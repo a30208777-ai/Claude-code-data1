@@ -349,3 +349,9 @@ def test_nome_com_html_e_escapado(cliente, sb):
     sb.perfil["username"] = "<script>x</script>"
     entrar(cliente)
     assert "<script>x</script>" not in html(cliente.get("/inicio"))
+
+
+def test_backend_nao_configurado_explica_o_erro(cliente, sb):
+    sb.request = lambda *a, **k: Resp(404, {"code": "NOT_FOUND", "message": "Requested function was not found"})
+    r = entrar(cliente)
+    assert "ainda não foi configurado" in html(r)

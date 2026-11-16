@@ -32,6 +32,9 @@ MENSAGENS = {
     "username_em_uso": "Esse nome de usuário já está em uso.",
     "sessao_expirada": "Sua sessão expirou. Entre novamente.",
     "sem_conexao": "Sem conexão com o servidor. Verifique sua internet.",
+    "NOT_FOUND": "O servidor do Rolox ainda não foi configurado no Supabase "
+                 "(função de login não encontrada).",
+    "PGRST205": "O banco do Rolox ainda não foi configurado no Supabase (tabela não encontrada).",
     # resultados das RPCs
     "servidor_inexistente": "Esse servidor não existe mais.",
     "use_servidor_hack": "Você marcou hack/mod neste jogo. Entre em um servidor de hack.",

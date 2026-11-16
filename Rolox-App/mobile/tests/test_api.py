@@ -228,3 +228,10 @@ def test_ver_senha_tentada():
         return resposta(200, {"senha_tentada": "123456"})
 
     assert rodar(logada(h).ver_senha_tentada(5)) == "123456"
+
+
+def test_backend_nao_configurado_explica_o_erro():
+    api = api_com(lambda r: resposta(404, {"code": "NOT_FOUND", "message": "Requested function was not found"}))
+    with pytest.raises(ErroRolox) as e:
+        rodar(api.login("admtest", "x"))
+    assert "ainda não foi configurado" in e.value.mensagem
