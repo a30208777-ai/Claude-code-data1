@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block conteudo %}
+<div class="logo">ROLOX</div>
+<p class="sub">Entre na sua conta</p>
+<form method="post" class="pilha">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <label>Usuário
+    <input type="text" name="usuario" value="{{ usuario }}" autocapitalize="none" autocorrect="off" autocomplete="username" required autofocus>
+  </label>
+  <label>Senha
+    <input type="password" name="senha" autocomplete="current-password" required>
+  </label>
+  <button class="btn" type="submit">Entrar</button>
+  <a class="btn texto" href="{{ url_for('cadastro') }}">Criar conta</a>
+  <p class="nota">3 senhas erradas bloqueiam o aparelho que errou, e o dono da conta é avisado.</p>
+</form>
+{% endblock %}

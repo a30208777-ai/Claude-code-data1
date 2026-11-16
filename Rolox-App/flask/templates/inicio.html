@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block conteudo %}
+<h1>Olá, {{ perfil.username }}!</h1>
+<p class="muted" id="status">
+  {% if onde.fila %}Na fila de espera — posição {{ onde.posicao }}.{% else %}Você está no lobby.{% endif %}
+</p>
+
+<h2>🛡️ Alertas de segurança</h2>
+{% for a in alertas %}
+  <div class="cartao {{ 'novo' if not a.lido }}" id="alerta-{{ a.id }}">
+    <span class="icone">⚠️</span>
+    <div class="info">
+      <div class="titulo">Alguém tentou entrar na sua conta</div>
+      <div class="detalhe">IP {{ a.ip }} · {{ a.criado_em | data }}{% if a.ip_foi_banido %} · IP banido{% endif %}</div>
+    </div>
+    <button class="btn texto" type="button" onclick="verSenha({{ a.id }})" aria-label="Ver senha usada">👁️</button>
+  </div>
+{% else %}
+  <p class="muted">Nenhuma tentativa suspeita na sua conta. 👍</p>
+{% endfor %}
+
+<dialog id="dialogo">
+  <h2>Senha usada na tentativa</h2>
+  <p class="senha" id="senha"></p>
+  <form method="dialog"><button class="btn">Fechar</button></form>
+</dialog>
+{% endblock %}
+{% block scripts %}
+<script>
+  async function verSenha(id) {
+    try {
+      const d = await api(`/api/alertas/${id}/senha`, {});
+      document.getElementById('senha').textContent = d.senha;
+      document.getElementById('dialogo').showModal();
+      document.getElementById('alerta-' + id).classList.remove('novo');
+    } catch (e) { aviso(e.message); }
+  }
+  let total = {{ alertas | length }};
+  setInterval(async () => {
+    try {
+      const d = await api('/api/status');
+      if (d.onde.servidor) location.href = '/chat/' + d.onde.servidor;
+      else if (d.alertas !== total) location.reload();
+      else document.getElementById('status').textContent = d.onde.fila
+        ? `Na fila de espera — posição ${d.onde.posicao}.` : 'Você está no lobby.';
+    } catch (e) {}
+  }, 10000);
+</script>
+{% endblock %}

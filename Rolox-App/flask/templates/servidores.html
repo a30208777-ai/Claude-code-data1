@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block titulo %}Servidores · Rolox{% endblock %}
+{% block conteudo %}
+<div class="linha">
+  <h1 class="cresce">Servidores</h1>
+  <button class="btn pequeno" type="button" onclick="document.getElementById('criar').showModal()">＋ Criar</button>
+</div>
+<p>
+  {% if todos %}
+    <a class="btn texto" href="{{ url_for('servidores') }}">Mostrar só os que posso entrar</a>
+  {% else %}
+    <a class="btn texto" href="{{ url_for('servidores', todos=1) }}">Mostrar todos</a>
+  {% endif %}
+</p>
+
+{% for s in servidores %}
+  <div class="cartao">
+    <div class="info">
+      <div class="titulo">{{ jogos.get(s.gameid, s.gameid) }}{% if s.is_hack_server %}<span class="etiqueta">HACK/MOD</span>{% endif %}</div>
+      <div class="detalhe">{{ s.jogadores }}/{{ s.capacidade }} jogadores</div>
+    </div>
+    <form method="post" action="{{ url_for('entrar', uid=s.server_uid) }}">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <button class="btn pequeno">{{ 'Fila' if s.status == 'cheio' else 'Entrar' }}</button>
+    </form>
+  </div>
+{% else %}
+  <p class="muted">Nenhum servidor aberto. Crie o primeiro!</p>
+{% endfor %}
+
+<dialog id="criar">
+  <h2>Criar servidor</h2>
+  {% if jogos %}
+  <form method="post" action="{{ url_for('criar_servidor') }}" class="pilha">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <label>Jogo
+      <select name="gameid">
+        {% for gid, nome in jogos.items() %}<option value="{{ gid }}">{{ nome }}</option>{% endfor %}
+      </select>
+    </label>
+    <label>Capacidade (1–100)
+      <input type="number" name="capacidade" value="10" min="1" max="100" required>
+    </label>
+    <label class="chave"><input type="checkbox" name="hack"> Servidor de hack/mod</label>
+    <div class="linha">
+      <button class="btn contorno cresce" type="button" onclick="this.closest('dialog').close()">Cancelar</button>
+      <button class="btn cresce">Criar</button>
+    </div>
+  </form>
+  {% else %}
+  <p>Nenhum jogo aprovado no catálogo ainda.</p>
+  <form method="dialog"><button class="btn">Fechar</button></form>
+  {% endif %}
+</dialog>
+{% endblock %}
+{% block scripts %}
+<script>setTimeout(() => { if (!document.querySelector('dialog[open]')) location.reload(); }, 15000);</script>
+{% endblock %}

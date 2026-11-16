@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block titulo %}Erro · Rolox{% endblock %}
+{% block conteudo %}
+<div class="logo">ROLOX</div>
+<p class="sub">{{ mensagem }}</p>
+<p style="text-align:center"><a class="btn" href="{{ request.path }}">Tentar de novo</a></p>
+{% endblock %}

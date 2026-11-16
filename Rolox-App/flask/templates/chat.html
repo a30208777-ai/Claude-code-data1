@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block titulo %}{{ jogo }} · Rolox{% endblock %}
+{% block classe_main %}cheio{% endblock %}
+{% block conteudo %}
+<div class="cabecalho-chat">
+  <h1>{{ jogo }}{% if s.is_hack_server %}<span class="etiqueta">HACK/MOD</span>{% endif %}</h1>
+  <form method="post" action="{{ url_for('sair_servidor', uid=s.server_uid) }}">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <button class="btn contorno pequeno">Sair</button>
+  </form>
+</div>
+<p class="nota">O chat passa pelo filtro SELECT antes de ser entregue.</p>
+<div id="mensagens" aria-live="polite"></div>
+<form id="envio" class="linha">
+  <input type="text" id="texto" class="cresce" maxlength="500" placeholder="Mensagem" autocomplete="off">
+  <button class="btn" aria-label="Enviar">➤</button>
+</form>
+{% endblock %}
+{% block scripts %}
+<script>
+  const UID = {{ s.server_uid | tojson }};
+  const caixa = document.getElementById('mensagens');
+  let ultimo = 0, puxando = false;
+
+  async function puxar() {
+    if (puxando) return; puxando = true;
+    try {
+      const d = await api(`/api/chat/${UID}?depois=${ultimo}`);
+      const noFim = caixa.scrollHeight - caixa.scrollTop - caixa.clientHeight < 40;
+      for (const m of d.mensagens) {
+        ultimo = Math.max(ultimo, m.id);
+        const p = document.createElement('p');
+        const b = document.createElement('b'); b.textContent = m.username + ': ';
+        p.append(b, document.createTextNode(m.mensagem_filtrada));
+        caixa.appendChild(p);
+      }
+      if (noFim || d.mensagens.length) caixa.scrollTop = caixa.scrollHeight;
+      if (!d.ainda_no_servidor) {
+        aviso('Você saiu do servidor (ele foi encerrado ou você foi removido).');
+        setTimeout(() => location.href = '{{ url_for("servidores") }}', 1500);
+      }
+    } catch (e) {} finally { puxando = false; }
+  }
+
+  document.getElementById('envio').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const campo = document.getElementById('texto');
+    const texto = campo.value.trim();
+    if (!texto) return;
+    try { await api(`/api/chat/${UID}`, {texto}); campo.value = ''; await puxar(); }
+    catch (e) { aviso(e.message); }
+    campo.focus();
+  });
+
+  puxar();
+  setInterval(puxar, 2000);
+  {% if host %}setInterval(() => api(`/api/heartbeat/${UID}`, {}).catch(() => {}), 15000);{% endif %}
+</script>
+{% endblock %}

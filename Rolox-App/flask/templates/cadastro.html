@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block titulo %}Criar conta · Rolox{% endblock %}
+{% block conteudo %}
+<h1>Criar conta</h1>
+<form method="post" class="pilha">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <label>E-mail
+    <input type="email" name="email" value="{{ dados.get('email', '') }}" autocomplete="email" required>
+  </label>
+  <label>Usuário (minúsculas, números e hífen, 3 a 32)
+    <input type="text" name="usuario" value="{{ dados.get('usuario', '') }}" pattern="[a-z0-9]([a-z0-9-]{1,30}[a-z0-9])" autocapitalize="none" autocorrect="off" required>
+  </label>
+  <label>Senha (mínimo 8)
+    <input type="password" name="senha" minlength="8" autocomplete="new-password" required>
+  </label>
+  <label class="chave"><input type="checkbox" name="localizacao" {{ 'checked' if dados.get('localizacao') }}> Mostrar para amigos onde estou jogando</label>
+  <p class="nota">Seu IP e sua localização na plataforma só são usados para segurança e status online (LGPD).</p>
+  <button class="btn" type="submit">Cadastrar</button>
+  <a class="btn texto" href="{{ url_for('login') }}">Já tenho conta</a>
+</form>
+{% endblock %}

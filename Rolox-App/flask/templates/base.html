@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="csrf" content="{{ csrf }}">
+  <title>{% block titulo %}Rolox{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='rolox.css') }}">
+</head>
+<body>
+  <main class="{% block classe_main %}{% endblock %}">
+    {% block conteudo %}{% endblock %}
+  </main>
+
+  <div class="avisos" id="avisos">
+    {% for tipo, texto in get_flashed_messages(with_categories=true) %}
+      <div class="aviso {{ tipo }}">{{ texto }}</div>
+    {% endfor %}
+  </div>
+
+  {% if aba %}
+  <nav class="barra">
+    <a href="{{ url_for('inicio') }}" class="{{ 'ativo' if aba == 'inicio' }}"><span>🏠</span>Início</a>
+    <a href="{{ url_for('servidores') }}" class="{{ 'ativo' if aba == 'servidores' }}"><span>🎮</span>Servidores</a>
+    <a href="{{ url_for('perfil') }}" class="{{ 'ativo' if aba == 'perfil' }}"><span>👤</span>Perfil</a>
+  </nav>
+  {% endif %}
+
+  <script>
+    const CSRF = document.querySelector('meta[name=csrf]').content;
+    function aviso(texto, tipo = 'erro') {
+      const d = document.createElement('div');
+      d.className = 'aviso ' + tipo; d.textContent = texto;
+      document.getElementById('avisos').appendChild(d);
+      setTimeout(() => d.remove(), 5000);
+    }
+    async function api(url, corpo) {
+      const op = corpo === undefined ? {} : {
+        method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRF': CSRF},
+        body: JSON.stringify(corpo)};
+      const r = await fetch(url, op);
+      const d = await r.json().catch(() => ({}));
+      if (r.status === 401) { location.href = '{{ url_for("login") }}'; throw new Error('sessão'); }
+      if (!r.ok) throw new Error(d.mensagem || 'Erro de conexão');
+      return d;
+    }
+    document.querySelectorAll('.avisos .aviso').forEach(a => setTimeout(() => a.remove(), 5000));
+  </script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>
