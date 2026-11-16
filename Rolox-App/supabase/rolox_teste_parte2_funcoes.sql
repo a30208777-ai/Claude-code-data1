@@ -1,11 +1,3 @@
--- =====================================================================
--- ROLOX — PARTE 2: funções (cole no SQL Editor do projeto Rolox e clique em Run)
--- A parte 1 (tabelas, RLS, Realtime) já foi aplicada.
--- Se o Supabase avisar sobre comandos "destrutivos", pode confirmar: são os
--- DELETE de dentro das funções (sair do servidor, limpezas), não apagam nada agora.
--- =====================================================================
-
--- Cria o perfil automaticamente no cadastro (username vem do metadata)
 create function public.criar_perfil_novo_usuario()
 returns trigger language plpgsql security definer set search_path = public as $$
 begin
@@ -22,12 +14,6 @@ create trigger ao_criar_usuario
   after insert on auth.users
   for each row execute function public.criar_perfil_novo_usuario();
 
--- =====================================================================
--- Funções (RPC)
--- =====================================================================
-
--- Filtro local: remove o termo e a palavra de ligação solta antes dele
--- ("a porra de uma sacola" -> "uma sacola"), preservando o resto da frase.
 create function public.filtrar_texto(p_texto text)
 returns text language plpgsql stable set search_path = public as $$
 declare
@@ -35,7 +21,6 @@ declare
   r text := p_texto;
 begin
   for t in select termo from public.termos_bloqueados loop
-    -- "a/o/uma/um <termo> de/do/da" some inteiro
     r := regexp_replace(r, '\m(a|o|uma|um)\s+' || t.termo || '\s+(de|do|da)\s+', '', 'gi');
     r := regexp_replace(r, '\m' || t.termo || '\s+(de|do|da)\s+', '', 'gi');
     r := regexp_replace(r, '\m' || t.termo || '\M', '', 'gi');
@@ -46,7 +31,6 @@ begin
   return btrim(r);
 end $$;
 
--- Matchmaking (Fase 12): retorna null se pode entrar, ou o motivo do bloqueio
 create function public.motivo_bloqueio(p_user uuid, p_server public.servidores_ativos)
 returns text language sql stable set search_path = public as $$
   select case
@@ -60,7 +44,6 @@ returns text language sql stable set search_path = public as $$
   from public.perfis p where p.id = p_user
 $$;
 
--- Fase 8: entrar com checagem de capacidade sob lock; cheio -> fila
 create function public.entrar_servidor(p_server uuid)
 returns json language plpgsql security definer set search_path = public as $$
 declare
@@ -86,7 +69,6 @@ begin
     return json_build_object('resultado', 'ja_esta');
   end if;
 
-  -- só pode estar em um servidor (e uma fila) por vez: sai dos outros antes
   for antigo in
     select server_uid from public.users_dos_servidores where user_id = uid and server_uid <> p_server
     union
@@ -113,7 +95,6 @@ begin
     'posicao', (select count(*) from public.espera where server_uid = p_server));
 end $$;
 
--- Sai do servidor (ou da fila) e promove o primeiro da fila que puder entrar
 create function public.sair_servidor(p_server uuid)
 returns json language plpgsql security definer set search_path = public as $$
 declare
@@ -150,7 +131,6 @@ begin
   return json_build_object('resultado', 'saiu');
 end $$;
 
--- Fase 9: só grava localização com consentimento (LGPD)
 create function public.registrar_local(p_user uuid, p_locate text, p_server uuid)
 returns void language plpgsql security definer set search_path = public as $$
 begin
@@ -170,7 +150,6 @@ returns void language sql security definer set search_path = public as $$
     (select server_uid from public.users_dos_servidores where user_id = auth.uid() limit 1));
 $$;
 
--- Fase 16: chat com filtro local; anti-spam de 1 mensagem/segundo
 create function public.enviar_mensagem(p_server uuid, p_texto text, p_idioma text default null)
 returns json language plpgsql security definer set search_path = public as $$
 declare
@@ -200,8 +179,6 @@ begin
   return json_build_object('resultado', 'enviada', 'mensagem_filtrada', filtrada);
 end $$;
 
--- Fase 10: trocou o jogo de hack/mod no meio da partida -> desconexão limpa
--- de servidores e filas que ficaram incompatíveis.
 create function public.ao_trocar_jogo_mod()
 returns trigger language plpgsql security definer set search_path = public as $$
 declare
@@ -230,7 +207,6 @@ create trigger ao_trocar_jogo_mod
   for each row when (old.jogo_mod is distinct from new.jogo_mod)
   execute function public.ao_trocar_jogo_mod();
 
--- Fase 7: limpeza de servidores sem heartbeat (agendar com pg_cron a cada minuto)
 create function public.limpar_servidores_inativos()
 returns int language plpgsql security definer set search_path = public as $$
 declare n int;
@@ -243,7 +219,6 @@ begin
   return n;
 end $$;
 
--- LGPD: apaga dados sensíveis com mais de 30 dias
 create function public.limpar_dados_antigos()
 returns void language sql security definer set search_path = public as $$
   delete from public.tentativas_login  where criado_em < now() - interval '30 days';
@@ -252,9 +227,6 @@ returns void language sql security definer set search_path = public as $$
    where criado_em < now() - interval '30 days' and mensagem_original <> mensagem_filtrada;
 $$;
 
--- =====================================================================
--- Agendamentos (pg_cron, se estiver ativo no projeto)
--- =====================================================================
 do $$ begin
   if exists (select 1 from pg_extension where extname = 'pg_cron') then
     perform cron.schedule('rolox-limpar-servidores', '* * * * *', 'select public.limpar_servidores_inativos()');
