@@ -1,0 +1,230 @@
+"""Testes do cliente da API (sem rede: usa um Supabase falso)."""
+
+import asyncio
+import json
+
+import httpx
+import pytest
+
+from rolox.api import ErroRolox, RoloxAPI, Sessao
+
+
+def rodar(coro):
+    return asyncio.run(coro)
+
+
+def api_com(handler) -> RoloxAPI:
+    return RoloxAPI(url="https://falso.supabase.co", chave="sb_publishable_teste",
+                    transport=httpx.MockTransport(handler))
+
+
+def resposta(status, corpo):
+    return httpx.Response(status, json=corpo)
+
+
+# ------------------------------------------------------------------ login
+def test_login_ok_guarda_sessao_e_manda_apikey():
+    vistos = []
+
+    def h(req: httpx.Request):
+        vistos.append(req)
+        assert req.url.path == "/functions/v1/login-protegido"
+        assert json.loads(req.content) == {"username": "alice", "senha": "segredo123"}
+        return resposta(200, {"access_token": "A", "refresh_token": "R", "user_id": "u1"})
+
+    api = api_com(h)
+    s = rodar(api.login("  Alice ", "segredo123"))
+    assert s == Sessao("A", "R", "u1")
+    assert vistos[0].headers["apikey"] == "sb_publishable_teste"
+    assert "authorization" not in vistos[0].headers
+
+
+def test_login_senha_errada_mostra_tentativas_restantes():
+    api = api_com(lambda r: resposta(401, {"erro": "credenciais_invalidas", "tentativas_restantes": 1}))
+    with pytest.raises(ErroRolox) as e:
+        rodar(api.login("alice", "errada"))
+    assert e.value.codigo == "credenciais_invalidas"
+    assert "Tentativas restantes: 1" in e.value.mensagem
+
+
+def test_login_ip_bloqueado():
+    api = api_com(lambda r: resposta(403, {"erro": "ip_bloqueado"}))
+    with pytest.raises(ErroRolox) as e:
+        rodar(api.login("alice", "x"))
+    assert e.value.codigo == "ip_bloqueado"
+    assert "bloqueado" in e.value.mensagem
+
+
+def test_login_vazio_nem_chama_servidor():
+    api = api_com(lambda r: pytest.fail("não deveria chamar a rede"))
+    with pytest.raises(ErroRolox) as e:
+        rodar(api.login("", ""))
+    assert e.value.codigo == "dados_invalidos"
+
+
+def test_sem_internet_vira_erro_amigavel():
+    def h(req):
+        raise httpx.ConnectError("sem rede", request=req)
+
+    with pytest.raises(ErroRolox) as e:
+        rodar(api_com(h).login("alice", "x"))
+    assert e.value.codigo == "sem_conexao"
+
+
+# --------------------------------------------------------------- cadastro
+@pytest.mark.parametrize("username", ["ab", "-alice", "alice-", "Al ice", "a" * 33, "ação"])
+def test_cadastro_rejeita_username_invalido(username):
+    api = api_com(lambda r: pytest.fail("não deveria chamar a rede"))
+    with pytest.raises(ErroRolox) as e:
+        rodar(api.cadastrar("a@b.com", username, "12345678", False))
+    assert e.value.codigo == "username_invalido"
+
+
+def test_cadastro_envia_metadata():
+    def h(req):
+        corpo = json.loads(req.content)
+        assert req.url.path == "/auth/v1/signup"
+        assert corpo["data"] == {"username": "alice-1", "aceitou_localizacao": True}
+        return resposta(200, {"id": "u1"})
+
+    rodar(api_com(h).cadastrar("a@b.com", "Alice-1", "12345678", True))
+
+
+def test_cadastro_username_duplicado():
+    api = api_com(lambda r: resposta(500, {"error_code": "unexpected_failure",
+                                           "msg": "Database error saving new user"}))
+    with pytest.raises(ErroRolox) as e:
+        rodar(api.cadastrar("a@b.com", "alice", "12345678", False))
+    assert e.value.codigo == "username_em_uso"
+
+
+# ----------------------------------------------------------------- sessão
+def test_token_expirado_renova_e_repete():
+    chamadas = []
+
+    def h(req):
+        chamadas.append((req.url.path, req.headers.get("authorization")))
+        if req.url.path == "/auth/v1/token":
+            assert req.url.params["grant_type"] == "refresh_token"
+            return resposta(200, {"access_token": "NOVO", "refresh_token": "R2", "user": {"id": "u1"}})
+        if req.headers["authorization"] == "Bearer VELHO":
+            return resposta(401, {"code": "PGRST303"})
+        return resposta(200, [{"id": "u1", "username": "alice"}])
+
+    api = api_com(h)
+    api.sessao = Sessao("VELHO", "R1", "u1")
+    perfil = rodar(api.meu_perfil())
+    assert perfil["username"] == "alice"
+    assert api.sessao == Sessao("NOVO", "R2", "u1")
+    assert [c[0] for c in chamadas] == ["/rest/v1/perfis", "/auth/v1/token", "/rest/v1/perfis"]
+
+
+def test_refresh_invalido_encerra_sessao():
+    api = api_com(lambda r: resposta(400, {"error_code": "refresh_token_not_found"}))
+    with pytest.raises(ErroRolox) as e:
+        rodar(api.renovar("ruim"))
+    assert e.value.codigo == "sessao_expirada"
+    assert api.sessao is None
+
+
+def test_chamada_logada_sem_sessao():
+    api = api_com(lambda r: pytest.fail("não deveria chamar a rede"))
+    with pytest.raises(ErroRolox) as e:
+        rodar(api.alertas())
+    assert e.value.codigo == "sessao_expirada"
+
+
+# -------------------------------------------------------------- servidores
+def logada(handler) -> RoloxAPI:
+    api = api_com(handler)
+    api.sessao = Sessao("T", "R", "u1")
+    return api
+
+
+def test_lista_servidores_conta_jogadores():
+    def h(req):
+        assert "users_dos_servidores(count)" in req.url.params["select"]
+        return resposta(200, [
+            {"server_uid": "s1", "gameid": "corrida", "capacidade": 10, "is_hack_server": False,
+             "status": "aberto", "host_id": "u2", "users_dos_servidores": [{"count": 3}]},
+        ])
+
+    s = rodar(logada(h).servidores())
+    assert s[0]["jogadores"] == 3 and "users_dos_servidores" not in s[0]
+
+
+def test_entrar_fila():
+    def h(req):
+        assert req.url.path == "/rest/v1/rpc/entrar_servidor"
+        assert json.loads(req.content) == {"p_server": "s1"}
+        return resposta(200, {"resultado": "fila", "posicao": 2})
+
+    assert rodar(logada(h).entrar("s1"))["posicao"] == 2
+
+
+def test_entrar_bloqueado_por_hack_vira_erro():
+    api = logada(lambda r: resposta(200, {"resultado": "use_servidor_hack"}))
+    with pytest.raises(ErroRolox) as e:
+        rodar(api.entrar("s1"))
+    assert "servidor de hack" in e.value.mensagem
+
+
+def test_criar_servidor_valida_capacidade():
+    api = logada(lambda r: pytest.fail("não deveria chamar a rede"))
+    with pytest.raises(ValueError):
+        rodar(api.criar_servidor("corrida", 0, False))
+
+
+def test_criar_servidor_usa_meu_id_como_host():
+    def h(req):
+        corpo = json.loads(req.content)
+        assert corpo == {"gameid": "corrida", "host_id": "u1", "capacidade": 8, "is_hack_server": True}
+        assert req.headers["prefer"] == "return=representation"
+        return resposta(201, [dict(corpo, server_uid="s9")])
+
+    assert rodar(logada(h).criar_servidor("corrida", 8, True))["server_uid"] == "s9"
+
+
+def test_onde_estou_na_fila_calcula_posicao():
+    def h(req):
+        p = req.url.path
+        if p == "/rest/v1/users_dos_servidores":
+            return resposta(200, [])
+        if req.url.params.get("user_id") == "eq.u1":
+            return resposta(200, [{"server_uid": "s1", "id": 7}])
+        assert req.url.params["id"] == "lte.7"
+        return resposta(200, [{"id": 3}, {"id": 7}])
+
+    assert rodar(logada(h).onde_estou()) == {"servidor": None, "fila": "s1", "posicao": 2}
+
+
+# ------------------------------------------------------------- perfil/chat
+def test_perfil_so_aceita_campos_editaveis():
+    api = logada(lambda r: pytest.fail("não deveria chamar a rede"))
+    with pytest.raises(ValueError):
+        rodar(api.atualizar_perfil(is_admin=True))
+
+
+def test_enviar_muito_rapido():
+    api = logada(lambda r: resposta(200, {"resultado": "muito_rapido"}))
+    with pytest.raises(ErroRolox) as e:
+        rodar(api.enviar("s1", "oi"))
+    assert e.value.codigo == "muito_rapido"
+
+
+def test_mensagens_pede_so_as_novas():
+    def h(req):
+        assert req.url.params["id"] == "gt.42"
+        assert req.url.params["select"] == "id,username,mensagem_filtrada,criado_em"
+        return resposta(200, [])
+
+    assert rodar(logada(h).mensagens("s1", 42)) == []
+
+
+def test_ver_senha_tentada():
+    def h(req):
+        assert req.url.path == "/functions/v1/ver-alerta"
+        assert req.headers["authorization"] == "Bearer T"
+        return resposta(200, {"senha_tentada": "123456"})
+
+    assert rodar(logada(h).ver_senha_tentada(5)) == "123456"

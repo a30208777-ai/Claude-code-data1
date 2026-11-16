@@ -1,0 +1,32 @@
+[project]
+name = "rolox-mobile"
+version = "0.1.0"
+description = "App Rolox para celular (Android/iOS) em Python + Flet"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "flet==1.1.2",
+]
+
+[dependency-groups]
+dev = [
+  "pytest>=8",
+]
+
+[tool.flet]
+org = "com.rolox"
+product = "Rolox"
+company = "Rolox"
+copyright = "Rolox"
+
+[tool.flet.app]
+path = "src"
+module = "main"
+
+# o app precisa de internet para falar com o Supabase
+[tool.flet.android.permission]
+"android.permission.INTERNET" = true
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
