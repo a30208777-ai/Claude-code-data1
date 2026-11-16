@@ -18,7 +18,7 @@ Abra **http://localhost:8550** no Chrome do celular. Dica: no menu do Chrome, us
 |---|---|---|
 | `ROLOX_PORTA` | `8550` | Porta do servidor |
 | `ROLOX_HOST` | `127.0.0.1` | `0.0.0.0` libera para outros aparelhos do Wi-Fi (cuidado: eles poderiam usar a sua sessão) |
-| `ROLOX_SUPABASE_URL` / `ROLOX_SUPABASE_CHAVE` | projeto "Mods" | Outro projeto Supabase |
+| `ROLOX_SUPABASE_URL` / `ROLOX_SUPABASE_CHAVE` | projeto "Rolox" | Outro projeto Supabase |
 
 ## Telas
 Login (com tentativas restantes e aviso de IP bloqueado), Cadastro, Início (status e alertas *"Alguém tentou entrar na sua conta"* com botão para ver a senha usada), Servidores (lista, filtro hack/limpo, criar, entrar ou fila), Chat (atualiza a cada 2 s; o host manda heartbeat) e Perfil (idioma, jogo com hack/mod, localização, sair). Tema claro e escuro automático.

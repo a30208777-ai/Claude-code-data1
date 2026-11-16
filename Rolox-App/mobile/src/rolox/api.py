@@ -23,6 +23,7 @@ MENSAGENS = {
     "credenciais_invalidas": "Usuário ou senha incorretos.",
     "ip_bloqueado": "Este aparelho/rede foi bloqueado após 3 senhas erradas.",
     "conta_banida": "Esta conta foi banida por um moderador.",
+    "email_nao_confirmado": "Confirme seu e-mail (veja a caixa de entrada) antes de entrar.",
     "confirme_por_email": "Muitas tentativas. Enviamos um e-mail para você redefinir a senha.",
     "dados_invalidos": "Preencha usuário e senha.",
     "username_invalido": "O usuário deve ter 3 a 32 letras minúsculas, números ou hífen "

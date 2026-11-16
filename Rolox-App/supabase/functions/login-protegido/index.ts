@@ -73,6 +73,10 @@ Deno.serve(async (req) => {
     });
   }
 
+  if (error && /email not confirmed/i.test(error.message)) {
+    return json({ erro: "email_nao_confirmado" }, 401);
+  }
+
   // 4. Senha errada
   const cifrada = await cifrar(senha);
   await admin.from("tentativas_login").insert({

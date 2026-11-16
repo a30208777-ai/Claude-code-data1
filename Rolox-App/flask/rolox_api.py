@@ -14,9 +14,9 @@ from typing import Any, Optional
 
 import requests
 
-SUPABASE_URL = os.environ.get("ROLOX_SUPABASE_URL", "https://eqeleozhqwmziiscsyco.supabase.co")
+SUPABASE_URL = os.environ.get("ROLOX_SUPABASE_URL", "https://llgriaqnlcylpaxudrlg.supabase.co")
 # publishable key: pública por natureza (só dá o acesso que o RLS permite). Nunca a service_role.
-SUPABASE_CHAVE = os.environ.get("ROLOX_SUPABASE_CHAVE", "sb_publishable_VQ7G5FBH-hpFZgkgGxCmrw_vNtmYC-P")
+SUPABASE_CHAVE = os.environ.get("ROLOX_SUPABASE_CHAVE", "sb_publishable_GFKzsWxgUtXTff5fHWVVfQ_dUKdF62n")
 
 USERNAME_VALIDO = re.compile(r"^[a-z0-9]([a-z0-9-]{1,30}[a-z0-9])$")
 
@@ -24,6 +24,7 @@ MENSAGENS = {
     "credenciais_invalidas": "Usuário ou senha incorretos.",
     "ip_bloqueado": "Este aparelho/rede foi bloqueado após 3 senhas erradas.",
     "conta_banida": "Esta conta foi banida por um moderador.",
+    "email_nao_confirmado": "Confirme seu e-mail (veja a caixa de entrada) antes de entrar.",
     "confirme_por_email": "Muitas tentativas. Enviamos um e-mail para você redefinir a senha.",
     "dados_invalidos": "Preencha usuário e senha.",
     "username_invalido": "O usuário deve ter 3 a 32 letras minúsculas, números ou hífen "

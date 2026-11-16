@@ -7,8 +7,8 @@ Nunca coloque aqui a service_role key.
 
 import os
 
-SUPABASE_URL = os.environ.get("ROLOX_SUPABASE_URL", "https://eqeleozhqwmziiscsyco.supabase.co")
-SUPABASE_CHAVE = os.environ.get("ROLOX_SUPABASE_CHAVE", "sb_publishable_VQ7G5FBH-hpFZgkgGxCmrw_vNtmYC-P")
+SUPABASE_URL = os.environ.get("ROLOX_SUPABASE_URL", "https://llgriaqnlcylpaxudrlg.supabase.co")
+SUPABASE_CHAVE = os.environ.get("ROLOX_SUPABASE_CHAVE", "sb_publishable_GFKzsWxgUtXTff5fHWVVfQ_dUKdF62n")
 
 # Intervalos de atualização (segundos)
 INTERVALO_CHAT = 2
