@@ -166,14 +166,12 @@ class RoloxApp:
         usuario = ft.TextField(label="Usuário", helper="minúsculas, números e hífen (3 a 32)",
                                capitalization=ft.TextCapitalization.NONE, autocorrect=False)
         senha = ft.TextField(label="Senha (mín. 8)", password=True, can_reveal_password=True)
-        email = ft.TextField(label="E-mail (opcional)", keyboard_type=ft.KeyboardType.EMAIL,
-                             helper="pode adicionar depois em Perfil")
         local = ft.Switch(label="Mostrar para amigos onde estou jogando", value=False)
 
         async def cadastrar(_):
             async def acao():
                 await self.api.cadastrar(usuario.value or "", senha.value or "",
-                                         bool(local.value), email.value or "")
+                                         bool(local.value))
                 await self._salvar_sessao()
                 await self.abrir_principal()
                 self.aviso("Conta criada! Bem-vindo ao Rolox.")
@@ -184,7 +182,9 @@ class RoloxApp:
             content=ft.Column(
                 [
                     ft.Text("Criar conta", size=28, weight=ft.FontWeight.BOLD),
-                    usuario, senha, email, local,
+                    usuario, senha, local,
+                    ft.Text("Você pode adicionar um e-mail depois, em Perfil.",
+                            size=12, italic=True),
                     ft.Text("Seu IP e sua localização na plataforma só são usados para "
                             "segurança e status online (LGPD).", size=12, italic=True),
                     ft.FilledButton("Cadastrar", on_click=cadastrar),

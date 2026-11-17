@@ -245,9 +245,6 @@ def test_cadastro_valida_e_mostra_username_em_uso(cliente):
     assert r.status_code == 400 and "O usuário deve ter" in html(r)
     r = cliente.post("/cadastro", data={"usuario": "bob", "senha": "12345678", "csrf": token})
     assert "já está em uso" in html(r)
-    r = cliente.post("/cadastro", data={"usuario": "alice", "senha": "12345678", "email": "nao-e-email",
-                                        "csrf": token})
-    assert "E-mail inválido" in html(r)
 
 
 def test_cadastro_sem_email_ja_entra(cliente, sb):
@@ -259,10 +256,9 @@ def test_cadastro_sem_email_ja_entra(cliente, sb):
     assert cliente.get("/inicio").status_code == 200
 
 
-def test_cadastro_com_email(cliente, sb):
-    cliente.post("/cadastro", data={"usuario": "dani", "senha": "12345678", "email": " Dani@Ex.com ",
-                                    "csrf": csrf(cliente)})
-    assert sb.cadastros[-1]["email"] == "dani@ex.com"
+def test_tela_de_cadastro_nao_pede_email(cliente):
+    pagina = html(cliente.get("/cadastro"))
+    assert 'name="email"' not in pagina and "adicionar um e-mail depois" in pagina
 
 
 # ------------------------------------------------------------- servidores

@@ -8,7 +8,7 @@ Segue a arquitetura v3: **o celular acessa direto as bases de dados do Supabase*
 | Tela | O que faz |
 |---|---|
 | **Login** | Entra com usuário e senha. Mostra tentativas restantes e avisa se o IP foi bloqueado. |
-| **Cadastro** | Usuário (minúsculas, números, hífen — vale como subdomínio no PC), senha, e-mail **opcional** e consentimento de localização (LGPD). Já entra na conta, sem confirmação por e-mail. |
+| **Cadastro** | Usuário (minúsculas, números, hífen — vale como subdomínio no PC), senha e consentimento de localização (LGPD), sem e-mail (ele pode ser adicionado depois em Perfil). Já entra na conta. |
 | **Início** | Status (lobby, fila com posição ou servidor) e **alertas de segurança**: "Alguém tentou entrar na sua conta", com IP, data e botão para ver a senha que foi usada. |
 | **Servidores** | Lista servidores com jogadores/capacidade e etiqueta HACK/MOD; filtro "só os que posso entrar"; criar servidor; entrar ou ir para a fila. |
 | **Chat** | Chat do servidor com filtro de palavrões (filtro local antes da IA SELECT); botão Sair. O host manda heartbeat a cada 15 s. |

@@ -143,7 +143,7 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
             f = request.form
             try:
                 g.api.cadastrar(f.get("usuario", ""), f.get("senha", ""),
-                                f.get("localizacao") == "on", f.get("email", ""))
+                                f.get("localizacao") == "on")
             except ErroRolox as e:
                 flash(e.mensagem, "erro")
                 return render_template("cadastro.html", dados=f), 400

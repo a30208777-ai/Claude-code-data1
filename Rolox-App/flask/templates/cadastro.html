@@ -10,10 +10,8 @@
   <label>Senha (mínimo 8)
     <input type="password" name="senha" minlength="8" autocomplete="new-password" required>
   </label>
-  <label>E-mail (opcional — pode adicionar depois em Perfil)
-    <input type="email" name="email" value="{{ dados.get('email', '') }}" autocomplete="email">
-  </label>
   <label class="chave"><input type="checkbox" name="localizacao" {{ 'checked' if dados.get('localizacao') }}> Mostrar para amigos onde estou jogando</label>
+  <p class="nota">Você pode adicionar um e-mail depois, em Perfil.</p>
   <p class="nota">Seu IP e sua localização na plataforma só são usados para segurança e status online (LGPD).</p>
   <button class="btn" type="submit">Cadastrar</button>
   <a class="btn texto" href="{{ url_for('login') }}">Já tenho conta</a>
