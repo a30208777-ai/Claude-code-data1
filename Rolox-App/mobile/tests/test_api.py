@@ -76,26 +76,34 @@ def test_sem_internet_vira_erro_amigavel():
 def test_cadastro_rejeita_username_invalido(username):
     api = api_com(lambda r: pytest.fail("não deveria chamar a rede"))
     with pytest.raises(ErroRolox) as e:
-        rodar(api.cadastrar("a@b.com", username, "12345678", False))
+        rodar(api.cadastrar(username, "12345678", False))
     assert e.value.codigo == "username_invalido"
 
 
-def test_cadastro_envia_metadata():
+def test_cadastro_sem_email_ja_entra():
     def h(req):
-        corpo = json.loads(req.content)
-        assert req.url.path == "/auth/v1/signup"
-        assert corpo["data"] == {"username": "alice-1", "aceitou_localizacao": True}
-        return resposta(200, {"id": "u1"})
+        assert req.url.path == "/functions/v1/cadastro"
+        assert json.loads(req.content) == {"username": "alice-1", "senha": "12345678", "email": "",
+                                           "aceitou_localizacao": True}
+        return resposta(201, {"access_token": "A", "refresh_token": "R", "user_id": "u1"})
 
-    rodar(api_com(h).cadastrar("a@b.com", "Alice-1", "12345678", True))
+    api = api_com(h)
+    assert rodar(api.cadastrar("Alice-1", "12345678", True)) == Sessao("A", "R", "u1")
+    assert api.sessao.user_id == "u1"
+
+
+def test_cadastro_email_opcional_valida_formato():
+    api = api_com(lambda r: pytest.fail("não deveria chamar a rede"))
+    with pytest.raises(ErroRolox) as e:
+        rodar(api.cadastrar("alice", "12345678", False, "nao-e-email"))
+    assert e.value.codigo == "email_invalido"
 
 
 def test_cadastro_username_duplicado():
-    api = api_com(lambda r: resposta(500, {"error_code": "unexpected_failure",
-                                           "msg": "Database error saving new user"}))
+    api = api_com(lambda r: resposta(409, {"erro": "username_em_uso"}))
     with pytest.raises(ErroRolox) as e:
-        rodar(api.cadastrar("a@b.com", "alice", "12345678", False))
-    assert e.value.codigo == "username_em_uso"
+        rodar(api.cadastrar("alice", "12345678", False))
+    assert "já está em uso" in e.value.mensagem
 
 
 # ----------------------------------------------------------------- sessão
@@ -199,6 +207,21 @@ def test_onde_estou_na_fila_calcula_posicao():
 
 
 # ------------------------------------------------------------- perfil/chat
+def test_email_do_perfil_normaliza_e_remove():
+    enviados = []
+
+    def h(req):
+        enviados.append(json.loads(req.content))
+        return resposta(200, [{"id": "u1"}])
+
+    api = logada(h)
+    rodar(api.atualizar_perfil(email=" Alice@Ex.com "))
+    rodar(api.atualizar_perfil(email=""))
+    assert enviados == [{"email": "alice@ex.com"}, {"email": None}]
+    with pytest.raises(ErroRolox):
+        rodar(api.atualizar_perfil(email="errado"))
+
+
 def test_perfil_so_aceita_campos_editaveis():
     api = logada(lambda r: pytest.fail("não deveria chamar a rede"))
     with pytest.raises(ValueError):

@@ -8,11 +8,11 @@ Segue a arquitetura v3: **o celular acessa direto as bases de dados do Supabase*
 | Tela | O que faz |
 |---|---|
 | **Login** | Entra com usuário e senha. Mostra tentativas restantes e avisa se o IP foi bloqueado. |
-| **Cadastro** | E-mail, usuário (minúsculas, números, hífen — vale como subdomínio no PC), senha e consentimento de localização (LGPD). |
+| **Cadastro** | Usuário (minúsculas, números, hífen — vale como subdomínio no PC), senha, e-mail **opcional** e consentimento de localização (LGPD). Já entra na conta, sem confirmação por e-mail. |
 | **Início** | Status (lobby, fila com posição ou servidor) e **alertas de segurança**: "Alguém tentou entrar na sua conta", com IP, data e botão para ver a senha que foi usada. |
 | **Servidores** | Lista servidores com jogadores/capacidade e etiqueta HACK/MOD; filtro "só os que posso entrar"; criar servidor; entrar ou ir para a fila. |
 | **Chat** | Chat do servidor com filtro de palavrões (filtro local antes da IA SELECT); botão Sair. O host manda heartbeat a cada 15 s. |
-| **Perfil (config)** | Idioma do chat, jogo onde usa hack/mod (troca rápida), mostrar localização, sair da conta. |
+| **Perfil (config)** | Idioma do chat, jogo onde usa hack/mod (troca rápida), mostrar localização, e-mail opcional, sair da conta. |
 
 ## Rodar
 
@@ -31,10 +31,11 @@ O endereço do Supabase e a *publishable key* ficam em `src/rolox/config.py` (ou
 
 ## Backend necessário (pasta `../supabase`)
 
-1. **Banco:** aplicar `supabase/migrations/20261116000000_rolox_base.sql` (tabelas, RLS, RPCs `entrar_servidor`, `sair_servidor`, `enviar_mensagem`, `atualizar_local`, triggers e limpezas agendadas).
+1. **Banco:** aplicar `supabase/migrations/20261116000000_rolox_base.sql` e depois `20261117000000_email_opcional.sql` (tabelas, RLS, RPCs `entrar_servidor`, `sair_servidor`, `enviar_mensagem`, `atualizar_local`, triggers e limpezas agendadas).
 2. **Segredo da criptografia:** `supabase secrets set ROLOX_CHAVE=$(openssl rand -base64 32)`
 3. **Edge Functions:**
    ```bash
+   supabase functions deploy cadastro --no-verify-jwt
    supabase functions deploy login-protegido --no-verify-jwt
    supabase functions deploy ver-alerta
    ```
@@ -42,6 +43,9 @@ O endereço do Supabase e a *publishable key* ficam em `src/rolox/config.py` (ou
 5. **Catálogo:** cadastrar os jogos em `jogos` com `commit_aprovado` preenchido (só jogos aprovados aparecem no app).
 
 Testes do banco num Postgres local: `supabase/tests/rodar.sh`.
+
+## E-mail opcional
+O cadastro passa pela Edge Function `cadastro`, que cria a conta no Supabase Auth com um e-mail interno (`<usuario>@jogador.rolox.invalid`, domínio reservado que nunca recebe mensagens) já confirmado. O e-mail de verdade, se o jogador quiser, fica em `perfis.email` e pode ser trocado em Perfil/config. Contas sem e-mail não recebem o e-mail de recuperação depois de 3 senhas erradas no próprio aparelho; em vez disso aparece "Muitas senhas erradas, espere um pouco".
 
 ## Limitações conhecidas
 

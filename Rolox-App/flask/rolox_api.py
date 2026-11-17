@@ -19,6 +19,7 @@ SUPABASE_URL = os.environ.get("ROLOX_SUPABASE_URL", "https://llgriaqnlcylpaxudrl
 SUPABASE_CHAVE = os.environ.get("ROLOX_SUPABASE_CHAVE", "sb_publishable_GFKzsWxgUtXTff5fHWVVfQ_dUKdF62n")
 
 USERNAME_VALIDO = re.compile(r"^[a-z0-9]([a-z0-9-]{1,30}[a-z0-9])$")
+EMAIL_VALIDO = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 MENSAGENS = {
     "credenciais_invalidas": "Usuário ou senha incorretos.",
@@ -31,6 +32,9 @@ MENSAGENS = {
                          "(sem hífen no começo ou no fim).",
     "senha_curta": "A senha precisa ter pelo menos 8 caracteres.",
     "email_invalido": "E-mail inválido.",
+    "senha_fraca": "Senha fraca demais. Use letras e números.",
+    "erro_cadastro": "Não foi possível criar a conta agora. Tente de novo.",
+    "muitas_tentativas": "Muitas senhas erradas. Espere um pouco e tente de novo.",
     "username_em_uso": "Esse nome de usuário já está em uso.",
     "sessao_expirada": "Sua sessão expirou. Entre novamente.",
     "sem_conexao": "Sem conexão com o servidor. Verifique sua internet.",
@@ -150,23 +154,22 @@ class RoloxAPI:
         self.sessao = Sessao(d["access_token"], d["refresh_token"], d["user_id"])
         return self.sessao
 
-    def cadastrar(self, email: str, username: str, senha: str, aceitou_localizacao: bool) -> dict:
+    def cadastrar(self, username: str, senha: str, aceitou_localizacao: bool,
+                  email: str = "") -> Sessao:
+        """Cria a conta (e-mail opcional) e já entra nela."""
         username = (username or "").strip().lower()
-        email = (email or "").strip()
+        email = (email or "").strip().lower()
         if not USERNAME_VALIDO.match(username):
             raise ErroRolox("username_invalido")
-        if "@" not in email or "." not in email.split("@")[-1]:
-            raise ErroRolox("email_invalido")
         if len(senha or "") < 8:
             raise ErroRolox("senha_curta")
-        try:
-            return self._req("POST", "/auth/v1/signup", autenticado=False, json={
-                "email": email, "password": senha,
-                "data": {"username": username, "aceitou_localizacao": aceitou_localizacao}})
-        except ErroRolox as e:
-            if e.codigo in ("unexpected_failure", "http_500") or "Database error" in str(e.detalhes):
-                raise ErroRolox("username_em_uso", e.detalhes) from e
-            raise
+        if email and not EMAIL_VALIDO.match(email):
+            raise ErroRolox("email_invalido")
+        d = self._req("POST", "/functions/v1/cadastro", autenticado=False, json={
+            "username": username, "senha": senha, "email": email,
+            "aceitou_localizacao": aceitou_localizacao})
+        self.sessao = Sessao(d["access_token"], d["refresh_token"], d["user_id"])
+        return self.sessao
 
     def renovar(self) -> Sessao:
         if not self.sessao:
@@ -194,15 +197,19 @@ class RoloxAPI:
     def meu_perfil(self) -> dict:
         linhas = self._req("GET", "/rest/v1/perfis", params={
             "id": f"eq.{self.user_id}",
-            "select": "id,username,idioma,jogo_mod,aceitou_localizacao,banido"})
+            "select": "id,username,email,idioma,jogo_mod,aceitou_localizacao,banido"})
         if not linhas:
             raise ErroRolox("perfil_nao_encontrado")
         return linhas[0]
 
     def atualizar_perfil(self, **campos: Any) -> dict:
-        invalidos = set(campos) - {"idioma", "jogo_mod", "aceitou_localizacao"}
+        invalidos = set(campos) - {"idioma", "jogo_mod", "aceitou_localizacao", "email"}
         if invalidos:
             raise ValueError(f"campos não editáveis: {sorted(invalidos)}")
+        if "email" in campos:
+            campos["email"] = (campos["email"] or "").strip().lower() or None
+            if campos["email"] and not EMAIL_VALIDO.match(campos["email"]):
+                raise ErroRolox("email_invalido")
         linhas = self._req("PATCH", "/rest/v1/perfis", params={"id": f"eq.{self.user_id}"},
                            json=campos, prefer="return=representation")
         return linhas[0] if linhas else {}

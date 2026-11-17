@@ -18,6 +18,9 @@
   </label>
   <p class="nota">Com hack/mod marcado, você só entra nos servidores de hack desse jogo. Pode trocar a qualquer momento.</p>
   <label class="chave"><input type="checkbox" name="localizacao" {{ 'checked' if perfil.aceitou_localizacao }}> Mostrar onde estou para amigos</label>
+  <label>E-mail (opcional — para contato e recuperação; deixe vazio para remover)
+    <input type="email" name="email" value="{{ perfil.email or '' }}" autocomplete="email">
+  </label>
   <button class="btn">Salvar</button>
 </form>
 <hr style="border:0;border-top:1px solid var(--borda);margin:24px 0">

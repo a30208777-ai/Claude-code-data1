@@ -163,18 +163,20 @@ class RoloxApp:
         ))
 
     def tela_cadastro(self) -> None:
-        email = ft.TextField(label="E-mail", keyboard_type=ft.KeyboardType.EMAIL)
         usuario = ft.TextField(label="Usuário", helper="minúsculas, números e hífen (3 a 32)",
                                capitalization=ft.TextCapitalization.NONE, autocorrect=False)
         senha = ft.TextField(label="Senha (mín. 8)", password=True, can_reveal_password=True)
+        email = ft.TextField(label="E-mail (opcional)", keyboard_type=ft.KeyboardType.EMAIL,
+                             helper="pode adicionar depois em Perfil")
         local = ft.Switch(label="Mostrar para amigos onde estou jogando", value=False)
 
         async def cadastrar(_):
             async def acao():
-                await self.api.cadastrar(email.value or "", usuario.value or "",
-                                         senha.value or "", bool(local.value))
-                self.aviso("Conta criada! Confirme seu e-mail e depois entre.")
-                self.tela_login()
+                await self.api.cadastrar(usuario.value or "", senha.value or "",
+                                         bool(local.value), email.value or "")
+                await self._salvar_sessao()
+                await self.abrir_principal()
+                self.aviso("Conta criada! Bem-vindo ao Rolox.")
             await self.executar(acao)
 
         self.mostrar(ft.Container(
@@ -182,7 +184,7 @@ class RoloxApp:
             content=ft.Column(
                 [
                     ft.Text("Criar conta", size=28, weight=ft.FontWeight.BOLD),
-                    email, usuario, senha, local,
+                    usuario, senha, email, local,
                     ft.Text("Seu IP e sua localização na plataforma só são usados para "
                             "segurança e status online (LGPD).", size=12, italic=True),
                     ft.FilledButton("Cadastrar", on_click=cadastrar),
@@ -474,13 +476,16 @@ class RoloxApp:
             + [ft.DropdownOption(key=j["gameid"], text=j["nome"]) for j in self.jogos])
         local = ft.Switch(label="Mostrar onde estou para amigos",
                           value=bool(p.get("aceitou_localizacao")))
+        email = ft.TextField(label="E-mail (opcional)", value=p.get("email") or "",
+                             keyboard_type=ft.KeyboardType.EMAIL,
+                             helper="deixe vazio para remover")
 
         async def salvar(_):
             async def acao():
                 novo_mod = jogo_mod.value or None
                 self.perfil = await self.api.atualizar_perfil(
                     idioma=idioma.value, jogo_mod=novo_mod,
-                    aceitou_localizacao=bool(local.value))
+                    aceitou_localizacao=bool(local.value), email=email.value or "")
                 await self.api.atualizar_local("menu")
                 self.aviso("Perfil salvo.")
             await self.executar(acao)
@@ -498,6 +503,7 @@ class RoloxApp:
                 ft.Text("Com hack/mod marcado, você só entra nos servidores de hack desse "
                         "jogo. Pode trocar a qualquer momento.", size=12, italic=True),
                 local,
+                email,
                 ft.FilledButton("Salvar", on_click=salvar),
                 ft.Divider(),
                 ft.OutlinedButton("Sair da conta", icon=ft.Icons.LOGOUT, on_click=sair),

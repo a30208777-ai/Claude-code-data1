@@ -35,8 +35,8 @@ class SupabaseFalso:
     def __init__(self):
         self.chamadas = []
         self.token_valido = "T1"
-        self.perfil = {"id": "u1", "username": "alice", "idioma": "pt-BR", "jogo_mod": None,
-                       "aceitou_localizacao": True, "banido": False}
+        self.perfil = {"id": "u1", "username": "alice", "email": None, "idioma": "pt-BR",
+                       "jogo_mod": None, "aceitou_localizacao": True, "banido": False}
         self.jogos = [{"gameid": "corrida", "nome": "Corrida Turbo"}]
         self.servidores = [
             {"server_uid": "s1", "gameid": "corrida", "host_id": "u2", "capacidade": 10,
@@ -51,6 +51,7 @@ class SupabaseFalso:
         self.alertas = [{"id": 9, "ip": "177.20.5.3", "ip_foi_banido": True, "lido": False,
                          "criado_em": "2026-11-15T22:40:00Z"}]
         self.falhas_login = 0
+        self.cadastros = []
         self.fora_do_ar = False
 
     def onde(self):
@@ -64,7 +65,7 @@ class SupabaseFalso:
         q = dict(params or {})
         self.chamadas.append((metodo, p, q, json, headers))
         auth = (headers or {}).get("Authorization", "")
-        publicas = {"/functions/v1/login-protegido", "/auth/v1/signup", "/auth/v1/token"}
+        publicas = {"/functions/v1/login-protegido", "/functions/v1/cadastro", "/auth/v1/token"}
         if p not in publicas and p != "/rest/v1/jogos" and auth != f"Bearer {self.token_valido}":
             return Resp(401, {"code": "PGRST303"})
 
@@ -75,10 +76,11 @@ class SupabaseFalso:
             if self.falhas_login >= 3:
                 return Resp(403, {"erro": "ip_bloqueado"})
             return Resp(401, {"erro": "credenciais_invalidas", "tentativas_restantes": 3 - self.falhas_login})
-        if p == "/auth/v1/signup":
-            if json["data"]["username"] == "bob":
-                return Resp(500, {"error_code": "unexpected_failure", "msg": "Database error saving new user"})
-            return Resp(200, {"id": "novo"})
+        if p == "/functions/v1/cadastro":
+            self.cadastros.append(json)
+            if json["username"] == "bob":
+                return Resp(409, {"erro": "username_em_uso"})
+            return Resp(201, {"access_token": self.token_valido, "refresh_token": "R1", "user_id": "u1"})
         if p == "/auth/v1/token":
             if json["refresh_token"] == "R1":
                 self.token_valido = "T2"
@@ -239,13 +241,28 @@ def test_sair_da_conta(cliente):
 # --------------------------------------------------------------- cadastro
 def test_cadastro_valida_e_mostra_username_em_uso(cliente):
     token = csrf(cliente)
-    r = cliente.post("/cadastro", data={"email": "a@b.com", "usuario": "-x", "senha": "12345678", "csrf": token})
+    r = cliente.post("/cadastro", data={"usuario": "-x", "senha": "12345678", "csrf": token})
     assert r.status_code == 400 and "O usuário deve ter" in html(r)
-    r = cliente.post("/cadastro", data={"email": "b@b.com", "usuario": "bob", "senha": "12345678", "csrf": token})
+    r = cliente.post("/cadastro", data={"usuario": "bob", "senha": "12345678", "csrf": token})
     assert "já está em uso" in html(r)
-    r = cliente.post("/cadastro", data={"email": "c@b.com", "usuario": "carol", "senha": "12345678",
-                                        "localizacao": "on", "csrf": token})
-    assert r.status_code == 302 and r.headers["Location"].endswith("/login")
+    r = cliente.post("/cadastro", data={"usuario": "alice", "senha": "12345678", "email": "nao-e-email",
+                                        "csrf": token})
+    assert "E-mail inválido" in html(r)
+
+
+def test_cadastro_sem_email_ja_entra(cliente, sb):
+    r = cliente.post("/cadastro", data={"usuario": "Carol", "senha": "12345678", "localizacao": "on",
+                                        "csrf": csrf(cliente)})
+    assert r.status_code == 302 and r.headers["Location"].endswith("/inicio")
+    assert sb.cadastros[-1] == {"username": "carol", "senha": "12345678", "email": "",
+                                "aceitou_localizacao": True}
+    assert cliente.get("/inicio").status_code == 200
+
+
+def test_cadastro_com_email(cliente, sb):
+    cliente.post("/cadastro", data={"usuario": "dani", "senha": "12345678", "email": " Dani@Ex.com ",
+                                    "csrf": csrf(cliente)})
+    assert sb.cadastros[-1]["email"] == "dani@ex.com"
 
 
 # ------------------------------------------------------------- servidores
@@ -333,6 +350,19 @@ def test_ver_senha_tentada(cliente, sb):
     r = cliente.post("/api/alertas/9/senha", json={}, headers={"X-CSRF": csrf(cliente)})
     assert r.get_json() == {"senha": "alice2024"}
     assert sb.alertas[0]["lido"] is True
+
+
+def test_email_no_perfil_salvar_e_remover(cliente, sb):
+    entrar(cliente)
+    token = csrf(cliente)
+    cliente.post("/perfil", data={"idioma": "pt-BR", "email": "Alice@Ex.com", "csrf": token})
+    assert sb.perfil["email"] == "alice@ex.com"
+    assert 'value="alice@ex.com"' in html(cliente.get("/perfil"))
+    cliente.post("/perfil", data={"idioma": "pt-BR", "email": "", "csrf": token})
+    assert sb.perfil["email"] is None
+    cliente.post("/perfil", data={"idioma": "pt-BR", "email": "errado", "csrf": token},
+                 headers={"Referer": "http://localhost/perfil"})
+    assert "E-mail inválido" in html(cliente.get("/perfil"))
 
 
 def test_salvar_perfil_e_idioma_invalido_vira_padrao(cliente, sb):

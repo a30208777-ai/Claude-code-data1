@@ -4,8 +4,8 @@
 // Deploy: supabase functions deploy ver-alerta
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
-import { decifrar } from "../_shared/cripto.ts";
-import { cors, json } from "../_shared/http.ts";
+import { decifrar } from "./cripto.ts";
+import { cors, json } from "./http.ts";
 
 const URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;

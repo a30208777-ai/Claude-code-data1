@@ -142,13 +142,17 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
         if request.method == "POST":
             f = request.form
             try:
-                g.api.cadastrar(f.get("email", ""), f.get("usuario", ""), f.get("senha", ""),
-                                f.get("localizacao") == "on")
+                g.api.cadastrar(f.get("usuario", ""), f.get("senha", ""),
+                                f.get("localizacao") == "on", f.get("email", ""))
             except ErroRolox as e:
                 flash(e.mensagem, "erro")
                 return render_template("cadastro.html", dados=f), 400
-            flash("Conta criada! Confirme seu e-mail e depois entre.", "ok")
-            return redirect(url_for("login"))
+            try:
+                g.api.atualizar_local("menu")
+            except ErroRolox:
+                pass
+            flash("Conta criada! Bem-vindo ao Rolox.", "ok")
+            return redirect(url_for("inicio"))
         return render_template("cadastro.html", dados={})
 
     @app.post("/sair-da-conta")
@@ -266,7 +270,8 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
             f = request.form
             idioma = f.get("idioma") if f.get("idioma") in IDIOMAS else "pt-BR"
             g.api.atualizar_perfil(idioma=idioma, jogo_mod=f.get("jogo_mod") or None,
-                                   aceitou_localizacao=f.get("localizacao") == "on")
+                                   aceitou_localizacao=f.get("localizacao") == "on",
+                                   email=f.get("email", ""))
             g.api.atualizar_local("menu")
             flash("Perfil salvo.", "ok")
             return redirect(url_for("perfil"))

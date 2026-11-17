@@ -18,6 +18,7 @@ import httpx
 from . import config
 
 USERNAME_VALIDO = re.compile(r"^[a-z0-9]([a-z0-9-]{1,30}[a-z0-9])$")
+EMAIL_VALIDO = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 MENSAGENS = {
     "credenciais_invalidas": "Usuário ou senha incorretos.",
@@ -30,6 +31,9 @@ MENSAGENS = {
                          "(sem hífen no começo ou no fim).",
     "senha_curta": "A senha precisa ter pelo menos 8 caracteres.",
     "email_invalido": "E-mail inválido.",
+    "senha_fraca": "Senha fraca demais. Use letras e números.",
+    "erro_cadastro": "Não foi possível criar a conta agora. Tente de novo.",
+    "muitas_tentativas": "Muitas senhas erradas. Espere um pouco e tente de novo.",
     "username_em_uso": "Esse nome de usuário já está em uso.",
     "sessao_expirada": "Sua sessão expirou. Entre novamente.",
     "sem_conexao": "Sem conexão com o servidor. Verifique sua internet.",
@@ -170,31 +174,24 @@ class RoloxAPI:
         self.sessao = Sessao(dados["access_token"], dados["refresh_token"], dados["user_id"])
         return self.sessao
 
-    async def cadastrar(self, email: str, username: str, senha: str,
-                        aceitou_localizacao: bool) -> dict:
+    async def cadastrar(self, username: str, senha: str, aceitou_localizacao: bool,
+                        email: str = "") -> Sessao:
+        """Cria a conta (e-mail opcional) e já entra nela."""
         username = username.strip().lower()
-        email = email.strip()
+        email = (email or "").strip().lower()
         if not USERNAME_VALIDO.match(username):
             raise ErroRolox("username_invalido")
-        if "@" not in email or "." not in email.split("@")[-1]:
-            raise ErroRolox("email_invalido")
         if len(senha) < 8:
             raise ErroRolox("senha_curta")
-        try:
-            return await self._req(
-                "POST", "/auth/v1/signup",
-                json={
-                    "email": email,
-                    "password": senha,
-                    "data": {"username": username, "aceitou_localizacao": aceitou_localizacao},
-                },
-                autenticado=False,
-            )
-        except ErroRolox as e:
-            # username duplicado estoura a constraint unique no trigger
-            if e.codigo in ("unexpected_failure", "http_500") or "Database error" in str(e.detalhes):
-                raise ErroRolox("username_em_uso", e.detalhes) from e
-            raise
+        if email and not EMAIL_VALIDO.match(email):
+            raise ErroRolox("email_invalido")
+        dados = await self._req(
+            "POST", "/functions/v1/cadastro", autenticado=False,
+            json={"username": username, "senha": senha, "email": email,
+                  "aceitou_localizacao": aceitou_localizacao},
+        )
+        self.sessao = Sessao(dados["access_token"], dados["refresh_token"], dados["user_id"])
+        return self.sessao
 
     async def renovar(self, refresh_token: Optional[str] = None) -> Sessao:
         token = refresh_token or (self.sessao.refresh_token if self.sessao else None)
@@ -226,17 +223,21 @@ class RoloxAPI:
         linhas = await self._req(
             "GET", "/rest/v1/perfis",
             params={"id": f"eq.{self.user_id}",
-                    "select": "id,username,idioma,jogo_mod,aceitou_localizacao,banido"},
+                    "select": "id,username,email,idioma,jogo_mod,aceitou_localizacao,banido"},
         )
         if not linhas:
             raise ErroRolox("perfil_nao_encontrado")
         return linhas[0]
 
     async def atualizar_perfil(self, **campos: Any) -> dict:
-        permitidos = {"idioma", "jogo_mod", "aceitou_localizacao"}
+        permitidos = {"idioma", "jogo_mod", "aceitou_localizacao", "email"}
         invalidos = set(campos) - permitidos
         if invalidos:
             raise ValueError(f"campos não editáveis: {sorted(invalidos)}")
+        if "email" in campos:
+            campos["email"] = (campos["email"] or "").strip().lower() or None
+            if campos["email"] and not EMAIL_VALIDO.match(campos["email"]):
+                raise ErroRolox("email_invalido")
         linhas = await self._req(
             "PATCH", "/rest/v1/perfis", params={"id": f"eq.{self.user_id}"},
             json=campos, prefer="return=representation",

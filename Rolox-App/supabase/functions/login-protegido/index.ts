@@ -12,8 +12,8 @@
 // Deploy: supabase functions deploy login-protegido --no-verify-jwt
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
-import { cifrar } from "../_shared/cripto.ts";
-import { cors, ipDoCliente, json } from "../_shared/http.ts";
+import { cifrar } from "./cripto.ts";
+import { cors, ipDoCliente, json } from "./http.ts";
 
 const URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -106,8 +106,12 @@ Deno.serve(async (req) => {
   if (banido) return json({ erro: "ip_bloqueado" }, 403);
 
   if (falhas >= LIMITE && confiavel) {
-    await publico.auth.resetPasswordForEmail(email);
-    return json({ erro: "confirme_por_email" }, 401);
+    // conta criada sem e-mail real (e-mail interno .invalid): não há para onde mandar
+    if (!email.endsWith("@jogador.rolox.invalid")) {
+      await publico.auth.resetPasswordForEmail(email);
+      return json({ erro: "confirme_por_email" }, 401);
+    }
+    return json({ erro: "muitas_tentativas" }, 429);
   }
 
   return json({ erro: "credenciais_invalidas", tentativas_restantes: LIMITE - falhas }, 401);
