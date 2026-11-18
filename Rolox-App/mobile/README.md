@@ -32,7 +32,7 @@ O endereço do Supabase e a *publishable key* ficam em `src/rolox/config.py` (ou
 ## Backend necessário (pasta `../supabase`)
 
 1. **Banco:** aplicar `supabase/migrations/20261116000000_rolox_base.sql` e depois `20261117000000_email_opcional.sql` `20261118000000_ias_nos_servidores.sql` e `20261118100000_tickets_adm_avatar.sql` (precisa das extensões `pg_net` e `pg_cron`) (tabelas, RLS, RPCs `entrar_servidor`, `sair_servidor`, `enviar_mensagem`, `atualizar_local`, triggers e limpezas agendadas).
-2. **Segredo da criptografia:** `supabase secrets set ROLOX_CHAVE=$(openssl rand -base64 32)`
+2. **Criptografia:** não precisa configurar nada; a chave AES é derivada da service role key do próprio Supabase (ou use o segredo opcional `ROLOX_CHAVE`, 32 bytes em base64).
 3. **Edge Functions:**
    ```bash
    supabase functions deploy cadastro --no-verify-jwt

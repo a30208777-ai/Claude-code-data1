@@ -1,6 +1,5 @@
 // Criptografia AES-GCM + base64 para senhas tentadas e credenciais de backup.
-// A chave fica no segredo ROLOX_CHAVE (32 bytes em base64):
-//   supabase secrets set ROLOX_CHAVE=$(openssl rand -base64 32)
+// Chave: segredo ROLOX_CHAVE (opcional) ou derivada da service role key.
 
 const enc = new TextEncoder();
 const dec = new TextDecoder();
@@ -17,12 +16,22 @@ function deB64(texto: string): Uint8Array {
 
 let chaveCache: CryptoKey | null = null;
 
+// A chave AES vem do segredo ROLOX_CHAVE, se existir. Se não existir, é gerada
+// a partir da SUPABASE_SERVICE_ROLE_KEY (que o Supabase já entrega às funções
+// e nunca sai do servidor): SHA-256 dela = 32 bytes. Assim não é preciso
+// configurar nenhum segredo extra.
 async function chave(): Promise<CryptoKey> {
   if (chaveCache) return chaveCache;
+  let bytes: Uint8Array;
   const bruta = Deno.env.get("ROLOX_CHAVE");
-  if (!bruta) throw new Error("segredo ROLOX_CHAVE não configurado");
-  const bytes = deB64(bruta);
-  if (bytes.length !== 32) throw new Error("ROLOX_CHAVE precisa ter 32 bytes");
+  if (bruta) {
+    bytes = deB64(bruta);
+    if (bytes.length !== 32) throw new Error("ROLOX_CHAVE precisa ter 32 bytes");
+  } else {
+    const base = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (!base) throw new Error("sem chave de criptografia");
+    bytes = new Uint8Array(await crypto.subtle.digest("SHA-256", enc.encode("rolox-cripto:" + base)));
+  }
   chaveCache = await crypto.subtle.importKey("raw", bytes, "AES-GCM", false, ["encrypt", "decrypt"]);
   return chaveCache;
 }
