@@ -317,7 +317,10 @@ class RoloxApp:
                         self.tela_chat()
                 await self.executar(acao)
 
-            etiquetas = [ft.Text(f"{s['jogadores']}/{s['capacidade']} jogadores")]
+            texto = f"{s['jogadores']}/{s['capacidade']} jogadores"
+            if s.get("ias"):
+                texto += f" ({s['ias']} IA)"
+            etiquetas = [ft.Text(texto)]
             if s["is_hack_server"]:
                 etiquetas.append(ft.Container(
                     ft.Text("HACK/MOD", size=11, color=ft.Colors.WHITE),
@@ -378,7 +381,7 @@ class RoloxApp:
                 self.page.pop_dialog()
                 r = await self.api.entrar(s["server_uid"])
                 if r["resultado"] in ("entrou", "ja_esta"):
-                    s["jogadores"] = 1
+                    s["jogadores"] = 1 + cap // 2   # você + as IAs (metade, para baixo)
                     self.servidor_atual = s
                     self.tela_chat()
             await self.executar(acao)
@@ -411,7 +414,10 @@ class RoloxApp:
             for m in novas:
                 ultimo_id = max(ultimo_id, m["id"])
                 mensagens.controls.append(ft.Text(spans=[
-                    ft.TextSpan(f"{m['username']}: ", ft.TextStyle(weight=ft.FontWeight.BOLD)),
+                    ft.TextSpan(f"{m['username']}", ft.TextStyle(weight=ft.FontWeight.BOLD)),
+                    ft.TextSpan(" IA" if m.get("bot_id") else "",
+                                ft.TextStyle(size=11, weight=ft.FontWeight.BOLD, color=COR_HACK)),
+                    ft.TextSpan(": ", ft.TextStyle(weight=ft.FontWeight.BOLD)),
                     ft.TextSpan(m["mensagem_filtrada"]),
                 ], selectable=True))
             onde = await self.api.onde_estou()

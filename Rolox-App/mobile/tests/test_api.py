@@ -154,11 +154,13 @@ def test_lista_servidores_conta_jogadores():
         assert "users_dos_servidores(count)" in req.url.params["select"]
         return resposta(200, [
             {"server_uid": "s1", "gameid": "corrida", "capacidade": 10, "is_hack_server": False,
-             "status": "aberto", "host_id": "u2", "users_dos_servidores": [{"count": 3}]},
+             "status": "aberto", "host_id": "u2", "users_dos_servidores": [{"count": 3}],
+             "bots_dos_servidores": [{"count": 5}]},
         ])
 
     s = rodar(logada(h).servidores())
-    assert s[0]["jogadores"] == 3 and "users_dos_servidores" not in s[0]
+    assert (s[0]["humanos"], s[0]["ias"], s[0]["jogadores"]) == (3, 5, 8)
+    assert "users_dos_servidores" not in s[0] and "bots_dos_servidores" not in s[0]
 
 
 def test_entrar_fila():
@@ -238,7 +240,7 @@ def test_enviar_muito_rapido():
 def test_mensagens_pede_so_as_novas():
     def h(req):
         assert req.url.params["id"] == "gt.42"
-        assert req.url.params["select"] == "id,username,mensagem_filtrada,criado_em"
+        assert req.url.params["select"] == "id,username,mensagem_filtrada,criado_em,bot_id"
         return resposta(200, [])
 
     assert rodar(logada(h).mensagens("s1", 42)) == []

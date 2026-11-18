@@ -31,11 +31,12 @@ O endereço do Supabase e a *publishable key* ficam em `src/rolox/config.py` (ou
 
 ## Backend necessário (pasta `../supabase`)
 
-1. **Banco:** aplicar `supabase/migrations/20261116000000_rolox_base.sql` e depois `20261117000000_email_opcional.sql` (tabelas, RLS, RPCs `entrar_servidor`, `sair_servidor`, `enviar_mensagem`, `atualizar_local`, triggers e limpezas agendadas).
+1. **Banco:** aplicar `supabase/migrations/20261116000000_rolox_base.sql` e depois `20261117000000_email_opcional.sql` e `20261118000000_ias_nos_servidores.sql` (precisa das extensões `pg_net` e `pg_cron`) (tabelas, RLS, RPCs `entrar_servidor`, `sair_servidor`, `enviar_mensagem`, `atualizar_local`, triggers e limpezas agendadas).
 2. **Segredo da criptografia:** `supabase secrets set ROLOX_CHAVE=$(openssl rand -base64 32)`
 3. **Edge Functions:**
    ```bash
    supabase functions deploy cadastro --no-verify-jwt
+   supabase functions deploy bots-responder --no-verify-jwt
    supabase functions deploy login-protegido --no-verify-jwt
    supabase functions deploy ver-alerta
    ```
@@ -43,6 +44,11 @@ O endereço do Supabase e a *publishable key* ficam em `src/rolox/config.py` (ou
 5. **Catálogo:** cadastrar os jogos em `jogos` com `commit_aprovado` preenchido (só jogos aprovados aparecem no app).
 
 Testes do banco num Postgres local: `supabase/tests/rodar.sh`.
+
+## IAs nos servidores
+Todo servidor recebe jogadores de IA: **metade da capacidade, arredondada para baixo** (10 → 5, 11 → 5, 3 → 1, 1 → 0). Jogadores reais têm prioridade: se o servidor lota, uma IA sai para abrir vaga, e volta quando alguém sai. O total nunca passa da capacidade, e a lista mostra, por exemplo, "7/10 jogadores (5 IA)".
+
+As IAs conversam no chat pela Edge Function `bots-responder`, chamada a cada mensagem de jogador real (gatilho com `pg_net`). Ela usa a mesma ideia do `IA/chat_ias.py`: tenta os modelos em ordem e troca quando um falha ou bate o limite. Sem chave nenhuma, usa os provedores gratuitos (Kilo, LLM7, OVH); com os segredos `CHAVE_GROQ`, `CHAVE_GEMINI`, `CHAVE_MISTRAL`, `CHAVE_COHERE`, `CHAVE_AION` ou `CHAVE_OPENROUTER` no Supabase, usa esses primeiro. Cada IA tem nome e personalidade (tabela `bots`), responde quando é chamada pelo nome ou quando alguém fala com o grupo, aparece com a etiqueta **IA** no chat e, se perguntarem, diz que é uma IA.
 
 ## E-mail opcional
 O cadastro passa pela Edge Function `cadastro`, que cria a conta no Supabase Auth com um e-mail interno (`<usuario>@jogador.rolox.invalid`, domínio reservado que nunca recebe mensagens) já confirmado. O e-mail de verdade, se o jogador quiser, fica em `perfis.email` e pode ser trocado em Perfil/config. Contas sem e-mail não recebem o e-mail de recuperação depois de 3 senhas erradas no próprio aparelho; em vez disso aparece "Muitas senhas erradas, espere um pouco".

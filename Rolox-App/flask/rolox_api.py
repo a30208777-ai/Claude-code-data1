@@ -222,11 +222,14 @@ class RoloxAPI:
     def servidores(self) -> list[dict]:
         linhas = self._req("GET", "/rest/v1/servidores_ativos", params={
             "select": "server_uid,gameid,host_id,capacidade,is_hack_server,status,"
-                      "users_dos_servidores(count)",
+                      "users_dos_servidores(count),bots_dos_servidores(count)",
             "status": "neq.encerrando", "order": "criado_em.desc", "limit": "100"})
         for s in linhas:
             contagem = s.pop("users_dos_servidores", None) or [{"count": 0}]
-            s["jogadores"] = contagem[0].get("count", 0)
+            s["humanos"] = contagem[0].get("count", 0)
+            ias = s.pop("bots_dos_servidores", None) or [{"count": 0}]
+            s["ias"] = ias[0].get("count", 0)
+            s["jogadores"] = s["humanos"] + s["ias"]
         return linhas
 
     def servidor(self, server_uid: str) -> Optional[dict]:
@@ -272,7 +275,7 @@ class RoloxAPI:
     def mensagens(self, server_uid: str, depois_de: int = 0) -> list[dict]:
         return self._req("GET", "/rest/v1/servidores_logados", params={
             "server_uid": f"eq.{server_uid}", "id": f"gt.{depois_de}",
-            "select": "id,username,mensagem_filtrada,criado_em", "order": "id", "limit": "100"})
+            "select": "id,username,mensagem_filtrada,criado_em,bot_id", "order": "id", "limit": "100"})
 
     def enviar(self, server_uid: str, texto: str, idioma: Optional[str] = None) -> dict:
         return self._rpc("enviar_mensagem", p_server=server_uid, p_texto=texto, p_idioma=idioma)

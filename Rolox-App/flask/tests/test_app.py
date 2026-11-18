@@ -96,7 +96,8 @@ class SupabaseFalso:
             return Resp(200, self.jogos)
         if p == "/rest/v1/servidores_ativos":
             if metodo == "GET":
-                return Resp(200, [dict(s, users_dos_servidores=[{"count": len(self.membros.get(s["server_uid"], []))}])
+                return Resp(200, [dict(s, users_dos_servidores=[{"count": len(self.membros.get(s["server_uid"], []))}],
+                                       bots_dos_servidores=[{"count": s["capacidade"] // 2}])
                                   for s in self.servidores])
             if metodo == "PATCH":
                 return Resp(204)
@@ -265,7 +266,7 @@ def test_tela_de_cadastro_nao_pede_email(cliente):
 def test_lista_esconde_servidor_hack_para_quem_nao_usa(cliente):
     entrar(cliente)
     pagina = html(cliente.get("/servidores"))
-    assert "Corrida Turbo" in pagina and "2/10 jogadores" in pagina and "HACK/MOD</span>" not in pagina
+    assert "Corrida Turbo" in pagina and "7/10 jogadores (5 IA)" in pagina and "HACK/MOD</span>" not in pagina
     assert "HACK/MOD</span>" in html(cliente.get("/servidores?todos=1"))
 
 

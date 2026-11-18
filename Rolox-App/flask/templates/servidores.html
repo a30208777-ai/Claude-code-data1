@@ -17,7 +17,7 @@
   <div class="cartao">
     <div class="info">
       <div class="titulo">{{ jogos.get(s.gameid, s.gameid) }}{% if s.is_hack_server %}<span class="etiqueta">HACK/MOD</span>{% endif %}</div>
-      <div class="detalhe">{{ s.jogadores }}/{{ s.capacidade }} jogadores</div>
+      <div class="detalhe">{{ s.jogadores }}/{{ s.capacidade }} jogadores{% if s.ias %} ({{ s.ias }} IA){% endif %}</div>
     </div>
     <form method="post" action="{{ url_for('entrar', uid=s.server_uid) }}">
       <input type="hidden" name="csrf" value="{{ csrf }}">

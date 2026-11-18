@@ -256,7 +256,7 @@ class RoloxAPI:
             "GET", "/rest/v1/servidores_ativos",
             params={
                 "select": "server_uid,gameid,host_id,capacidade,is_hack_server,status,"
-                          "users_dos_servidores(count)",
+                          "users_dos_servidores(count),bots_dos_servidores(count)",
                 "status": "neq.encerrando",
                 "order": "criado_em.desc",
                 "limit": "100",
@@ -264,7 +264,10 @@ class RoloxAPI:
         )
         for s in linhas:
             contagem = s.pop("users_dos_servidores", None) or [{"count": 0}]
-            s["jogadores"] = contagem[0].get("count", 0)
+            s["humanos"] = contagem[0].get("count", 0)
+            ias = s.pop("bots_dos_servidores", None) or [{"count": 0}]
+            s["ias"] = ias[0].get("count", 0)
+            s["jogadores"] = s["humanos"] + s["ias"]
         return linhas
 
     async def criar_servidor(self, gameid: str, capacidade: int, hack: bool) -> dict:
@@ -329,7 +332,7 @@ class RoloxAPI:
             params={
                 "server_uid": f"eq.{server_uid}",
                 "id": f"gt.{depois_de}",
-                "select": "id,username,mensagem_filtrada,criado_em",
+                "select": "id,username,mensagem_filtrada,criado_em,bot_id",
                 "order": "id",
                 "limit": "100",
             },
