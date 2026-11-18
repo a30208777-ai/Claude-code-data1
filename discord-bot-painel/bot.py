@@ -157,9 +157,19 @@ class PainelBot(discord.Client):
         await self.runner.setup()
         await web.TCPSite(self.runner, "0.0.0.0", PORT).start()
         log.info("Painel web ouvindo na porta %s", PORT)
+
+    async def sync_commands(self) -> None:
+        """Registra os comandos / só se mudaram (evita bloqueio do Discord ao reiniciar)."""
         try:
-            synced = await self.tree.sync()
+            local = {(c.name, c.description) for c in self.tree.get_commands()}
+            remote = {(c.name, c.description) for c in await self.tree.fetch_commands()}
+            if local == remote:
+                log.info("Comandos de barra já estão atualizados (%d)", len(local))
+                return
+            synced = await asyncio.wait_for(self.tree.sync(), timeout=60)
             log.info("%d comandos de barra sincronizados", len(synced))
+        except asyncio.TimeoutError:
+            log.warning("Discord demorou para registrar os comandos; tento no próximo início")
         except discord.HTTPException as exc:
             log.warning("Falha ao sincronizar comandos: %s", exc)
 
@@ -188,6 +198,9 @@ bot = PainelBot()
 @bot.event
 async def on_ready() -> None:
     log.info("Conectado como %s em %d servidor(es)", bot.user, len(bot.guilds))
+    if not getattr(bot, "_synced", False):
+        bot._synced = True
+        asyncio.create_task(bot.sync_commands())
 
 
 @bot.event
