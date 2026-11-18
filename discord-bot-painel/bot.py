@@ -148,7 +148,10 @@ class PainelBot(discord.Client):
         self.tree = app_commands.CommandTree(self)
         self.http_session: aiohttp.ClientSession | None = None
         self.runner: web.AppRunner | None = None
-        self.webhooks: dict[int, discord.Webhook] = {}
+        # um webhook por (canal, pessoa)
+        self.webhooks: dict[tuple[int, str], discord.Webhook] = {}
+        self.webhook_used: dict[int, float] = {}
+        self.webhook_locks: dict[int, asyncio.Lock] = defaultdict(asyncio.Lock)
         self.sockets: dict[web.WebSocketResponse, str | None] = {}
 
     async def setup_hook(self) -> None:
@@ -291,18 +294,51 @@ def readable_channel(channel_id: str) -> discord.TextChannel | None:
     return ch if (p.view_channel and p.read_message_history) else None
 
 
-async def get_webhook(ch: discord.TextChannel) -> discord.Webhook | None:
-    if ch.id in bot.webhooks:
-        return bot.webhooks[ch.id]
+MAX_WEBHOOKS_PER_CHANNEL = 15  # limite do Discord
+
+
+def webhook_name(person: str) -> str:
+    return f"{person} (via painel)"[:80]
+
+
+async def get_webhook(ch: discord.TextChannel, person: str) -> discord.Webhook | None:
+    """Devolve o webhook desta pessoa neste canal, criando se precisar.
+
+    Cada pessoa ganha o seu próprio webhook em cada canal (com o nome dela).
+    Se o canal chegar no limite de 15 webhooks, apaga o webhook do painel
+    usado há mais tempo para abrir espaço.
+    """
+    key = (ch.id, person)
+    if key in bot.webhooks:
+        return bot.webhooks[key]
     if not ch.permissions_for(ch.guild.me).manage_webhooks:
         return None
-    for wh in await ch.webhooks():
-        if wh.user and bot.user and wh.user.id == bot.user.id and wh.token:
-            bot.webhooks[ch.id] = wh
-            return wh
-    wh = await ch.create_webhook(name="Painel")
-    bot.webhooks[ch.id] = wh
-    return wh
+    async with bot.webhook_locks[ch.id]:  # evita criar dois iguais ao mesmo tempo
+        if key in bot.webhooks:
+            return bot.webhooks[key]
+        wanted = webhook_name(person)
+        existing = await ch.webhooks()
+        mine = [w for w in existing if w.user and bot.user and w.user.id == bot.user.id and w.token]
+        for w in mine:
+            if w.name == wanted:
+                bot.webhooks[key] = w
+                return w
+        if len(existing) >= MAX_WEBHOOKS_PER_CHANNEL:
+            if not mine:
+                return None  # canal cheio de webhooks de outros bots → envia como o bot
+            oldest = min(mine, key=lambda w: (bot.webhook_used.get(w.id, 0), w.created_at))
+            try:
+                await oldest.delete(reason="Painel: abrindo espaço para outro webhook")
+            except discord.HTTPException:
+                return None
+            for k, v in list(bot.webhooks.items()):
+                if v.id == oldest.id:
+                    bot.webhooks.pop(k, None)
+            log.info("Webhook '%s' apagado em #%s para abrir espaço", oldest.name, ch.name)
+        wh = await ch.create_webhook(name=wanted, reason=f"Painel: webhook de {person}")
+        log.info("Webhook '%s' criado em #%s", wanted, ch.name)
+        bot.webhooks[key] = wh
+        return wh
 
 
 # ---------------------------------------------------------------- web
@@ -456,7 +492,7 @@ async def api_send(request: web.Request) -> web.Response:
     send_times[name].append(time.time())
     sent: discord.Message | None = None
     try:
-        wh = await get_webhook(ch)
+        wh = await get_webhook(ch, name)
     except discord.HTTPException:
         wh = None
 
@@ -471,16 +507,17 @@ async def api_send(request: web.Request) -> web.Response:
             try:
                 sent = await wh.send(
                     content=text or None,
-                    username=f"{name} (via painel)",
+                    username=webhook_name(name),
                     avatar_url=f"https://api.dicebear.com/9.x/initials/png?seed={quote(name)}",
                     **files(),
                     allowed_mentions=NO_MENTIONS,
                     wait=True,
                 )
+                bot.webhook_used[wh.id] = time.time()
                 break
             except discord.NotFound:  # webhook foi apagado no Discord
-                bot.webhooks.pop(ch.id, None)
-                wh = await get_webhook(ch)
+                bot.webhooks.pop((ch.id, name), None)
+                wh = await get_webhook(ch, name)
                 if not wh or attempt:
                     break
     if sent is None:

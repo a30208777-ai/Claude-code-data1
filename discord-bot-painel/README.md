@@ -27,7 +27,7 @@ Bot do Discord em Python com um **painel no navegador** para ler e escrever nos 
    View Channels, Send Messages, Read Message History, Attach Files, Embed Links e **Manage Webhooks**.
 5. Abra o link gerado e adicione o bot ao seu servidor.
 
-> A permissão **Manage Webhooks** faz a mensagem aparecer com o nome de quem escreveu, por exemplo "João (via painel)". Sem ela, a mensagem sai como o bot, com o nome na frente.
+> A permissão **Manage Webhooks** faz o bot criar **um webhook para cada pessoa em cada canal**, com o nome dela, por exemplo "João (via painel)". O Discord permite até 15 webhooks por canal; quando o canal enche, o bot apaga o webhook do painel usado há mais tempo. Sem essa permissão, a mensagem sai como o bot, com o nome na frente.
 >
 > O bot só enxerga os canais onde tem permissão. Para esconder um canal do painel, tire do bot a permissão de ver esse canal.
 
