@@ -1,0 +1,602 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1e1f22">
+<title>Painel do Bot</title>
+<style>
+  :root {
+    --bg: #313338; --bg2: #2b2d31; --bg3: #1e1f22; --bg4: #383a40;
+    --text: #dbdee1; --muted: #949ba4; --head: #f2f3f5;
+    --accent: #5865f2; --accent2: #4752c4; --danger: #f23f43; --ok: #23a55a;
+    --hover: rgba(78, 80, 88, .3);
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font: 15px/1.4 "gg sans", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    overflow: hidden;
+  }
+  button, input, textarea, select { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  .hidden { display: none !important; }
+
+  /* ---------- login ---------- */
+  #login {
+    position: fixed; inset: 0; display: grid; place-items: center; padding: 16px;
+    background: linear-gradient(135deg, #404eed 0%, #1e1f22 70%);
+  }
+  .card {
+    width: 100%; max-width: 400px; background: var(--bg); border-radius: 8px;
+    padding: 28px 24px; box-shadow: 0 8px 24px rgba(0,0,0,.4);
+  }
+  .card h1 { margin: 0 0 4px; color: var(--head); font-size: 22px; text-align: center; }
+  .card p.sub { margin: 0 0 20px; color: var(--muted); text-align: center; }
+  label { display: block; font-size: 12px; font-weight: 700; text-transform: uppercase;
+    color: var(--muted); margin: 14px 0 6px; letter-spacing: .02em; }
+  .field { position: relative; }
+  .field input {
+    width: 100%; padding: 11px 12px; border: 0; border-radius: 4px;
+    background: var(--bg3); outline: none;
+  }
+  .field input:focus { box-shadow: 0 0 0 2px var(--accent); }
+  .field .eye {
+    position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+    background: none; border: 0; color: var(--muted); padding: 6px;
+  }
+  .btn {
+    width: 100%; margin-top: 20px; padding: 11px; border: 0; border-radius: 4px;
+    background: var(--accent); color: #fff; font-weight: 600;
+  }
+  .btn:hover { background: var(--accent2); }
+  .btn:disabled { opacity: .6; cursor: default; }
+  .err { color: var(--danger); font-size: 14px; min-height: 20px; margin-top: 10px; text-align: center; }
+
+  /* ---------- app ---------- */
+  #app { display: flex; height: 100dvh; }
+  #sidebar {
+    width: 260px; flex-shrink: 0; background: var(--bg2); display: flex; flex-direction: column;
+  }
+  .guild-select { padding: 12px; border-bottom: 1px solid var(--bg3); }
+  .guild-select select {
+    width: 100%; padding: 8px; border-radius: 4px; border: 0; background: var(--bg3);
+    font-weight: 600; color: var(--head);
+  }
+  #channels { flex: 1; overflow-y: auto; padding: 8px; }
+  .cat { margin: 14px 4px 4px; font-size: 12px; font-weight: 700; text-transform: uppercase;
+    color: var(--muted); letter-spacing: .02em; }
+  .chan {
+    display: flex; align-items: center; gap: 6px; width: 100%; text-align: left;
+    padding: 7px 8px; border: 0; border-radius: 4px; background: none; color: var(--muted);
+  }
+  .chan:hover { background: var(--hover); color: var(--text); }
+  .chan.active { background: var(--bg4); color: var(--head); }
+  .chan .hash { font-size: 20px; line-height: 1; opacity: .7; }
+  .chan .lock { margin-left: auto; font-size: 12px; opacity: .7; }
+  .user-bar {
+    display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: #232428;
+  }
+  .user-bar .me { flex: 1; min-width: 0; font-weight: 600; color: var(--head);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .user-bar .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
+  .user-bar .dot.on { background: var(--ok); }
+  .icon-btn { background: none; border: 0; color: var(--muted); padding: 6px 8px; border-radius: 4px; }
+  .icon-btn:hover { background: var(--hover); color: var(--text); }
+
+  #main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  header {
+    height: 48px; flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 0 12px;
+    border-bottom: 1px solid var(--bg3); box-shadow: 0 1px 2px rgba(0,0,0,.2);
+  }
+  header .title { font-weight: 700; color: var(--head); white-space: nowrap; }
+  header .topic { color: var(--muted); font-size: 13px; overflow: hidden; text-overflow: ellipsis;
+    white-space: nowrap; border-left: 1px solid var(--bg4); padding-left: 8px; }
+  #menu-btn { display: none; font-size: 20px; }
+
+  #messages { flex: 1; overflow-y: auto; padding: 16px 0 8px; overscroll-behavior: contain; }
+  .load-more { display: block; margin: 0 auto 12px; background: var(--bg4); border: 0; border-radius: 4px;
+    padding: 6px 14px; color: var(--text); font-size: 13px; }
+  .empty { color: var(--muted); text-align: center; padding: 40px 16px; }
+  .msg { display: flex; gap: 14px; padding: 2px 16px 2px 16px; position: relative; }
+  .msg.first { margin-top: 14px; }
+  .msg:hover { background: rgba(2,2,2,.06); }
+  .msg .av { width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0; background: var(--bg4); }
+  .msg .gutter { width: 40px; flex-shrink: 0; }
+  .msg .body { min-width: 0; flex: 1; }
+  .msg .meta { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .msg .name { font-weight: 600; color: var(--head); }
+  .badge { font-size: 10px; font-weight: 700; background: var(--accent); color: #fff;
+    border-radius: 3px; padding: 1px 4px; vertical-align: 1px; }
+  .msg .time { font-size: 12px; color: var(--muted); }
+  .msg .content { white-space: pre-wrap; word-wrap: break-word; overflow-wrap: anywhere; }
+  .msg .content.sys { color: var(--muted); font-style: italic; }
+  .msg .edited { font-size: 11px; color: var(--muted); }
+  .msg .reply { font-size: 13px; color: var(--muted); margin-bottom: 2px; overflow: hidden;
+    text-overflow: ellipsis; white-space: nowrap; }
+  .msg .reply b { color: var(--text); }
+  .msg .actions { position: absolute; right: 16px; top: -10px; display: none; background: var(--bg);
+    border: 1px solid var(--bg3); border-radius: 4px; }
+  .msg:hover .actions { display: block; }
+  .msg .actions button { background: none; border: 0; padding: 4px 8px; color: var(--muted); font-size: 13px; }
+  .msg .actions button:hover { color: var(--text); }
+  .att-img { display: block; max-width: min(400px, 100%); max-height: 300px; border-radius: 6px; margin-top: 6px; }
+  .att-file { display: inline-block; margin-top: 6px; padding: 8px 12px; background: var(--bg2);
+    border-radius: 6px; color: #00a8fc; }
+  .embed { margin-top: 6px; max-width: 520px; background: var(--bg2); border-left: 4px solid var(--bg3);
+    border-radius: 4px; padding: 8px 12px; }
+  .embed .et { font-weight: 600; color: var(--head); }
+  .embed img { max-width: 100%; border-radius: 4px; margin-top: 6px; }
+  .content code { background: var(--bg3); padding: 1px 4px; border-radius: 3px; font-size: 13px;
+    font-family: Consolas, "Courier New", monospace; }
+  .content pre { background: var(--bg2); border: 1px solid var(--bg3); padding: 8px; border-radius: 4px;
+    overflow-x: auto; margin: 4px 0; white-space: pre; }
+  .content pre code { background: none; padding: 0; }
+  .content a, .embed a { color: #00a8fc; text-decoration: none; }
+  .content a:hover { text-decoration: underline; }
+  .content blockquote { margin: 2px 0; padding-left: 10px; border-left: 4px solid var(--bg4); }
+  .spoiler { background: #1e1f22; color: transparent; border-radius: 3px; cursor: pointer; }
+  .spoiler.show { background: var(--bg4); color: inherit; }
+
+  #composer { padding: 0 16px 16px; flex-shrink: 0; }
+  .reply-bar, .file-bar {
+    display: flex; align-items: center; gap: 8px; background: var(--bg2); padding: 8px 12px;
+    border-radius: 8px 8px 0 0; font-size: 13px; color: var(--muted);
+  }
+  .reply-bar span, .file-bar span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .input-row { display: flex; align-items: flex-end; gap: 4px; background: var(--bg4);
+    border-radius: 8px; padding: 4px 6px; }
+  .reply-bar + .input-row, .file-bar + .input-row, .reply-bar + .file-bar { border-top-left-radius: 0; border-top-right-radius: 0; }
+  #text {
+    flex: 1; resize: none; border: 0; background: none; outline: none; padding: 9px 4px;
+    max-height: 40vh; min-height: 40px;
+  }
+  #text:disabled { cursor: not-allowed; }
+  .attach, .send { font-size: 20px; padding: 6px 10px; }
+  .send { color: var(--accent); }
+  .counter { font-size: 11px; color: var(--muted); text-align: right; height: 14px; margin-top: 2px; }
+  .counter.over { color: var(--danger); }
+  #toast {
+    position: fixed; left: 50%; bottom: 90px; transform: translateX(-50%); background: var(--bg3);
+    color: var(--head); padding: 10px 16px; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,.4);
+    max-width: calc(100% - 32px); z-index: 50;
+  }
+  #toast.bad { background: var(--danger); color: #fff; }
+  #backdrop { display: none; }
+
+  @media (max-width: 760px) {
+    #sidebar { position: fixed; z-index: 20; top: 0; bottom: 0; left: 0; width: 82%; max-width: 300px;
+      transform: translateX(-100%); transition: transform .2s; }
+    #sidebar.open { transform: none; }
+    #backdrop.open { display: block; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 10; }
+    #menu-btn { display: block; }
+    header .topic { display: none; }
+    .msg { padding: 2px 10px; gap: 10px; }
+    .msg .av, .msg .gutter { width: 34px; }
+    .msg .av { height: 34px; }
+    .msg .actions { display: block; position: static; float: right; border: 0; background: none; }
+    .msg .actions .lbl { display: none; }
+    .msg .actions button { font-size: 16px; padding: 0 4px; }
+    #composer { padding: 0 8px calc(8px + env(safe-area-inset-bottom)); }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ LOGIN ============ -->
+<div id="login" class="hidden">
+  <form class="card" id="login-form" autocomplete="on">
+    <h1>Painel do Bot</h1>
+    <p class="sub">Leia e escreva no Discord pelo navegador</p>
+    <label for="l-name">Seu nome</label>
+    <div class="field"><input id="l-name" name="username" maxlength="32" required autocomplete="nickname" placeholder="Como vai aparecer no Discord"></div>
+    <label for="l-pass">Senha do painel</label>
+    <div class="field">
+      <input id="l-pass" name="password" type="password" required autocomplete="current-password">
+      <button type="button" class="eye" id="eye" aria-label="Mostrar senha">👁</button>
+    </div>
+    <button class="btn" id="l-btn">Entrar</button>
+    <div class="err" id="l-err"></div>
+  </form>
+</div>
+
+<!-- ============ APP ============ -->
+<div id="app" class="hidden">
+  <aside id="sidebar">
+    <div class="guild-select"><select id="guild" aria-label="Servidor"></select></div>
+    <nav id="channels"></nav>
+    <div class="user-bar">
+      <span class="dot" id="status-dot" title="Conexão em tempo real"></span>
+      <span class="me" id="me"></span>
+      <button class="icon-btn" id="logout" title="Sair">Sair</button>
+    </div>
+  </aside>
+  <div id="backdrop"></div>
+
+  <main id="main">
+    <header>
+      <button class="icon-btn" id="menu-btn" aria-label="Canais">☰</button>
+      <span class="title" id="ch-title">Escolha um canal</span>
+      <span class="topic" id="ch-topic"></span>
+    </header>
+    <section id="messages"><div class="empty">Escolha um canal na lista para ver as mensagens.</div></section>
+    <form id="composer" class="hidden">
+      <div class="reply-bar hidden" id="reply-bar"><span id="reply-text"></span><button type="button" class="icon-btn" id="reply-x">✕</button></div>
+      <div class="file-bar hidden" id="file-bar"><span id="file-text"></span><button type="button" class="icon-btn" id="file-x">✕</button></div>
+      <div class="input-row">
+        <button type="button" class="icon-btn attach" id="attach" title="Enviar imagem/arquivo">＋</button>
+        <input type="file" id="file" class="hidden">
+        <textarea id="text" rows="1" maxlength="2000" placeholder="Conversar"></textarea>
+        <button class="icon-btn send" id="send" title="Enviar">➤</button>
+      </div>
+      <div class="counter" id="counter"></div>
+    </form>
+  </main>
+</div>
+
+<div id="toast" class="hidden"></div>
+
+<script>
+(() => {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+  };
+
+  const state = {
+    me: null, guilds: [], guildId: null, channel: null,
+    messages: [], oldestLoaded: false, loading: false,
+    replyTo: null, file: null, ws: null, wsTries: 0,
+  };
+
+  // ---------------- util ----------------
+  let toastTimer;
+  function toast(msg, bad = false) {
+    const t = $("toast");
+    t.textContent = msg; t.className = bad ? "bad" : "";
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => t.className = "hidden", 3500);
+  }
+
+  async function api(path, opts = {}) {
+    const o = { credentials: "same-origin", ...opts, headers: { ...(opts.headers || {}) } };
+    if ((o.method || "GET") !== "GET") o.headers["X-Panel"] = "1";
+    const r = await fetch(path, o);
+    let data = null;
+    try { data = await r.json(); } catch {}
+    if (r.status === 401 && path !== "/api/login") { showLogin(); throw new Error("Faça login"); }
+    if (!r.ok) throw new Error((data && data.error) || `Erro ${r.status}`);
+    return data;
+  }
+
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+  // Markdown básico do Discord (o texto é escapado ANTES de formatar).
+  function md(raw) {
+    const blocks = [];
+    let s = esc(raw);
+    s = s.replace(/```(?:[a-z0-9+-]*\n)?([\s\S]*?)```/gi, (_, c) => `\u0000${blocks.push(`<pre><code>${c}</code></pre>`) - 1}\u0000`);
+    s = s.replace(/`([^`\n]+)`/g, (_, c) => `\u0000${blocks.push(`<code>${c}</code>`) - 1}\u0000`);
+    s = s.replace(/\bhttps?:\/\/[^\s<]+[^\s<.,:;"')\]]/g, (u) =>
+      `\u0000${blocks.push(`<a href="${u}" target="_blank" rel="noopener noreferrer">${u}</a>`) - 1}\u0000`);
+    s = s.replace(/\*\*(.+?)\*\*/gs, "<b>$1</b>")
+         .replace(/__(.+?)__/gs, "<u>$1</u>")
+         .replace(/(^|[^*])\*(?!\s)(.+?)\*/gs, "$1<i>$2</i>")
+         .replace(/(^|\W)_(?!\s)(.+?)_(?=\W|$)/gs, "$1<i>$2</i>")
+         .replace(/~~(.+?)~~/gs, "<s>$1</s>")
+         .replace(/\|\|(.+?)\|\|/gs, '<span class="spoiler">$1</span>')
+         .replace(/^&gt; (.*)$/gm, "<blockquote>$1</blockquote>");
+    return s.replace(/\u0000(\d+)\u0000/g, (_, i) => blocks[+i]);
+  }
+
+  const fmtTime = (iso) => {
+    const d = new Date(iso), now = new Date();
+    const hm = d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    if (d.toDateString() === now.toDateString()) return `Hoje às ${hm}`;
+    const y = new Date(now); y.setDate(now.getDate() - 1);
+    if (d.toDateString() === y.toDateString()) return `Ontem às ${hm}`;
+    return `${d.toLocaleDateString("pt-BR")} ${hm}`;
+  };
+
+  // ---------------- login ----------------
+  function showLogin() {
+    $("app").classList.add("hidden");
+    $("login").classList.remove("hidden");
+    $("l-name").value = store.get("painel_nome") || "";
+    (store.get("painel_nome") ? $("l-pass") : $("l-name")).focus();
+    if (state.ws) { state.ws.onclose = null; state.ws.close(); state.ws = null; }
+  }
+
+  $("eye").onclick = () => {
+    const p = $("l-pass"); p.type = p.type === "password" ? "text" : "password";
+  };
+
+  $("login-form").onsubmit = async (e) => {
+    e.preventDefault();
+    $("l-err").textContent = ""; $("l-btn").disabled = true;
+    try {
+      const r = await api("/api/login", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: $("l-name").value, password: $("l-pass").value }),
+      });
+      store.set("painel_nome", r.name);
+      $("l-pass").value = "";
+      start(r.name);
+    } catch (err) {
+      $("l-err").textContent = err.message;
+    } finally { $("l-btn").disabled = false; }
+  };
+
+  $("logout").onclick = async () => {
+    try { await api("/api/logout", { method: "POST" }); } catch {}
+    showLogin();
+  };
+
+  // ---------------- canais ----------------
+  async function loadGuilds(retry = 0) {
+    try {
+      state.guilds = await api("/api/guilds");
+    } catch (err) {
+      if (retry < 20) { toast(err.message); setTimeout(() => loadGuilds(retry + 1), 3000); }
+      return;
+    }
+    const sel = $("guild");
+    sel.innerHTML = state.guilds.map((g) => `<option value="${g.id}">${esc(g.name)}</option>`).join("")
+      || `<option>O bot não está em nenhum servidor</option>`;
+    const saved = store.get("painel_guild");
+    state.guildId = state.guilds.some((g) => g.id === saved) ? saved : state.guilds[0]?.id;
+    if (state.guildId) sel.value = state.guildId;
+    renderChannels();
+    const savedCh = store.get("painel_canal");
+    const g = state.guilds.find((x) => x.id === state.guildId);
+    const ch = g?.categories.flatMap((c) => c.channels).find((c) => c.id === savedCh);
+    if (ch) openChannel(ch); else if (window.innerWidth <= 760) toggleSidebar(true);
+  }
+
+  $("guild").onchange = (e) => {
+    state.guildId = e.target.value; store.set("painel_guild", state.guildId); renderChannels();
+  };
+
+  function renderChannels() {
+    const g = state.guilds.find((x) => x.id === state.guildId);
+    const nav = $("channels");
+    if (!g) { nav.innerHTML = ""; return; }
+    if (!g.categories.length) { nav.innerHTML = `<div class="empty">O bot não vê nenhum canal aqui.</div>`; return; }
+    nav.innerHTML = g.categories.map((c) => `
+      ${c.name ? `<div class="cat">${esc(c.name)}</div>` : ""}
+      ${c.channels.map((ch) => `
+        <button class="chan ${state.channel?.id === ch.id ? "active" : ""}" data-id="${ch.id}">
+          <span class="hash">#</span><span>${esc(ch.name)}</span>
+          ${ch.can_send ? "" : '<span class="lock" title="Somente leitura">🔒</span>'}
+        </button>`).join("")}`).join("");
+    nav.querySelectorAll(".chan").forEach((b) => b.onclick = () => {
+      const ch = g.categories.flatMap((c) => c.channels).find((c) => c.id === b.dataset.id);
+      openChannel(ch); toggleSidebar(false);
+    });
+  }
+
+  function toggleSidebar(open) {
+    $("sidebar").classList.toggle("open", open);
+    $("backdrop").classList.toggle("open", open);
+  }
+  $("menu-btn").onclick = () => toggleSidebar(true);
+  $("backdrop").onclick = () => toggleSidebar(false);
+
+  // ---------------- mensagens ----------------
+  async function openChannel(ch) {
+    state.channel = ch; state.messages = []; state.oldestLoaded = false;
+    store.set("painel_canal", ch.id);
+    clearReply(); clearFile();
+    $("ch-title").textContent = "# " + ch.name;
+    $("ch-topic").textContent = ch.topic || "";
+    renderChannels();
+    $("composer").classList.remove("hidden");
+    const t = $("text");
+    t.disabled = !ch.can_send;
+    t.placeholder = ch.can_send ? `Conversar em #${ch.name}` : "Somente leitura — o bot não pode escrever aqui";
+    $("send").disabled = $("attach").disabled = !ch.can_send;
+    $("messages").innerHTML = `<div class="empty">Carregando…</div>`;
+    subscribe();
+    try {
+      const msgs = await api(`/api/channels/${ch.id}/messages`);
+      if (state.channel?.id !== ch.id) return;
+      state.messages = msgs; state.oldestLoaded = msgs.length < 50;
+      render(true);
+    } catch (err) {
+      $("messages").innerHTML = `<div class="empty">${esc(err.message)}</div>`;
+    }
+  }
+
+  async function loadOlder() {
+    if (state.loading || state.oldestLoaded || !state.messages.length) return;
+    state.loading = true;
+    const box = $("messages"), prevH = box.scrollHeight;
+    try {
+      const older = await api(`/api/channels/${state.channel.id}/messages?before=${state.messages[0].id}`);
+      state.oldestLoaded = older.length < 50;
+      const ids = new Set(state.messages.map((m) => m.id));
+      state.messages = older.filter((m) => !ids.has(m.id)).concat(state.messages);
+      render(false);
+      box.scrollTop = box.scrollHeight - prevH;
+    } catch (err) { toast(err.message, true); }
+    state.loading = false;
+  }
+
+  $("messages").addEventListener("scroll", (e) => { if (e.target.scrollTop < 80) loadOlder(); });
+
+  function render(toBottom) {
+    const box = $("messages");
+    const nearBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 120;
+    if (!state.messages.length) {
+      box.innerHTML = `<div class="empty">Nenhuma mensagem ainda. Diga oi! 👋</div>`; return;
+    }
+    let html = state.oldestLoaded ? "" : `<button class="load-more" id="more">Carregar mensagens antigas</button>`;
+    let prev = null;
+    for (const m of state.messages) {
+      const grouped = prev && !m.reply && !m.system && !prev.system && prev.author.id === m.author.id
+        && prev.author.name === m.author.name && (new Date(m.ts) - new Date(prev.ts)) < 7 * 60000;
+      html += msgHTML(m, grouped);
+      prev = m;
+    }
+    box.innerHTML = html;
+    if ($("more")) $("more").onclick = loadOlder;
+    if (toBottom || nearBottom) box.scrollTop = box.scrollHeight;
+  }
+
+  function msgHTML(m, grouped) {
+    const a = m.author;
+    const badge = a.webhook ? '<span class="badge">PAINEL</span>' : a.bot ? '<span class="badge">BOT</span>' : "";
+    const atts = m.attachments.map((x) => x.image
+      ? `<a href="${esc(x.url)}" target="_blank" rel="noopener"><img class="att-img" loading="lazy" src="${esc(x.url)}" alt="${esc(x.name)}"></a>`
+      : `<a class="att-file" href="${esc(x.url)}" target="_blank" rel="noopener">📎 ${esc(x.name)}</a>`).join("");
+    const embeds = m.embeds.filter((e) => e.title || e.description || e.image).map((e) => `
+      <div class="embed" style="border-left-color:${e.color != null ? "#" + e.color.toString(16).padStart(6, "0") : "var(--bg3)"}">
+        ${e.title ? `<div class="et">${e.url ? `<a href="${esc(e.url)}" target="_blank" rel="noopener">${esc(e.title)}</a>` : esc(e.title)}</div>` : ""}
+        ${e.description ? `<div class="content">${md(e.description)}</div>` : ""}
+        ${e.image ? `<img loading="lazy" src="${esc(e.image)}" alt="">` : ""}
+      </div>`).join("");
+    const actions = state.channel?.can_send && !m.system
+      ? `<div class="actions"><button data-reply="${m.id}" title="Responder">↩<span class="lbl"> Responder</span></button></div>` : "";
+    return `
+      <div class="msg ${grouped ? "" : "first"}" id="m-${m.id}">
+        ${grouped ? '<div class="gutter"></div>' : `<img class="av" src="${esc(a.avatar)}" alt="" loading="lazy">`}
+        <div class="body">
+          ${actions}
+          ${m.reply ? `<div class="reply">↪ <b>${esc(m.reply.name)}</b> ${esc(m.reply.content)}</div>` : ""}
+          ${grouped ? "" : `<div class="meta"><span class="name">${esc(a.name)}</span>${badge}<span class="time">${fmtTime(m.ts)}</span></div>`}
+          ${m.content ? `<div class="content ${m.system ? "sys" : ""}">${md(m.content)}${m.edited ? ' <span class="edited">(editado)</span>' : ""}</div>` : ""}
+          ${atts}${embeds}
+        </div>
+      </div>`;
+  }
+
+  $("messages").addEventListener("click", (e) => {
+    const sp = e.target.closest(".spoiler");
+    if (sp) { sp.classList.add("show"); return; }
+    const r = e.target.closest("[data-reply]");
+    if (r) {
+      const m = state.messages.find((x) => x.id === r.dataset.reply);
+      if (m) setReply(m);
+    }
+  });
+
+  function upsert(m) {
+    if (!state.channel || m.channel_id !== state.channel.id) return;
+    const i = state.messages.findIndex((x) => x.id === m.id);
+    if (i >= 0) { state.messages[i] = m; render(false); return; }
+    // Mensagem nova: só acrescenta no fim (não recarrega as imagens da tela)
+    const box = $("messages");
+    const prev = state.messages[state.messages.length - 1];
+    state.messages.push(m);
+    if (!prev) { render(true); return; }
+    const nearBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 120;
+    const grouped = !m.reply && !m.system && !prev.system && prev.author.id === m.author.id
+      && prev.author.name === m.author.name && (new Date(m.ts) - new Date(prev.ts)) < 7 * 60000;
+    box.insertAdjacentHTML("beforeend", msgHTML(m, grouped));
+    if (nearBottom || m.author.name.startsWith(state.me)) box.scrollTop = box.scrollHeight;
+  }
+
+  // ---------------- tempo real ----------------
+  function connectWS() {
+    if (state.ws) return;
+    const ws = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws`);
+    state.ws = ws;
+    ws.onopen = () => {
+      state.wsTries = 0; $("status-dot").classList.add("on");
+      if (state.wasDisconnected && state.channel) openChannel(state.channel); // recupera o que perdeu
+      else subscribe();
+      state.wasDisconnected = false;
+    };
+    ws.onmessage = (ev) => {
+      let d; try { d = JSON.parse(ev.data); } catch { return; }
+      if (d.type === "message" || d.type === "edit") upsert(d.message);
+      else if (d.type === "delete") {
+        state.messages = state.messages.filter((m) => m.id !== d.id); render(false);
+      }
+    };
+    ws.onclose = () => {
+      $("status-dot").classList.remove("on");
+      state.ws = null; state.wasDisconnected = true;
+      const wait = Math.min(30000, 1000 * 2 ** state.wsTries++);
+      setTimeout(async () => {
+        try { await api("/api/me"); connectWS(); } catch { /* 401 já mostra o login */ }
+      }, wait);
+    };
+  }
+  function subscribe() {
+    if (state.ws?.readyState === 1 && state.channel)
+      state.ws.send(JSON.stringify({ type: "subscribe", channel_id: state.channel.id }));
+  }
+
+  // ---------------- enviar ----------------
+  function setReply(m) {
+    state.replyTo = m;
+    $("reply-text").textContent = `Respondendo a ${m.author.name}`;
+    $("reply-bar").classList.remove("hidden"); $("text").focus();
+  }
+  function clearReply() { state.replyTo = null; $("reply-bar").classList.add("hidden"); }
+  $("reply-x").onclick = clearReply;
+
+  function clearFile() { state.file = null; $("file").value = ""; $("file-bar").classList.add("hidden"); }
+  $("file-x").onclick = clearFile;
+  $("attach").onclick = () => $("file").click();
+  $("file").onchange = (e) => {
+    const f = e.target.files[0];
+    if (!f) return;
+    if (f.size > 8 * 1024 * 1024) { toast("Arquivo maior que 8 MB", true); clearFile(); return; }
+    state.file = f;
+    $("file-text").textContent = `📎 ${f.name} (${(f.size / 1024).toFixed(0)} KB)`;
+    $("file-bar").classList.remove("hidden");
+  };
+
+  const text = $("text");
+  function autosize() {
+    text.style.height = "auto"; text.style.height = text.scrollHeight + "px";
+    const n = text.value.length, c = $("counter");
+    c.textContent = n > 1800 ? `${n}/2000` : ""; c.classList.toggle("over", n > 2000);
+  }
+  text.addEventListener("input", autosize);
+  text.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey && !e.isComposing && window.innerWidth > 760) {
+      e.preventDefault(); $("composer").requestSubmit();
+    }
+    if (e.key === "Escape") clearReply();
+  });
+
+  $("composer").onsubmit = async (e) => {
+    e.preventDefault();
+    const content = text.value.trim();
+    if (!state.channel || (!content && !state.file)) return;
+    const fd = new FormData();
+    fd.append("content", content);
+    if (state.replyTo) fd.append("reply_to", state.replyTo.id);
+    if (state.file) fd.append("file", state.file);
+    $("send").disabled = true;
+    try {
+      const m = await api(`/api/channels/${state.channel.id}/messages`, { method: "POST", body: fd });
+      text.value = ""; autosize(); clearReply(); clearFile();
+      upsert(m);
+      $("messages").scrollTop = $("messages").scrollHeight;
+    } catch (err) {
+      toast(err.message, true);
+    } finally { $("send").disabled = !state.channel?.can_send; text.focus(); }
+  };
+
+  // ---------------- início ----------------
+  function start(name) {
+    state.me = name;
+    $("me").textContent = name;
+    $("login").classList.add("hidden");
+    $("app").classList.remove("hidden");
+    loadGuilds();
+    connectWS();
+  }
+
+  api("/api/me").then((r) => start(r.name)).catch(() => showLogin());
+})();
+</script>
+</body>
+</html>
