@@ -19,6 +19,8 @@ from typing import Callable, Optional
 from flask import (Flask, abort, flash, g, jsonify, redirect, render_template, request,
                    session, url_for)
 
+import avatar as avatar_mod
+from markupsafe import Markup
 from rolox_api import ErroRolox, RoloxAPI, Sessao
 
 IDIOMAS = {"pt-BR": "Português", "en": "English", "es": "Español"}
@@ -83,7 +85,16 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
 
     @app.context_processor
     def globais():
-        return {"csrf": session.get("csrf", ""), "logado": "sb" in session}
+        return {"csrf": session.get("csrf", ""), "logado": "sb" in session,
+                "eh_adm": bool(session.get("adm")) and "sb" in session,
+                "desenhar_avatar": lambda a, largura=120: Markup(avatar_mod.svg(a, largura))}
+
+    def carregar_perfil() -> dict:
+        """Lê o perfil e lembra na sessão se é ADM (só para mostrar a aba;
+        quem decide de verdade é o Supabase em cada ação de ADM)."""
+        p = g.api.meu_perfil()
+        session["adm"] = bool(p.get("is_adm"))
+        return p
 
     @app.errorhandler(ErroRolox)
     def erro_rolox(e: ErroRolox):
@@ -168,7 +179,11 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
         onde = g.api.onde_estou()
         if onde["servidor"]:
             return redirect(url_for("chat", uid=onde["servidor"]))
-        return render_template("inicio.html", perfil=g.api.meu_perfil(), onde=onde,
+        presente = g.api.receber_tickets()
+        if presente.get("ganhou"):
+            flash(f"🎟️ Presente do dia: +{presente['ganhou']} tickets! "
+                  f"Amanhã você ganha {presente['amanha']}.", "ok")
+        return render_template("inicio.html", perfil=carregar_perfil(), onde=onde,
                                alertas=g.api.alertas(), aba="inicio")
 
     @app.get("/api/status")
@@ -271,12 +286,58 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
             idioma = f.get("idioma") if f.get("idioma") in IDIOMAS else "pt-BR"
             g.api.atualizar_perfil(idioma=idioma, jogo_mod=f.get("jogo_mod") or None,
                                    aceitou_localizacao=f.get("localizacao") == "on",
-                                   email=f.get("email", ""))
+                                   email=f.get("email", ""),
+                                   avatar={k: f.get(k, "") for k in avatar_mod.PADRAO})
             g.api.atualizar_local("menu")
             flash("Perfil salvo.", "ok")
             return redirect(url_for("perfil"))
-        return render_template("perfil.html", perfil=g.api.meu_perfil(), jogos=nomes_jogos(),
-                               idiomas=IDIOMAS, aba="perfil")
+        perfil = carregar_perfil()
+        return render_template("perfil.html", perfil=perfil, jogos=nomes_jogos(), idiomas=IDIOMAS,
+                               av=avatar_mod, avatar=avatar_mod.normalizar(perfil.get("avatar")),
+                               aba="perfil")
+
+    @app.get("/avatar.svg")
+    def avatar_svg():
+        """Prévia ao vivo do editor de avatar."""
+        a = avatar_mod.normalizar({k: request.args.get(k, "") for k in avatar_mod.PADRAO})
+        return app.response_class(avatar_mod.svg(a, 160), mimetype="image/svg+xml")
+
+    # --------------------------------------------------------------- ADM
+    @app.get("/adm")
+    @logado
+    def adm():
+        return render_template("adm.html", d=g.api.adm_painel(), eu=g.api.user_id,
+                               jogos=nomes_jogos(), aba="adm")
+
+    @app.post("/adm/<acao>")
+    @logado
+    def adm_acao(acao: str):
+        f = request.form
+        if acao == "tickets":
+            try:
+                qtd = int(f.get("quantidade", "0"))
+            except ValueError:
+                raise ErroRolox("quantidade_invalida")
+            g.api.adm_dar_tickets(f["user_id"], qtd)
+            flash("Tickets ajustados.", "ok")
+        elif acao == "banir":
+            g.api.adm_banir(f["user_id"], f.get("motivo", ""))
+            flash("Usuário banido.", "ok")
+        elif acao == "desbanir":
+            g.api.adm_desbanir(f["user_id"])
+            flash("Usuário desbanido.", "ok")
+        elif acao == "definir-adm":
+            g.api.adm_definir_adm(f["user_id"], f.get("adm") == "1")
+            flash("Permissão de ADM alterada.", "ok")
+        elif acao == "desbloquear-ip":
+            g.api.adm_desbloquear_ip(f["ip"])
+            flash(f"IP {f['ip']} desbloqueado.", "ok")
+        elif acao == "encerrar-servidor":
+            g.api.adm_encerrar_servidor(f["server_uid"])
+            flash("Servidor encerrado.", "ok")
+        else:
+            abort(404)
+        return redirect(url_for("adm"))
 
     return app
 

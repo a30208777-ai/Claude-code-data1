@@ -15,6 +15,7 @@ from typing import Any, Optional
 
 import httpx
 
+from . import avatar as avatar_mod
 from . import config
 
 USERNAME_VALIDO = re.compile(r"^[a-z0-9]([a-z0-9-]{1,30}[a-z0-9])$")
@@ -34,6 +35,7 @@ MENSAGENS = {
     "senha_fraca": "Senha fraca demais. Use letras e números.",
     "erro_cadastro": "Não foi possível criar a conta agora. Tente de novo.",
     "muitas_tentativas": "Muitas senhas erradas. Espere um pouco e tente de novo.",
+    "42501": "Você não tem permissão para isso.",
     "username_em_uso": "Esse nome de usuário já está em uso.",
     "sessao_expirada": "Sua sessão expirou. Entre novamente.",
     "sem_conexao": "Sem conexão com o servidor. Verifique sua internet.",
@@ -59,6 +61,8 @@ class ErroRolox(Exception):
 
     @property
     def mensagem(self) -> str:
+        if self.codigo in ("P0001", "42501") and self.detalhes.get("message"):
+            return str(self.detalhes["message"]).capitalize() + "."
         texto = MENSAGENS.get(self.codigo, f"Erro: {self.codigo}")
         restantes = self.detalhes.get("tentativas_restantes")
         if restantes is not None:
@@ -223,17 +227,20 @@ class RoloxAPI:
         linhas = await self._req(
             "GET", "/rest/v1/perfis",
             params={"id": f"eq.{self.user_id}",
-                    "select": "id,username,email,idioma,jogo_mod,aceitou_localizacao,banido"},
+                    "select": "id,username,email,idioma,jogo_mod,aceitou_localizacao,banido,"
+                              "is_adm,tickets,tickets_ultimo_ganho,avatar"},
         )
         if not linhas:
             raise ErroRolox("perfil_nao_encontrado")
         return linhas[0]
 
     async def atualizar_perfil(self, **campos: Any) -> dict:
-        permitidos = {"idioma", "jogo_mod", "aceitou_localizacao", "email"}
+        permitidos = {"idioma", "jogo_mod", "aceitou_localizacao", "email", "avatar"}
         invalidos = set(campos) - permitidos
         if invalidos:
             raise ValueError(f"campos não editáveis: {sorted(invalidos)}")
+        if "avatar" in campos:
+            campos["avatar"] = avatar_mod.normalizar(campos["avatar"])
         if "email" in campos:
             campos["email"] = (campos["email"] or "").strip().lower() or None
             if campos["email"] and not EMAIL_VALIDO.match(campos["email"]):
@@ -357,3 +364,32 @@ class RoloxAPI:
     async def ver_senha_tentada(self, alerta_id: int) -> str:
         dados = await self._req("POST", "/functions/v1/ver-alerta", json={"alerta_id": alerta_id})
         return dados["senha_tentada"]
+
+    # --------------------------------------------------------------- tickets
+    async def receber_tickets(self) -> dict:
+        """Presente diário: {"infinito", "ganhou", "tickets", "amanha"}."""
+        return await self._req("POST", "/rest/v1/rpc/receber_tickets_diarios", json={})
+
+    # ------------------------------------------------------------------- ADM
+    async def adm_painel(self) -> dict:
+        return await self._req("POST", "/rest/v1/rpc/adm_painel", json={})
+
+    async def adm_dar_tickets(self, user_id: str, quantidade: int) -> dict:
+        return await self._req("POST", "/rest/v1/rpc/adm_dar_tickets",
+                               json={"p_user": user_id, "p_qtd": int(quantidade)})
+
+    async def adm_banir(self, user_id: str, motivo: str = "") -> None:
+        await self._req("POST", "/rest/v1/rpc/adm_banir",
+                        json={"p_user": user_id, "p_motivo": motivo or None})
+
+    async def adm_desbanir(self, user_id: str) -> None:
+        await self._req("POST", "/rest/v1/rpc/adm_desbanir", json={"p_user": user_id})
+
+    async def adm_definir_adm(self, user_id: str, adm: bool) -> None:
+        await self._req("POST", "/rest/v1/rpc/adm_definir_adm", json={"p_user": user_id, "p_adm": adm})
+
+    async def adm_desbloquear_ip(self, ip: str) -> None:
+        await self._req("POST", "/rest/v1/rpc/adm_desbloquear_ip", json={"p_ip": ip})
+
+    async def adm_encerrar_servidor(self, server_uid: str) -> None:
+        await self._req("POST", "/rest/v1/rpc/adm_encerrar_servidor", json={"p_server": server_uid})

@@ -31,7 +31,7 @@ O endereço do Supabase e a *publishable key* ficam em `src/rolox/config.py` (ou
 
 ## Backend necessário (pasta `../supabase`)
 
-1. **Banco:** aplicar `supabase/migrations/20261116000000_rolox_base.sql` e depois `20261117000000_email_opcional.sql` e `20261118000000_ias_nos_servidores.sql` (precisa das extensões `pg_net` e `pg_cron`) (tabelas, RLS, RPCs `entrar_servidor`, `sair_servidor`, `enviar_mensagem`, `atualizar_local`, triggers e limpezas agendadas).
+1. **Banco:** aplicar `supabase/migrations/20261116000000_rolox_base.sql` e depois `20261117000000_email_opcional.sql` `20261118000000_ias_nos_servidores.sql` e `20261118100000_tickets_adm_avatar.sql` (precisa das extensões `pg_net` e `pg_cron`) (tabelas, RLS, RPCs `entrar_servidor`, `sair_servidor`, `enviar_mensagem`, `atualizar_local`, triggers e limpezas agendadas).
 2. **Segredo da criptografia:** `supabase secrets set ROLOX_CHAVE=$(openssl rand -base64 32)`
 3. **Edge Functions:**
    ```bash
@@ -44,6 +44,13 @@ O endereço do Supabase e a *publishable key* ficam em `src/rolox/config.py` (ou
 5. **Catálogo:** cadastrar os jogos em `jogos` com `commit_aprovado` preenchido (só jogos aprovados aparecem no app).
 
 Testes do banco num Postgres local: `supabase/tests/rodar.sh`.
+
+## Tickets, ADM e avatar
+- **Tickets:** 1 ticket = R$ 0 (não é dinheiro) = 1 resposta de IA no chat. Cada resposta gasta 1 ticket de quem mandou a mensagem; sem tickets, as IAs não respondem a ele; se a IA falhar, o ticket volta.
+- **Presente diário:** ao abrir o app, 5 tickets no primeiro dia e o dobro do presente anterior a cada novo dia (5, 10, 20, 40, 80, 160, 320, 640), com teto de 640 por dia. Função `receber_tickets_diarios()`.
+- **ADM:** coluna `perfis.is_adm`. Com `true`: tickets infinitos (∞) e aba **ADM** (usuários, dar/tirar tickets, banir/desbanir, tornar ADM, desbloquear IP, encerrar servidor). Toda ação de ADM é conferida no banco (`exigir_adm()`).
+- **Proteção:** o gatilho `proteger_perfil` impede o jogador de mudar sozinho `is_adm`, banimento, username ou tickets.
+- **Avatar (primeiro passo):** editor em Perfil com pele, cabelo, cor do cabelo, camisa, calça e acessório, salvo em `perfis.avatar`. O desenho em blocos vem de `rolox/avatar.py` (Flet) e `avatar.py` (Flask, em SVG).
 
 ## IAs nos servidores
 Todo servidor recebe jogadores de IA: **metade da capacidade, arredondada para baixo** (10 → 5, 11 → 5, 3 → 1, 1 → 0). Jogadores reais têm prioridade: se o servidor lota, uma IA sai para abrir vaga, e volta quando alguém sai. O total nunca passa da capacidade, e a lista mostra, por exemplo, "7/10 jogadores (5 IA)".

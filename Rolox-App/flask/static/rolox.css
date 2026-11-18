@@ -96,3 +96,6 @@ nav.barra a.ativo { color: var(--primaria); font-weight: 700; }
 dialog { border: 0; border-radius: 16px; padding: 20px; background: var(--cartao); color: var(--texto); width: min(90vw, 360px); }
 dialog::backdrop { background: #0008; }
 .senha { font-size: 1.3rem; font-family: ui-monospace, monospace; background: var(--fundo); padding: 10px; border-radius: 8px; user-select: all; }
+
+.avatar-mini { flex: none; background: var(--cartao); border: 1px solid var(--borda); border-radius: 12px; padding: 6px; }
+.grade-avatar { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }

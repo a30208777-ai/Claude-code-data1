@@ -36,7 +36,10 @@ class SupabaseFalso:
         self.chamadas = []
         self.token_valido = "T1"
         self.perfil = {"id": "u1", "username": "alice", "email": None, "idioma": "pt-BR",
-                       "jogo_mod": None, "aceitou_localizacao": True, "banido": False}
+                       "jogo_mod": None, "aceitou_localizacao": True, "banido": False,
+                       "is_adm": False, "tickets": 0, "tickets_ultimo_ganho": 0, "avatar": {}}
+        self.presente = {"infinito": False, "ganhou": 5, "tickets": 5, "amanha": 10}
+        self.adm_chamadas = []
         self.jogos = [{"gameid": "corrida", "nome": "Corrida Turbo"}]
         self.servidores = [
             {"server_uid": "s1", "gameid": "corrida", "host_id": "u2", "capacidade": 10,
@@ -141,6 +144,25 @@ class SupabaseFalso:
         if p == "/rest/v1/servidores_logados":
             depois = int(q["id"].split(".")[1])
             return Resp(200, [m for m in self.chat if m["id"] > depois])
+        if p == "/rest/v1/rpc/receber_tickets_diarios":
+            r = dict(self.presente)
+            if r.get("ganhou"):
+                self.perfil["tickets"] += r["ganhou"]
+                self.presente = dict(r, ganhou=0)
+            return Resp(200, r)
+        if p.startswith("/rest/v1/rpc/adm_"):
+            if not self.perfil["is_adm"]:
+                return Resp(403, {"code": "42501", "message": "apenas ADM"})
+            self.adm_chamadas.append((p.rsplit("/", 1)[1], json))
+            if p.endswith("adm_painel"):
+                return Resp(200, {"totais": {"usuarios": 2, "servidores": 1, "ips_bloqueados": 1, "alertas_hoje": 0},
+                                  "usuarios": [{"id": "u1", "username": "alice", "tickets": 0, "is_adm": True, "banido": False},
+                                               {"id": "u9", "username": "bob", "tickets": 7, "is_adm": False, "banido": False}],
+                                  "ips_bloqueados": [{"ip": "1.2.3.4", "conta_alvo": "alice", "motivo": "x",
+                                                      "bloqueado_em": "2026-11-18T00:00:00Z"}],
+                                  "servidores": [{"server_uid": "s1", "gameid": "corrida", "capacidade": 10,
+                                                  "is_hack_server": False, "humanos": 2, "ias": 5}]})
+            return Resp(200, {"tickets": 17} if p.endswith("adm_dar_tickets") else None)
         if p == "/rest/v1/alertas_seguranca":
             return Resp(200, self.alertas)
         if p == "/functions/v1/ver-alerta":
@@ -382,3 +404,65 @@ def test_backend_nao_configurado_explica_o_erro(cliente, sb):
     sb.request = lambda *a, **k: Resp(404, {"code": "NOT_FOUND", "message": "Requested function was not found"})
     r = entrar(cliente)
     assert "ainda não foi configurado" in html(r)
+
+
+# ------------------------------------------------------ tickets, ADM, avatar
+def test_presente_diario_aparece_uma_vez_e_mostra_tickets(cliente, sb):
+    entrar(cliente)
+    pagina = html(cliente.get("/inicio"))
+    assert "Presente do dia: +5 tickets" in pagina and "Tickets: 5" in pagina
+    pagina = html(cliente.get("/inicio"))
+    assert "Presente do dia" not in pagina and "Tickets: 5" in pagina
+
+
+def test_adm_tem_tickets_infinitos_e_aba_adm(cliente, sb):
+    sb.perfil["is_adm"] = True
+    sb.presente = {"infinito": True, "ganhou": 0}
+    entrar(cliente)
+    pagina = html(cliente.get("/inicio"))
+    assert "∞ (ADM)" in pagina and 'href="/adm"' in pagina
+    painel = html(cliente.get("/adm"))
+    assert "bob" in painel and "1.2.3.4" in painel and "2 usuários" in painel and "7/10 (5 IA)" in painel
+
+
+def test_usuario_comum_nao_ve_aba_adm_nem_painel(cliente, sb):
+    entrar(cliente)
+    assert 'href="/adm"' not in html(cliente.get("/inicio"))
+    r = cliente.get("/adm")
+    assert r.status_code == 400 and "Apenas adm" in html(r)
+
+
+def test_acoes_do_adm(cliente, sb):
+    sb.perfil["is_adm"] = True
+    entrar(cliente)
+    token = csrf(cliente)
+    for acao, dados in [("tickets", {"user_id": "u9", "quantidade": "10"}),
+                        ("banir", {"user_id": "u9", "motivo": "spam"}),
+                        ("desbanir", {"user_id": "u9"}),
+                        ("definir-adm", {"user_id": "u9", "adm": "1"}),
+                        ("desbloquear-ip", {"ip": "1.2.3.4"}),
+                        ("encerrar-servidor", {"server_uid": "s1"})]:
+        r = cliente.post(f"/adm/{acao}", data=dict(dados, csrf=token))
+        assert r.status_code == 302 and r.headers["Location"].endswith("/adm")
+    assert [c[0] for c in sb.adm_chamadas] == ["adm_dar_tickets", "adm_banir", "adm_desbanir",
+                                                "adm_definir_adm", "adm_desbloquear_ip", "adm_encerrar_servidor"]
+    assert sb.adm_chamadas[0][1] == {"p_user": "u9", "p_qtd": 10}
+    assert sb.adm_chamadas[3][1] == {"p_user": "u9", "p_adm": True}
+
+
+def test_salvar_avatar_e_previa(cliente, sb):
+    entrar(cliente)
+    cliente.post("/perfil", data={"idioma": "pt-BR", "pele": "#8d5524", "cabelo": "moicano",
+                                  "cor_cabelo": "#e53935", "camisa": "#43a047", "calca": "#212121",
+                                  "acessorio": "coroa", "csrf": csrf(cliente)})
+    assert sb.perfil["avatar"] == {"pele": "#8d5524", "cabelo": "moicano", "cor_cabelo": "#e53935",
+                                   "camisa": "#43a047", "calca": "#212121", "acessorio": "coroa"}
+    svg = cliente.get("/avatar.svg?pele=%238d5524&cabelo=moicano&acessorio=coroa").get_data(as_text=True)
+    assert svg.startswith("<svg") and "#8d5524" in svg and "#fbc02d" in svg
+
+
+def test_avatar_ignora_valores_inventados(cliente, sb):
+    entrar(cliente)
+    cliente.post("/perfil", data={"idioma": "pt-BR", "pele": "javascript:alert(1)", "cabelo": "<b>",
+                                  "csrf": csrf(cliente)})
+    assert sb.perfil["avatar"]["pele"] == "#c68642" and sb.perfil["avatar"]["cabelo"] == "curto"

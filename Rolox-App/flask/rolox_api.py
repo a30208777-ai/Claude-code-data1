@@ -14,6 +14,8 @@ from typing import Any, Optional
 
 import requests
 
+import avatar as avatar_mod
+
 SUPABASE_URL = os.environ.get("ROLOX_SUPABASE_URL", "https://llgriaqnlcylpaxudrlg.supabase.co")
 # publishable key: pública por natureza (só dá o acesso que o RLS permite). Nunca a service_role.
 SUPABASE_CHAVE = os.environ.get("ROLOX_SUPABASE_CHAVE", "sb_publishable_GFKzsWxgUtXTff5fHWVVfQ_dUKdF62n")
@@ -49,6 +51,8 @@ MENSAGENS = {
     "tamanho_invalido": "A mensagem deve ter entre 1 e 500 caracteres.",
     "alerta_nao_encontrado": "Alerta não encontrado.",
     "capacidade_invalida": "A capacidade deve ficar entre 1 e 100.",
+    "quantidade_invalida": "Digite um número de tickets válido.",
+    "42501": "Você não tem permissão para isso.",
 }
 
 
@@ -60,6 +64,8 @@ class ErroRolox(Exception):
 
     @property
     def mensagem(self) -> str:
+        if self.codigo in ("P0001", "42501") and self.detalhes.get("message"):
+            return str(self.detalhes["message"]).capitalize() + "."
         texto = MENSAGENS.get(self.codigo, f"Erro: {self.codigo}")
         restantes = self.detalhes.get("tentativas_restantes")
         if restantes is not None:
@@ -197,15 +203,18 @@ class RoloxAPI:
     def meu_perfil(self) -> dict:
         linhas = self._req("GET", "/rest/v1/perfis", params={
             "id": f"eq.{self.user_id}",
-            "select": "id,username,email,idioma,jogo_mod,aceitou_localizacao,banido"})
+            "select": "id,username,email,idioma,jogo_mod,aceitou_localizacao,banido,"
+                      "is_adm,tickets,tickets_ultimo_ganho,avatar"})
         if not linhas:
             raise ErroRolox("perfil_nao_encontrado")
         return linhas[0]
 
     def atualizar_perfil(self, **campos: Any) -> dict:
-        invalidos = set(campos) - {"idioma", "jogo_mod", "aceitou_localizacao", "email"}
+        invalidos = set(campos) - {"idioma", "jogo_mod", "aceitou_localizacao", "email", "avatar"}
         if invalidos:
             raise ValueError(f"campos não editáveis: {sorted(invalidos)}")
+        if "avatar" in campos:
+            campos["avatar"] = avatar_mod.normalizar(campos["avatar"])
         if "email" in campos:
             campos["email"] = (campos["email"] or "").strip().lower() or None
             if campos["email"] and not EMAIL_VALIDO.match(campos["email"]):
@@ -287,3 +296,30 @@ class RoloxAPI:
 
     def ver_senha_tentada(self, alerta_id: int) -> str:
         return self._req("POST", "/functions/v1/ver-alerta", json={"alerta_id": alerta_id})["senha_tentada"]
+
+    # ----------------------------------------------------------- tickets
+    def receber_tickets(self) -> dict:
+        """Presente diário: {"infinito", "ganhou", "tickets", "amanha"}."""
+        return self._req("POST", "/rest/v1/rpc/receber_tickets_diarios", json={})
+
+    # --------------------------------------------------------------- ADM
+    def adm_painel(self) -> dict:
+        return self._req("POST", "/rest/v1/rpc/adm_painel", json={})
+
+    def adm_dar_tickets(self, user_id: str, quantidade: int) -> dict:
+        return self._req("POST", "/rest/v1/rpc/adm_dar_tickets", json={"p_user": user_id, "p_qtd": int(quantidade)})
+
+    def adm_banir(self, user_id: str, motivo: str = "") -> None:
+        self._req("POST", "/rest/v1/rpc/adm_banir", json={"p_user": user_id, "p_motivo": motivo or None})
+
+    def adm_desbanir(self, user_id: str) -> None:
+        self._req("POST", "/rest/v1/rpc/adm_desbanir", json={"p_user": user_id})
+
+    def adm_definir_adm(self, user_id: str, adm: bool) -> None:
+        self._req("POST", "/rest/v1/rpc/adm_definir_adm", json={"p_user": user_id, "p_adm": adm})
+
+    def adm_desbloquear_ip(self, ip: str) -> None:
+        self._req("POST", "/rest/v1/rpc/adm_desbloquear_ip", json={"p_ip": ip})
+
+    def adm_encerrar_servidor(self, server_uid: str) -> None:
+        self._req("POST", "/rest/v1/rpc/adm_encerrar_servidor", json={"p_server": server_uid})

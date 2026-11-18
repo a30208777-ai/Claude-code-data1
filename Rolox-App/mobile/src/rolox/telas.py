@@ -8,6 +8,7 @@ from typing import Awaitable, Callable, Optional
 
 import flet as ft
 
+from . import avatar as avatar_mod
 from . import config
 from .api import ErroRolox, RoloxAPI
 
@@ -22,6 +23,16 @@ def formatar_data(iso: str) -> str:
         return datetime.fromisoformat(iso.replace("Z", "+00:00")).astimezone().strftime("%d/%m %H:%M")
     except (ValueError, AttributeError):
         return iso or ""
+
+
+def desenhar_avatar(avatar: Optional[dict], escala: float = 1.0) -> ft.Control:
+    """Desenha o boneco em blocos (ver rolox/avatar.py)."""
+    return ft.Stack(
+        width=avatar_mod.LARGURA * escala, height=avatar_mod.ALTURA * escala,
+        controls=[ft.Container(left=x * escala, top=y * escala, width=w * escala, height=h * escala,
+                               bgcolor=cor, border_radius=r * escala)
+                  for x, y, w, h, cor, r in avatar_mod.pecas(avatar)],
+    )
 
 
 class RoloxApp:
@@ -206,6 +217,14 @@ class RoloxApp:
     # ======================================================== área logada
     async def abrir_principal(self, aba: int = 0) -> None:
         self.perfil = await self.api.meu_perfil()
+        try:
+            presente = await self.api.receber_tickets()
+            if presente.get("ganhou"):
+                self.perfil["tickets"] = presente["tickets"]
+                self.aviso(f"Presente do dia: +{presente['ganhou']} tickets! "
+                           f"Amanhã você ganha {presente['amanha']}.")
+        except ErroRolox:
+            pass
         self.jogos = await self.api.jogos()
         onde = await self.api.onde_estou()
         if onde["servidor"]:
@@ -229,11 +248,24 @@ class RoloxApp:
                 ft.NavigationBarDestination(icon=ft.Icons.HOME, label="Início"),
                 ft.NavigationBarDestination(icon=ft.Icons.DNS, label="Servidores"),
                 ft.NavigationBarDestination(icon=ft.Icons.PERSON, label="Perfil"),
-            ],
+            ] + ([ft.NavigationBarDestination(icon=ft.Icons.ADMIN_PANEL_SETTINGS, label="ADM")]
+                 if self.perfil.get("is_adm") else []),
         )
 
     def abrir_aba(self, indice: int) -> None:
-        [self.aba_inicio, self.aba_servidores, self.aba_perfil][indice]()
+        abas = [self.aba_inicio, self.aba_servidores, self.aba_perfil]
+        if self.perfil.get("is_adm"):
+            abas.append(self.aba_adm)
+        abas[min(indice, len(abas) - 1)]()
+
+    def texto_tickets(self) -> str:
+        if self.perfil.get("is_adm"):
+            return "Tickets: ∞ (ADM)"
+        return f"Tickets: {self.perfil.get('tickets', 0)}"
+
+    def linha_tickets(self) -> ft.Control:
+        return ft.Row([ft.Icon(ft.Icons.CONFIRMATION_NUMBER, size=18, color=COR_HACK),
+                       ft.Text(self.texto_tickets(), weight=ft.FontWeight.BOLD)], spacing=6)
 
     # --------------------------------------------------------------- início
     def aba_inicio(self) -> None:
@@ -286,9 +318,17 @@ class RoloxApp:
         ger = self.mostrar(ft.Container(
             padding=16,
             content=ft.Column([
-                ft.Text(f"Olá, {self.perfil.get('username', '')}!", size=24,
-                        weight=ft.FontWeight.BOLD),
-                status,
+                ft.Row([
+                    desenhar_avatar(self.perfil.get("avatar"), 0.4),
+                    ft.Column([
+                        ft.Text(f"Olá, {self.perfil.get('username', '')}!", size=24,
+                                weight=ft.FontWeight.BOLD),
+                        status,
+                        self.linha_tickets(),
+                        ft.Text("1 ticket = 1 resposta de IA no chat. Todo dia tem presente!",
+                                size=12, italic=True),
+                    ], spacing=4, expand=True),
+                ], vertical_alignment=ft.CrossAxisAlignment.START),
                 ft.Divider(),
                 ft.Row([ft.Icon(ft.Icons.SHIELD), ft.Text("Alertas de segurança", size=18)]),
                 lista,
@@ -459,7 +499,8 @@ class RoloxApp:
                     ft.Text(titulo, size=20, weight=ft.FontWeight.BOLD, expand=True),
                     ft.OutlinedButton("Sair", icon=ft.Icons.EXIT_TO_APP, on_click=sair),
                 ]),
-                ft.Text("O chat passa pelo filtro SELECT antes de ser entregue.",
+                ft.Text("O chat passa pelo filtro SELECT. Cada resposta de IA usa 1 ticket seu "
+                        f"({self.texto_tickets().replace('Tickets: ', '')}).",
                         size=12, italic=True),
                 ft.Divider(),
                 mensagens,
@@ -486,12 +527,41 @@ class RoloxApp:
                              keyboard_type=ft.KeyboardType.EMAIL,
                              helper="deixe vazio para remover")
 
+        # ---- editor de avatar (primeiro passo)
+        escolha = avatar_mod.normalizar(p.get("avatar"))
+        previa = ft.Container(content=desenhar_avatar(escolha, 0.9), alignment=ft.Alignment.CENTER)
+
+        def seletor(rotulo: str, chave: str, opcoes: dict) -> ft.Dropdown:
+            # opcoes: nome -> valor (cores) ou valor -> nome (estilos)
+            if chave in ("cabelo", "acessorio"):
+                itens = [ft.DropdownOption(key=k, text=v) for k, v in opcoes.items()]
+            else:
+                itens = [ft.DropdownOption(key=v, text=n) for n, v in opcoes.items()]
+
+            def mudou(e):
+                escolha[chave] = e.control.value
+                previa.content = desenhar_avatar(escolha, 0.9)
+                previa.update()
+
+            return ft.Dropdown(label=rotulo, value=escolha[chave], options=itens,
+                               on_select=mudou, expand=True)
+
+        editor = ft.Column([
+            ft.Row([seletor("Pele", "pele", avatar_mod.PELES),
+                    seletor("Cabelo", "cabelo", avatar_mod.CABELOS)]),
+            ft.Row([seletor("Cor do cabelo", "cor_cabelo", avatar_mod.CORES),
+                    seletor("Acessório", "acessorio", avatar_mod.ACESSORIOS)]),
+            ft.Row([seletor("Camisa", "camisa", avatar_mod.CORES),
+                    seletor("Calça", "calca", avatar_mod.CORES)]),
+        ], spacing=10)
+
         async def salvar(_):
             async def acao():
                 novo_mod = jogo_mod.value or None
                 self.perfil = await self.api.atualizar_perfil(
                     idioma=idioma.value, jogo_mod=novo_mod,
-                    aceitou_localizacao=bool(local.value), email=email.value or "")
+                    aceitou_localizacao=bool(local.value), email=email.value or "",
+                    avatar=escolha)
                 await self.api.atualizar_local("menu")
                 self.aviso("Perfil salvo.")
             await self.executar(acao)
@@ -503,6 +573,11 @@ class RoloxApp:
             padding=16,
             content=ft.Column([
                 ft.Text(p.get("username", ""), size=24, weight=ft.FontWeight.BOLD),
+                self.linha_tickets(),
+                ft.Text("Avatar", size=16),
+                previa,
+                editor,
+                ft.Divider(),
                 ft.Text("Configurações (config)", size=16),
                 idioma,
                 jogo_mod,
@@ -515,3 +590,108 @@ class RoloxApp:
                 ft.OutlinedButton("Sair da conta", icon=ft.Icons.LOGOUT, on_click=sair),
             ], spacing=14, scroll=ft.ScrollMode.AUTO),
         ), self.barra(2))
+
+    # ------------------------------------------------------------------ ADM
+    def aba_adm(self) -> None:
+        resumo = ft.Text("")
+        usuarios = ft.Column(spacing=6)
+        ips = ft.Column(spacing=6)
+        servidores = ft.Column(spacing=6)
+
+        def secao(titulo: str, icone, corpo: ft.Control) -> ft.Control:
+            return ft.Column([ft.Row([ft.Icon(icone), ft.Text(titulo, size=18)]), corpo], spacing=6)
+
+        async def carregar(_=None):
+            async def acao():
+                d = await self.api.adm_painel()
+                t = d["totais"]
+                resumo.value = (f"{t['usuarios']} usuários · {t['servidores']} servidores · "
+                                f"{t['ips_bloqueados']} IPs bloqueados · {t['alertas_hoje']} alertas hoje")
+                usuarios.controls = [cartao_usuario(u) for u in d["usuarios"]] or [ft.Text("Nenhum.")]
+                ips.controls = [cartao_ip(i) for i in d["ips_bloqueados"]] or [ft.Text("Nenhum IP bloqueado.")]
+                servidores.controls = [cartao_servidor(s) for s in d["servidores"]] or [ft.Text("Nenhum servidor.")]
+                self.page.update()
+            await self.executar(acao)
+
+        def acao_e_recarrega(fn, texto_ok: str):
+            async def clique(_):
+                async def acao():
+                    await fn()
+                    self.aviso(texto_ok)
+                    await carregar()
+                await self.executar(acao)
+            return clique
+
+        def cartao_usuario(u: dict) -> ft.Control:
+            eu = u["id"] == self.api.user_id
+            tickets = "∞" if u["is_adm"] else str(u["tickets"])
+            marcas = (" · ADM" if u["is_adm"] else "") + (" · BANIDO" if u["banido"] else "")
+
+            def dar_tickets(_):
+                campo = ft.TextField(label="Quantidade (use - para tirar)", value="10",
+                                     keyboard_type=ft.KeyboardType.NUMBER)
+
+                async def confirmar(_):
+                    async def acao():
+                        try:
+                            qtd = int(campo.value or "0")
+                        except ValueError:
+                            raise ValueError("Digite um número.")
+                        self.page.pop_dialog()
+                        await self.api.adm_dar_tickets(u["id"], qtd)
+                        self.aviso(f"Tickets de {u['username']} ajustados.")
+                        await carregar()
+                    await self.executar(acao)
+
+                self.page.show_dialog(ft.AlertDialog(
+                    title=ft.Text(f"Tickets para {u['username']}"), content=campo,
+                    actions=[ft.TextButton("Cancelar", on_click=lambda _: self.page.pop_dialog()),
+                             ft.FilledButton("Confirmar", on_click=confirmar)]))
+
+            botoes = []
+            if not u["is_adm"]:
+                botoes.append(ft.IconButton(ft.Icons.CONFIRMATION_NUMBER, tooltip="Dar/tirar tickets",
+                                            on_click=dar_tickets))
+            if not eu:
+                if u["banido"]:
+                    botoes.append(ft.IconButton(ft.Icons.LOCK_OPEN, tooltip="Desbanir", on_click=acao_e_recarrega(
+                        lambda: self.api.adm_desbanir(u["id"]), f"{u['username']} desbanido.")))
+                else:
+                    botoes.append(ft.IconButton(ft.Icons.BLOCK, tooltip="Banir", on_click=acao_e_recarrega(
+                        lambda: self.api.adm_banir(u["id"], "banido por ADM"), f"{u['username']} banido.")))
+                botoes.append(ft.IconButton(
+                    ft.Icons.REMOVE_MODERATOR if u["is_adm"] else ft.Icons.ADD_MODERATOR,
+                    tooltip="Tirar ADM" if u["is_adm"] else "Tornar ADM",
+                    on_click=acao_e_recarrega(lambda: self.api.adm_definir_adm(u["id"], not u["is_adm"]),
+                                              "Permissão de ADM alterada.")))
+            return ft.Card(content=ft.ListTile(
+                title=ft.Text(u["username"] + (" (você)" if eu else "")),
+                subtitle=ft.Text(f"Tickets: {tickets}{marcas}"),
+                trailing=ft.Row(botoes, tight=True, spacing=0)))
+
+        def cartao_ip(i: dict) -> ft.Control:
+            return ft.Card(content=ft.ListTile(
+                title=ft.Text(i["ip"]),
+                subtitle=ft.Text(f"tentou entrar em {i.get('conta_alvo') or '?'} · {formatar_data(i['bloqueado_em'])}"),
+                trailing=ft.TextButton("Desbloquear", on_click=acao_e_recarrega(
+                    lambda: self.api.adm_desbloquear_ip(i["ip"]), f"IP {i['ip']} desbloqueado."))))
+
+        def cartao_servidor(s: dict) -> ft.Control:
+            return ft.Card(content=ft.ListTile(
+                title=ft.Text(self.nome_jogo(s["gameid"]) + (" · HACK/MOD" if s["is_hack_server"] else "")),
+                subtitle=ft.Text(f"{s['humanos'] + s['ias']}/{s['capacidade']} ({s['ias']} IA)"),
+                trailing=ft.TextButton("Encerrar", on_click=acao_e_recarrega(
+                    lambda: self.api.adm_encerrar_servidor(s["server_uid"]), "Servidor encerrado."))))
+
+        self.mostrar(ft.Container(
+            padding=16,
+            content=ft.Column([
+                ft.Row([ft.Text("Painel ADM", size=24, weight=ft.FontWeight.BOLD, expand=True),
+                        ft.IconButton(ft.Icons.REFRESH, tooltip="Atualizar", on_click=carregar)]),
+                resumo,
+                secao("Usuários", ft.Icons.PEOPLE, usuarios),
+                secao("IPs bloqueados", ft.Icons.SHIELD, ips),
+                secao("Servidores", ft.Icons.DNS, servidores),
+            ], spacing=14, scroll=ft.ScrollMode.AUTO, expand=True),
+        ), self.barra(3))
+        self.page.run_task(carregar)

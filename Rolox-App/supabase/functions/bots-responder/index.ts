@@ -6,6 +6,9 @@
 // usa os provedores gratuitos sem chave (Kilo, LLM7, OVH). Chaves opcionais:
 // segredos CHAVE_GROQ, CHAVE_GEMINI, CHAVE_MISTRAL, CHAVE_OPENROUTER, etc.
 //
+// Cada resposta gasta 1 ticket de quem mandou a mensagem (ADM: infinito);
+// sem tickets a IA não responde; se a IA falhar, o ticket é devolvido.
+//
 // Deploy: supabase functions deploy bots-responder --no-verify-jwt
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
@@ -119,7 +122,7 @@ async function responder(id: number): Promise<Record<string, unknown>> {
     .update({ respondida: true })
     .eq("id", id).eq("respondida", false).not("user_id", "is", null)
     .gte("criado_em", new Date(Date.now() - 60_000).toISOString())
-    .select("id, server_uid, username, mensagem_filtrada").maybeSingle();
+    .select("id, server_uid, user_id, username, mensagem_filtrada").maybeSingle();
   if (!msg) return { ok: false, motivo: "ja_respondida_ou_antiga" };
 
   const { data: presentes } = await admin.from("bots_dos_servidores")
@@ -133,6 +136,15 @@ async function responder(id: number): Promise<Record<string, unknown>> {
   const paraTodos = /\?|(^|\s)(oi|ola|olá|e ai|e aí|eae|pessoal|galera|alguém|alguem|vocês|voces)([\s,!.]|$)/i.test(texto);
   if (!chamado && !paraTodos && Math.random() > CHANCE_RESPONDER) return { ok: true, motivo: "ficou_quieto" };
   const bot = chamado ?? bots[Math.floor(Math.random() * bots.length)];
+
+  // 1 ticket do jogador = 1 resposta de IA (ADM tem infinitos)
+  const { data: pagou, error: erroTicket } = await admin.rpc("gastar_ticket", { p_user: msg.user_id });
+  if (erroTicket) return { ok: false, motivo: "erro_ticket", detalhe: erroTicket.message };
+  if (!pagou) return { ok: true, motivo: "sem_tickets" };
+  const devolver = async (motivo: string) => {
+    await admin.rpc("devolver_ticket", { p_user: msg.user_id });
+    return { ok: false, motivo, ticket: "devolvido" };
+  };
 
   const { data: srv } = await admin.from("servidores_ativos")
     .select("gameid, is_hack_server, jogos(nome)").eq("server_uid", msg.server_uid).maybeSingle();
@@ -162,12 +174,12 @@ async function responder(id: number): Promise<Record<string, unknown>> {
     { role: "system", content: sistema },
     { role: "user", content: `Chat do servidor até agora:\n${conversa}\n\nEscreva a próxima mensagem de ${bot.nome}.` },
   ]);
-  if (!resposta) return { ok: false, motivo: "nenhum_modelo_respondeu" };
+  if (!resposta) return await devolver("nenhum_modelo_respondeu");
 
   const falado = limpar(resposta[1], bot.nome);
-  if (!falado) return { ok: false, motivo: "resposta_vazia" };
+  if (!falado) return await devolver("resposta_vazia");
   const { data: filtrada } = await admin.rpc("filtrar_texto", { p_texto: falado });
-  if (!filtrada) return { ok: false, motivo: "resposta_vazia" };
+  if (!filtrada) return await devolver("resposta_vazia");
 
   // "tempo de digitação" para parecer natural
   await new Promise((r) => setTimeout(r, 1000 + Math.random() * 2000));
@@ -175,7 +187,7 @@ async function responder(id: number): Promise<Record<string, unknown>> {
   // a IA pode ter saído do servidor enquanto pensava
   const { data: ainda } = await admin.from("bots_dos_servidores")
     .select("bot_id").eq("server_uid", msg.server_uid).eq("bot_id", bot.id).maybeSingle();
-  if (!ainda) return { ok: false, motivo: "ia_saiu" };
+  if (!ainda) return await devolver("ia_saiu");
 
   await admin.from("servidores_logados").insert({
     server_uid: msg.server_uid, bot_id: bot.id, username: bot.nome,

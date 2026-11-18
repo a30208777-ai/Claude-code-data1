@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block titulo %}ADM · Rolox{% endblock %}
+{% block conteudo %}
+<h1>🛠️ Painel ADM</h1>
+<p class="muted">{{ d.totais.usuarios }} usuários · {{ d.totais.servidores }} servidores ·
+  {{ d.totais.ips_bloqueados }} IPs bloqueados · {{ d.totais.alertas_hoje }} alertas hoje</p>
+
+<h2>👥 Usuários</h2>
+{% for u in d.usuarios %}
+  <div class="cartao">
+    <div class="info">
+      <div class="titulo">{{ u.username }}{% if u.id == eu %} (você){% endif %}
+        {% if u.is_adm %}<span class="etiqueta">ADM</span>{% endif %}
+        {% if u.banido %}<span class="etiqueta" style="background:var(--perigo)">BANIDO</span>{% endif %}</div>
+      <div class="detalhe">🎟️ {% if u.is_adm %}∞{% else %}{{ u.tickets }}{% endif %}</div>
+      {% if not u.is_adm %}
+      <form method="post" action="{{ url_for('adm_acao', acao='tickets') }}" class="linha" style="margin-top:6px">
+        <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="user_id" value="{{ u.id }}">
+        <input type="number" name="quantidade" value="10" aria-label="Quantidade de tickets" style="max-width:100px">
+        <button class="btn pequeno contorno">Dar tickets</button>
+      </form>
+      {% endif %}
+    </div>
+    {% if u.id != eu %}
+    <div class="linha" style="flex-direction:column;gap:4px">
+      <form method="post" action="{{ url_for('adm_acao', acao='desbanir' if u.banido else 'banir') }}">
+        <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="user_id" value="{{ u.id }}">
+        <button class="btn pequeno {{ '' if u.banido else 'contorno' }}">{{ 'Desbanir' if u.banido else 'Banir' }}</button>
+      </form>
+      <form method="post" action="{{ url_for('adm_acao', acao='definir-adm') }}">
+        <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="user_id" value="{{ u.id }}">
+        <input type="hidden" name="adm" value="{{ '0' if u.is_adm else '1' }}">
+        <button class="btn texto pequeno">{{ 'Tirar ADM' if u.is_adm else 'Tornar ADM' }}</button>
+      </form>
+    </div>
+    {% endif %}
+  </div>
+{% endfor %}
+
+<h2>🛡️ IPs bloqueados</h2>
+{% for i in d.ips_bloqueados %}
+  <div class="cartao">
+    <div class="info"><div class="titulo">{{ i.ip }}</div>
+      <div class="detalhe">tentou entrar em {{ i.conta_alvo or '?' }} · {{ i.bloqueado_em | data }}</div></div>
+    <form method="post" action="{{ url_for('adm_acao', acao='desbloquear-ip') }}">
+      <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="ip" value="{{ i.ip }}">
+      <button class="btn pequeno contorno">Desbloquear</button>
+    </form>
+  </div>
+{% else %}<p class="muted">Nenhum IP bloqueado.</p>{% endfor %}
+
+<h2>🎮 Servidores</h2>
+{% for s in d.servidores %}
+  <div class="cartao">
+    <div class="info"><div class="titulo">{{ jogos.get(s.gameid, s.gameid) }}{% if s.is_hack_server %}<span class="etiqueta">HACK/MOD</span>{% endif %}</div>
+      <div class="detalhe">{{ s.humanos + s.ias }}/{{ s.capacidade }} ({{ s.ias }} IA)</div></div>
+    <form method="post" action="{{ url_for('adm_acao', acao='encerrar-servidor') }}">
+      <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="server_uid" value="{{ s.server_uid }}">
+      <button class="btn pequeno contorno">Encerrar</button>
+    </form>
+  </div>
+{% else %}<p class="muted">Nenhum servidor.</p>{% endfor %}
+{% endblock %}

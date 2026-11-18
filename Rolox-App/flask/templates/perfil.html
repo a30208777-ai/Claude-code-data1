@@ -1,10 +1,32 @@
 {% extends "base.html" %}
 {% block titulo %}Perfil · Rolox{% endblock %}
+{% block scripts %}
+<script>
+  const campos = document.querySelectorAll('[data-avatar]');
+  campos.forEach(c => c.addEventListener('change', () => {
+    const q = new URLSearchParams();
+    campos.forEach(x => q.set(x.name, x.value));
+    document.getElementById('previa').src = '{{ url_for("avatar_svg") }}?' + q.toString();
+  }));
+</script>
+{% endblock %}
 {% block conteudo %}
 <h1>{{ perfil.username }}</h1>
-<h2>⚙️ Configurações (config)</h2>
-<form method="post" class="pilha">
+<p><b>🎟️ Tickets: {% if perfil.is_adm %}∞ (ADM){% else %}{{ perfil.tickets }}{% endif %}</b></p>
+<form method="post" class="pilha" id="form-perfil">
   <input type="hidden" name="csrf" value="{{ csrf }}">
+  <h2>🧍 Avatar</h2>
+  <div style="text-align:center"><img id="previa" alt="Prévia do avatar" width="160" height="267"
+       src="{{ url_for('avatar_svg', **avatar) }}"></div>
+  <div class="grade-avatar">
+    <label>Pele<select name="pele" data-avatar>{% for n, v in av.PELES.items() %}<option value="{{ v }}" {{ 'selected' if avatar.pele == v }}>{{ n }}</option>{% endfor %}</select></label>
+    <label>Cabelo<select name="cabelo" data-avatar>{% for v, n in av.CABELOS.items() %}<option value="{{ v }}" {{ 'selected' if avatar.cabelo == v }}>{{ n }}</option>{% endfor %}</select></label>
+    <label>Cor do cabelo<select name="cor_cabelo" data-avatar>{% for n, v in av.CORES.items() %}<option value="{{ v }}" {{ 'selected' if avatar.cor_cabelo == v }}>{{ n }}</option>{% endfor %}</select></label>
+    <label>Acessório<select name="acessorio" data-avatar>{% for v, n in av.ACESSORIOS.items() %}<option value="{{ v }}" {{ 'selected' if avatar.acessorio == v }}>{{ n }}</option>{% endfor %}</select></label>
+    <label>Camisa<select name="camisa" data-avatar>{% for n, v in av.CORES.items() %}<option value="{{ v }}" {{ 'selected' if avatar.camisa == v }}>{{ n }}</option>{% endfor %}</select></label>
+    <label>Calça<select name="calca" data-avatar>{% for n, v in av.CORES.items() %}<option value="{{ v }}" {{ 'selected' if avatar.calca == v }}>{{ n }}</option>{% endfor %}</select></label>
+  </div>
+  <h2>⚙️ Configurações (config)</h2>
   <label>Idioma do chat
     <select name="idioma">
       {% for k, v in idiomas.items() %}<option value="{{ k }}" {{ 'selected' if perfil.idioma == k }}>{{ v }}</option>{% endfor %}

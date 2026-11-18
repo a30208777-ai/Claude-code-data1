@@ -260,3 +260,65 @@ def test_backend_nao_configurado_explica_o_erro():
     with pytest.raises(ErroRolox) as e:
         rodar(api.login("admtest", "x"))
     assert "ainda não foi configurado" in e.value.mensagem
+
+
+# ------------------------------------------------------ tickets, ADM, avatar
+from rolox import avatar as av  # noqa: E402
+
+
+def test_receber_tickets():
+    def h(req):
+        assert req.url.path == "/rest/v1/rpc/receber_tickets_diarios"
+        return resposta(200, {"infinito": False, "ganhou": 10, "tickets": 15, "amanha": 20})
+
+    assert rodar(logada(h).receber_tickets())["amanha"] == 20
+
+
+def test_acoes_de_adm_chamam_as_rpcs_certas():
+    vistos = []
+
+    def h(req):
+        vistos.append((req.url.path.rsplit("/", 1)[1], json.loads(req.content)))
+        return resposta(200, {"tickets": 1})
+
+    api = logada(h)
+    rodar(api.adm_dar_tickets("u9", 10))
+    rodar(api.adm_banir("u9", "spam"))
+    rodar(api.adm_desbanir("u9"))
+    rodar(api.adm_definir_adm("u9", True))
+    rodar(api.adm_desbloquear_ip("1.2.3.4"))
+    rodar(api.adm_encerrar_servidor("s1"))
+    assert vistos == [("adm_dar_tickets", {"p_user": "u9", "p_qtd": 10}),
+                      ("adm_banir", {"p_user": "u9", "p_motivo": "spam"}),
+                      ("adm_desbanir", {"p_user": "u9"}),
+                      ("adm_definir_adm", {"p_user": "u9", "p_adm": True}),
+                      ("adm_desbloquear_ip", {"p_ip": "1.2.3.4"}),
+                      ("adm_encerrar_servidor", {"p_server": "s1"})]
+
+
+def test_erro_de_permissao_mostra_a_mensagem_do_servidor():
+    api = logada(lambda r: resposta(403, {"code": "42501", "message": "apenas ADM"}))
+    with pytest.raises(ErroRolox) as e:
+        rodar(api.adm_painel())
+    assert e.value.mensagem == "Apenas adm."
+
+
+def test_avatar_normaliza_e_desenha():
+    a = av.normalizar({"pele": "#8d5524", "cabelo": "moicano", "acessorio": "coroa",
+                       "camisa": "javascript:x", "extra": "1"})
+    assert a == dict(av.PADRAO, pele="#8d5524", cabelo="moicano", acessorio="coroa")
+    pecas = av.pecas(a)
+    assert all(0 <= x and x + w <= av.LARGURA and 0 <= y and y + h <= av.ALTURA for x, y, w, h, _, _ in pecas)
+    assert any(cor == "#fbc02d" for *_, cor, _ in pecas)        # coroa
+    assert len(av.pecas({"cabelo": "careca"})) < len(av.pecas({"cabelo": "topete"}))
+
+
+def test_salvar_avatar_manda_so_valores_validos():
+    enviados = []
+
+    def h(req):
+        enviados.append(json.loads(req.content))
+        return resposta(200, [{"id": "u1"}])
+
+    rodar(logada(h).atualizar_perfil(avatar={"pele": "<script>", "cabelo": "longo"}))
+    assert enviados[0]["avatar"] == dict(av.PADRAO, cabelo="longo")

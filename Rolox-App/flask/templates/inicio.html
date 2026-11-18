@@ -1,9 +1,16 @@
 {% extends "base.html" %}
 {% block conteudo %}
-<h1>Olá, {{ perfil.username }}!</h1>
-<p class="muted" id="status">
-  {% if onde.fila %}Na fila de espera — posição {{ onde.posicao }}.{% else %}Você está no lobby.{% endif %}
-</p>
+<div class="linha" style="align-items:flex-start">
+  <div class="avatar-mini">{{ desenhar_avatar(perfil.avatar, 56) }}</div>
+  <div class="cresce">
+    <h1>Olá, {{ perfil.username }}!</h1>
+    <p class="muted" id="status">
+      {% if onde.fila %}Na fila de espera — posição {{ onde.posicao }}.{% else %}Você está no lobby.{% endif %}
+    </p>
+    <p><b>🎟️ Tickets: {% if perfil.is_adm %}∞ (ADM){% else %}{{ perfil.tickets }}{% endif %}</b></p>
+    <p class="nota">1 ticket = 1 resposta de IA no chat. Todo dia tem presente!</p>
+  </div>
+</div>
 
 <h2>🛡️ Alertas de segurança</h2>
 {% for a in alertas %}
