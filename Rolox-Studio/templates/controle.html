@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <title>Controle PCtoCelular</title>
+  <style>
+    :root { --fundo: #15171c; --painel: #23262e; --texto: #eef0f5; --suave: #9aa1b1; --primaria: #7e57c2; --erro: #ff6b6b; --ok: #7bd88f; }
+    @media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) { --fundo: #eef0f4; --painel: #fff; --texto: #1d1f27; --suave: #5e6575; --primaria: #5e35b1; --erro: #c62828; --ok: #2e7d32; } }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; }
+    body { background: var(--fundo); color: var(--texto); font: 16px/1.4 system-ui, Roboto, sans-serif; display: flex; flex-direction: column; overscroll-behavior: none; }
+    main { max-width: 520px; width: 100%; margin: 0 auto; padding: 16px; flex: 1; display: flex; flex-direction: column; gap: 12px; }
+    h1 { font-size: 22px; margin: 4px 0; color: var(--primaria); }
+    input, button { font: inherit; padding: 12px; border-radius: 10px; border: 1px solid #3a3f4b; background: var(--painel); color: var(--texto); }
+    button.destaque { background: var(--primaria); color: #fff; border-color: var(--primaria); font-weight: 700; }
+    .nota { color: var(--suave); font-size: 14px; }
+    .erro { color: var(--erro); } .ok { color: var(--ok); }
+    #jogo { flex: 1; display: none; flex-direction: column; gap: 10px; }
+    #jogo.ativo { display: flex; }
+    .area { flex: 1; position: relative; border-radius: 16px; background: var(--painel); touch-action: none; min-height: 260px; }
+    #joystick { position: absolute; left: 50%; top: 50%; width: 180px; height: 180px; margin: -90px 0 0 -90px; border-radius: 50%; border: 2px solid var(--suave); }
+    #manche { position: absolute; left: 60px; top: 60px; width: 60px; height: 60px; border-radius: 50%; background: var(--primaria); }
+    #pular { width: 100%; padding: 22px; font-size: 20px; }
+    .leituras { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; font: 12px ui-monospace, monospace; text-align: center; }
+    .leituras div { background: var(--painel); border-radius: 8px; padding: 6px; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>🎮 Controle PCtoCelular</h1>
+    <section id="entrar">
+      <p class="nota">Digite o código que aparece no painel PCtoCelular do Studio no PC.</p>
+      <p><input id="codigo" inputmode="numeric" maxlength="4" placeholder="Código (4 dígitos)" autocomplete="off" style="width:100%"></p>
+      <p><input id="nome" maxlength="20" placeholder="Seu nome no jogo" style="width:100%"></p>
+      <p><button id="conectar" class="destaque" style="width:100%">Conectar</button></p>
+      <p id="estado" class="nota" aria-live="polite"></p>
+      <p class="nota">Seus dados de movimento vão só para o PC ligado por cabo ou Bluetooth. Nada é enviado para a internet.</p>
+    </section>
+    <section id="jogo">
+      <p id="modo" class="nota"></p>
+      <div class="area" id="areaControle">
+        <div id="joystick" hidden><div id="manche"></div></div>
+        <p id="dicaSensor" class="nota" style="position:absolute;inset:auto 12px 12px 12px;text-align:center" hidden>
+          Incline o celular para andar · levante rápido para pular</p>
+      </div>
+      <div class="leituras" id="leituras" hidden>
+        <div>giro<br><b id="la">0</b></div><div>frente<br><b id="lb">0</b></div><div>lado<br><b id="lg">0</b></div><div>altura<br><b id="lh">0</b></div>
+      </div>
+      <button id="pular" class="destaque">Pular</button>
+      <button id="trocar">Usar joystick</button>
+    </section>
+  </main>
+  <script src="{{ url_for('static', filename='studio/controle.js') }}"></script>
+</body>
+</html>

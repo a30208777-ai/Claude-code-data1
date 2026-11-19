@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+projetos/*
+!projetos/.gitkeep
+static/vendor/pyodide/

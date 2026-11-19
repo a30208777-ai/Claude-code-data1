@@ -1,0 +1,28 @@
+{% extends "_base_simples.html" %}
+{% block conteudo %}
+<h1>ROLOX Studio</h1>
+<p class="nota">Crie jogos com peças, física e scripts em Lua (Luau) e Python.</p>
+<div class="cartoes">
+  <a class="cartao" id="leve" href="/studio/leve">
+    <h2>📱 Studio leve</h2>
+    <p>Para celular: interface de toque, gráficos simples, gasta menos bateria. Até 400 peças.</p>
+  </a>
+  <a class="cartao" id="pc" href="/studio/pc">
+    <h2>🖥️ Studio PC</h2>
+    <p>Completo: sombras, setas para mover e escalar, painéis lado a lado, PCtoCelular. Até 5000 peças.</p>
+  </a>
+</div>
+<p class="nota" id="sugestao"></p>
+<h2>Scripts</h2>
+<ul>
+  <li><b>LocalScript</b> (roda no dispositivo do jogador): <b>Lua</b>.</li>
+  <li><b>Script</b> (servidor): <b>Python</b>.</li>
+  <li><b>ModuleScript</b>: Lua ou Python — o dono do jogo escolhe na primeira linha:
+    <code>_++linguagemprogroma++_ = lua</code> ou <code>_++linguagemprogroma++_ = python</code> (vale também para os outros scripts).</li>
+</ul>
+<script>
+  const cel = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+  document.getElementById(cel ? "leve" : "pc").classList.add("sugerido");
+  document.getElementById("sugestao").textContent = cel ? "Sugestão para este aparelho: Studio leve." : "Sugestão para este aparelho: Studio PC.";
+</script>
+{% endblock %}
