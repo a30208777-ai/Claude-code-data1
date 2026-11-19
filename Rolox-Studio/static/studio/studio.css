@@ -86,7 +86,22 @@ body.modo-leve #editorScript { inset: 0; border-radius: 0; }
 #editorScript[hidden] { display: none; }
 #editorScript .cabecalho { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 #editorScript .cabecalho strong { margin-right: auto; }
-#scriptTexto { flex: 1; resize: none; font: 13px/1.5 ui-monospace, Menlo, Consolas, monospace; tab-size: 2; padding: 10px; }
+#codigo { flex: 1; min-height: 0; display: flex; border: 1px solid var(--borda); border-radius: 8px; overflow: hidden; background: var(--painel2); }
+#numeros { margin: 0; padding: 10px 8px 10px 10px; text-align: right; color: var(--suave); background: var(--painel); user-select: none;
+  font: 13px/1.5 ui-monospace, Menlo, Consolas, monospace; overflow: hidden; min-width: 3.2em; border-right: 1px solid var(--borda); }
+#codigo .camadas { position: relative; flex: 1; min-width: 0; }
+#realce, #scriptTexto { position: absolute; inset: 0; margin: 0; padding: 10px; border: 0; border-radius: 0;
+  font: 13px/1.5 ui-monospace, Menlo, Consolas, monospace; tab-size: 2; white-space: pre; overflow: auto; }
+#realce { pointer-events: none; color: var(--texto); background: transparent; }
+#realce code { font: inherit; }
+#scriptTexto { resize: none; background: transparent; color: transparent; caret-color: var(--texto); outline: none; }
+#scriptTexto::selection { background: var(--sel); color: transparent; }
+.tk-kw { color: #c792ea; font-weight: 600; } .tk-txt { color: #c3e88d; } .tk-num { color: #f78c6c; }
+.tk-com { color: #7f8aa3; font-style: italic; } .tk-api { color: #82aaff; } .tk-dir { color: #ffcb6b; font-weight: 700; }
+@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) {
+  --x: 0; } :root:not([data-theme="dark"]) .tk-kw { color: #7b1fa2; } :root:not([data-theme="dark"]) .tk-txt { color: #2e7d32; }
+  :root:not([data-theme="dark"]) .tk-num { color: #c62828; } :root:not([data-theme="dark"]) .tk-com { color: #78809a; }
+  :root:not([data-theme="dark"]) .tk-api { color: #1565c0; } :root:not([data-theme="dark"]) .tk-dir { color: #a15c00; } }
 .dica { margin: 0; font-size: 12px; color: var(--suave); }
 
 /* modal */
@@ -112,3 +127,8 @@ body.modo-leve #editorScript { inset: 0; border-radius: 0; }
 #manche { position: absolute; left: 40px; top: 40px; width: 50px; height: 50px; border-radius: 50%; background: #ffffffaa; }
 #botaoPulo { position: absolute; right: 28px; bottom: 40px; width: 74px; height: 74px; border-radius: 50%; font-size: 30px;
   background: #ffffff33; border: 2px solid #ffffff77; color: #fff; pointer-events: auto; touch-action: none; }
+
+#modal .modelo { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; white-space: normal; padding: 10px 12px; }
+button:disabled { opacity: .4; cursor: default; }
+.botoesLeve { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 10px; }
+.botoesLeve button { padding: 10px 4px; }

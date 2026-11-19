@@ -38,6 +38,8 @@
       <button data-acao="pasta">+ Pasta</button>
     </div>
     <div class="grupo">
+      <button data-acao="desfazer" title="Desfazer (Ctrl+Z)" aria-label="Desfazer">↶</button>
+      <button data-acao="refazer" title="Refazer (Ctrl+Y)" aria-label="Refazer">↷</button>
       <button data-acao="duplicar" title="Duplicar (Ctrl+D)">Duplicar</button>
       <button data-acao="apagar" title="Apagar (Delete)">Apagar</button>
       <button data-acao="mover" class="so-pesado ativo" title="Mover (W)">Mover</button>
@@ -91,7 +93,13 @@
       <button id="scriptFechar" class="destaque">Fechar</button>
     </div>
     <p id="scriptDica" class="dica"></p>
-    <textarea id="scriptTexto" spellcheck="false" autocapitalize="off" autocomplete="off"></textarea>
+    <div id="codigo">
+      <pre id="numeros" aria-hidden="true"></pre>
+      <div class="camadas">
+        <pre id="realce" aria-hidden="true"><code></code></pre>
+        <textarea id="scriptTexto" spellcheck="false" autocapitalize="off" autocomplete="off" wrap="off" aria-label="Código do script"></textarea>
+      </div>
+    </div>
   </div>
 
   <div id="modal" hidden role="dialog" aria-modal="true">

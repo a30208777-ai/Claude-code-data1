@@ -176,5 +176,13 @@ export class Render {
     return null;
   }
 
+  /** Ponto onde o raio do dedo/mouse cruza o plano horizontal y (para arrastar peças). */
+  pontoNoPlano(xNorm, yNorm, y) {
+    const r = new THREE.Raycaster();
+    r.setFromCamera(new THREE.Vector2(xNorm, yNorm), this.camera);
+    const p = new THREE.Vector3();
+    return r.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 1, 0), -y), p) ? p : null;
+  }
+
   objetoDe(i) { return this.objetos.get(i?.id); }
 }

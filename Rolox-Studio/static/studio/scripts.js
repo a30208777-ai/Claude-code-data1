@@ -5,6 +5,7 @@
 // A linguagem vem da primeira linha:  _++linguagemprogroma++_ = lua   (ou python)
 
 import { Color3, Instance, Sinal, Vector3, BaseScript, criar } from "./motor.js";
+import { traduzirLuau } from "./luau.js";
 
 let contadorApi = 0;
 
@@ -251,7 +252,7 @@ export class ExecutorLua {
       throw new Error(msg);
     }
   }
-  rodar(script, codigo) { this._chamarGlobal("__rodarScript", script, codigo, script.Name); }
+  rodar(script, codigo) { this._chamarGlobal("__rodarScript", script, traduzirLuau(codigo), script.Name); }
   passo() { this._chamarGlobal("__passo"); }
   fechar() { if (this.L) { this.lua.lua_close(this.L); this.L = null; } delete window[this.nomeApi]; }
 }
@@ -273,41 +274,159 @@ export function carregarPython(saida) {
   return pyodideCarregando;
 }
 
-const BASE_PYTHON = `
-import asyncio, types
-from rolox import game, workspace, _Vector3, _Color3, _criar, _imprimir, _avisar, _agora, _fonte_modulo
-Workspace = workspace
+const BASE_PYTHON = String.raw`
+import asyncio, types, math, weakref
+from pyodide.ffi import JsProxy, create_proxy
+try:
+    from pyodide.ffi import jsnull as _jsnull
+except ImportError:
+    _jsnull = None
+from rolox import (_game, _V3, _C3, _criar, _imprimir, _avisar, _agora, _fonte_modulo,
+                   _eh_v3, _eh_c3, _eh_inst, _eh_sinal, _eh_array)
 
-# No Pyodide, ".new" numa classe JS vira "new Classe(...)"; por isso estas versões em Python.
+# ---------------------------------------------------------------- Vector3 / Color3 em Python
+def _n(v):
+    v = float(v)
+    return int(v) if v.is_integer() else v
+
+class Vector3:
+    __slots__ = ("X", "Y", "Z")
+    def __init__(self, x=0, y=0, z=0):
+        object.__setattr__(self, "X", _n(x)); object.__setattr__(self, "Y", _n(y)); object.__setattr__(self, "Z", _n(z))
+    def __setattr__(self, k, v):
+        raise AttributeError("Vector3 não muda: crie outro com Vector3.new(...)")
+    @staticmethod
+    def new(x=0, y=0, z=0):
+        return Vector3(x, y, z)
+    x = property(lambda s: s.X); y = property(lambda s: s.Y); z = property(lambda s: s.Z)
+    @property
+    def Magnitude(self):
+        return math.sqrt(self.X * self.X + self.Y * self.Y + self.Z * self.Z)
+    @property
+    def Unit(self):
+        m = self.Magnitude or 1.0
+        return Vector3(self.X / m, self.Y / m, self.Z / m)
+    def _o(self, o):
+        return (o.X, o.Y, o.Z) if isinstance(o, Vector3) else (o, o, o)
+    def __add__(self, o): a = self._o(o); return Vector3(self.X + a[0], self.Y + a[1], self.Z + a[2])
+    def __sub__(self, o): a = self._o(o); return Vector3(self.X - a[0], self.Y - a[1], self.Z - a[2])
+    def __mul__(self, o): a = self._o(o); return Vector3(self.X * a[0], self.Y * a[1], self.Z * a[2])
+    __rmul__ = __mul__
+    def __truediv__(self, o): a = self._o(o); return Vector3(self.X / a[0], self.Y / a[1], self.Z / a[2])
+    def __neg__(self): return Vector3(-self.X, -self.Y, -self.Z)
+    def __eq__(self, o): return isinstance(o, Vector3) and (self.X, self.Y, self.Z) == (o.X, o.Y, o.Z)
+    def __hash__(self): return hash((self.X, self.Y, self.Z))
+    def __iter__(self): return iter((self.X, self.Y, self.Z))
+    # nomes antigos (primeira versão)
+    def add(self, o): return self + o
+    def sub(self, o): return self - o
+    def mul(self, o): return self * o
+    def __str__(self): return ", ".join(_num(v) for v in (self.X, self.Y, self.Z))
+    __repr__ = lambda self: f"Vector3({self})"
+
+Vector3.zero = Vector3(0, 0, 0)
+Vector3.one = Vector3(1, 1, 1)
+
+class Color3:
+    __slots__ = ("R", "G", "B")
+    def __init__(self, r=0, g=0, b=0):
+        self.R, self.G, self.B = float(r), float(g), float(b)
+    @staticmethod
+    def new(r=0, g=0, b=0): return Color3(r, g, b)
+    @staticmethod
+    def fromRGB(r=0, g=0, b=0): return Color3(r / 255, g / 255, b / 255)
+    def __eq__(self, o): return isinstance(o, Color3) and (self.R, self.G, self.B) == (o.R, o.G, o.B)
+    def __str__(self): return ", ".join(_num(v) for v in (self.R, self.G, self.B))
+
+def _num(v):
+    return str(int(v)) if float(v).is_integer() else f"{v:g}"
+
+# ---------------------------------------------------------------- JS <-> Python
+_cache = weakref.WeakValueDictionary()
+
+def _py(v):
+    """Valor vindo do JS -> Python (instâncias, vetores, cores, eventos, listas)."""
+    if v is None or v is _jsnull:
+        return None
+    if not isinstance(v, JsProxy):
+        return v
+    if _eh_v3(v): return Vector3(v.X, v.Y, v.Z)
+    if _eh_c3(v): return Color3(v.R, v.G, v.B)
+    if _eh_inst(v):
+        w = _cache.get(v.id)
+        if w is None:
+            w = Inst(v); _cache[v.id] = w
+        return w
+    if _eh_sinal(v): return Sinal(v)
+    if _eh_array(v): return [_py(x) for x in v]
+    return v
+
+def _js(v):
+    """Valor do Python -> JS."""
+    if isinstance(v, Inst): return object.__getattribute__(v, "_js")
+    if isinstance(v, Sinal): return v._js
+    if isinstance(v, Vector3): return _V3.new(v.X, v.Y, v.Z)
+    if isinstance(v, Color3): return _C3.new(v.R, v.G, v.B)
+    return v
+
+def _agendar(r):
+    if asyncio.iscoroutine(r):
+        asyncio.ensure_future(r)
+
+class Inst:
+    """Uma instância do jogo (Part, Model, Humanoid...) vista pelo Python."""
+    __slots__ = ("_js", "__weakref__")
+    def __init__(self, js): object.__setattr__(self, "_js", js)
+    def __getattr__(self, k):
+        o = object.__getattribute__(self, "_js")
+        try:
+            val = getattr(o, k)
+        except AttributeError:
+            raise AttributeError(f"{o.Name} não tem '{k}' (nem um filho com esse nome)") from None
+        if isinstance(val, JsProxy) and val.typeof == "function":
+            return lambda *a: _py(val(*[_js(x) for x in a]))
+        return _py(val)
+    def __setattr__(self, k, v): setattr(object.__getattribute__(self, "_js"), k, _js(v))
+    def __eq__(self, o): return isinstance(o, Inst) and self._js.id == o._js.id
+    def __hash__(self): return hash(("inst", self._js.id))
+    def __str__(self): return str(self._js.Name)
+    def __repr__(self): return f"<{self._js.ClassName} {self._js.Name}>"
+
+class Sinal:
+    """Evento (Touched, Died, Heartbeat...): Connect aceita função normal ou async def."""
+    __slots__ = ("_js",)
+    def __init__(self, js): self._js = js
+    def Connect(self, fn):
+        def chamar(*a):
+            _agendar(fn(*[_py(x) for x in a]))
+        return self._js.Connect(create_proxy(chamar))
+    connect = Connect
+    async def Wait(self):
+        fut = asyncio.get_event_loop().create_future()
+        def pegar(*a):
+            if not fut.done():
+                fut.set_result(tuple(_py(x) for x in a))
+        p = create_proxy(pegar)
+        c = self._js.Connect(p)
+        try:
+            r = await fut
+        finally:
+            c.Disconnect()
+        return r[0] if len(r) == 1 else (r or None)
+
 class Instance:
     @staticmethod
     def new(classe, pai=None):
-        return _criar(classe, pai)
+        return _py(_criar(classe, _js(pai)))
 
-class Vector3:
-    @staticmethod
-    def new(x=0, y=0, z=0):
-        return _Vector3.new(x, y, z)
-
-Vector3.zero = Vector3.new(0, 0, 0)
-Vector3.one = Vector3.new(1, 1, 1)
-
-class Color3:
-    @staticmethod
-    def new(r=0, g=0, b=0):
-        return _Color3.new(r, g, b)
-    @staticmethod
-    def fromRGB(r=0, g=0, b=0):
-        return _Color3.fromRGB(r, g, b)
+game = _py(_game)
+workspace = game.Workspace
+Workspace = workspace
 
 async def wait(s=0.03):
     t0 = _agora()
     await asyncio.sleep(float(s))
     return _agora() - t0
-
-def _agendar(r):
-    if asyncio.iscoroutine(r):
-        asyncio.ensure_future(r)
 
 class _Task:
     wait = staticmethod(wait)
@@ -325,20 +444,20 @@ task = _Task()
 _modulos = {}
 def _globais_base(nome, script):
     g = {k: v for k, v in globals().items() if not k.startswith("__")}
-    def _print(*a, sep=" ", end="\\n"):
+    def _print(*a, sep=" ", end="\n"):
         _imprimir(nome, sep.join(str(x) for x in a))
     def _warn(*a):
         _avisar(nome, " ".join(str(x) for x in a))
-    g.update(print=_print, warn=_warn, script=script, __name__=nome)
+    g.update(print=_print, warn=_warn, script=_py(script), __name__=nome)
     return g
 
 def require(m):
-    info = _fonte_modulo(m)
+    info = _fonte_modulo(_js(m))
     if info.erro:
         raise RuntimeError(info.erro)
     if info.id in _modulos:
         return _modulos[info.id]
-    g = _globais_base(info.nome, m)
+    g = _globais_base(info.nome, _js(m))
     exec(compile(info.codigo, info.nome, "exec"), g)
     ns = types.SimpleNamespace(**{k: v for k, v in g.items() if not k.startswith("_") and k not in _NOMES_BASE})
     _modulos[info.id] = ns
@@ -350,6 +469,7 @@ def _parar_tudo():
     for t in asyncio.all_tasks():
         t.cancel()
     _modulos.clear()
+    _cache.clear()
 `;
 
 export class ExecutorPython {
@@ -357,8 +477,9 @@ export class ExecutorPython {
     this.py = py;
     this.api = api;
     py.registerJsModule("rolox", {
-      game: api.game, workspace: api.game.Workspace, _Vector3: Vector3, _Color3: Color3,
+      _game: api.game, _V3: Vector3, _C3: Color3,
       _criar: (classe, pai) => criar(String(classe), pai || undefined),
+      _eh_v3: api.ehV3, _eh_c3: api.ehC3, _eh_inst: api.ehInstancia, _eh_sinal: api.ehSinal, _eh_array: api.ehArray,
       _imprimir: (n, t) => api.imprimir(n, t), _avisar: (n, t) => api.avisar(n, t),
       _agora: () => api.agora(), _fonte_modulo: (m) => api.fonteModulo(m, "python"),
     });
@@ -403,7 +524,8 @@ export function criarApi(mundo, saida) {
       if (m.Linguagem !== quem) {
         return { erro: `O ModuleScript "${m.Name}" está em ${m.Linguagem}; um script em ${quem} só pode usar módulos em ${quem} (por enquanto).` };
       }
-      return { id: m.id, nome: m.Name, codigo: m.CodigoExecutavel, erro: null };
+      const codigo = quem === "lua" ? traduzirLuau(m.CodigoExecutavel) : m.CodigoExecutavel;
+      return { id: m.id, nome: m.Name, codigo, erro: null };
     },
   };
   return api;

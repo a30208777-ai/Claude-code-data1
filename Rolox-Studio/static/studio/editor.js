@@ -10,6 +10,7 @@ import { Jogo } from "./jogo.js";
 import { importarNoMundo } from "./importar_obj.js";
 import { PCtoCelular, ehCelular, LIMITES } from "./pctocelular.js";
 import { carregarPython } from "./scripts.js";
+import { MODELOS } from "./modelos.js";
 
 const MODO = document.body.dataset.modo;           // "leve" | "pesado"
 const PESADO = MODO === "pesado";
@@ -47,6 +48,59 @@ function saida(texto, tipo = "info", origem) {
   if (tipo === "erro" && !PESADO) marcarAba("painelSaida");
 }
 definirReporteDeErro((e) => saida(e?.message || String(e), "erro"));
+
+// ------------------------------------------------- desfazer / refazer
+const historico = { pilha: [], i: -1, restaurando: false, timer: null };
+function fotografar() {
+  const d = salvarMundo(estado.mundo, estado.nome || "projeto");
+  delete d.assets;                      // malhas não mudam; não precisa copiar
+  return JSON.stringify(d);
+}
+function gravarFoto() {
+  clearTimeout(historico.timer); historico.timer = null;
+  const foto = fotografar();
+  if (foto === historico.pilha[historico.i]) return;
+  historico.pilha.splice(historico.i + 1);
+  historico.pilha.push(foto);
+  if (historico.pilha.length > 60) historico.pilha.shift();
+  historico.i = historico.pilha.length - 1;
+  botoesHistorico();
+}
+function mudou() {
+  estado.sujo = true;
+  if (historico.restaurando || estado.jogo) return;
+  clearTimeout(historico.timer);
+  historico.timer = setTimeout(gravarFoto, 250);
+}
+function reiniciarHistorico() { historico.pilha = [fotografar()]; historico.i = 0; botoesHistorico(); }
+function botoesHistorico() {
+  const d = document.querySelector('[data-acao="desfazer"]'), r = document.querySelector('[data-acao="refazer"]');
+  if (d) d.disabled = historico.i <= 0;
+  if (r) r.disabled = historico.i >= historico.pilha.length - 1;
+}
+function acharPorCaminho(m, caminho) {
+  let atual = m.game;
+  for (const nome of caminho.split(".")) { atual = atual?.FindFirstChild(nome); if (!atual) return null; }
+  return atual;
+}
+function irParaFoto(novo) {
+  if (estado.jogo) return;
+  if (scriptAberto) fecharScript();
+  if (historico.timer) gravarFoto();
+  if (novo < 0 || novo >= historico.pilha.length) return;
+  const caminho = estado.sel && !estado.sel._destruida ? estado.sel.GetFullName() : null;
+  historico.restaurando = true;
+  const d = JSON.parse(historico.pilha[novo]);
+  d.assets = estado.mundo.assets;
+  const m = carregarMundo(d);
+  gizmo?.detach();
+  render.definirMundo(m);
+  estado.mundo = m; estado.sujo = true;
+  historico.i = novo;
+  historico.restaurando = false;
+  selecionar(caminho ? acharPorCaminho(m, caminho) : null);
+  botoesHistorico();
+}
 
 // ------------------------------------------------------------------ modal
 function modal(conteudo, botoes = [{ texto: "OK", valor: true, destaque: true }]) {
@@ -89,16 +143,50 @@ if (PESADO) {
       const t = o.children[0].userData.tamanho;
       i.Size = new Vector3(o.scale.x * t.x, o.scale.y * t.y, o.scale.z * t.z);
     }
-    estado.sujo = true;
+    mudou();
     desenharProps();
   });
   render.cena.add(gizmo.getHelper ? gizmo.getHelper() : gizmo);
 }
 
+// Studio leve: arrastar a peça selecionada com o dedo (no plano da altura dela)
+let arraste = null;
+estado.arrastar = !PESADO;
+const coordNorm = (e) => {
+  const r = canvas.getBoundingClientRect();
+  return [((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1];
+};
+canvas.addEventListener("pointerdown", (e) => {
+  const i = estado.sel;
+  if (PESADO || estado.jogo || !estado.arrastar || !(i instanceof BasePart) || i._destruida) return;
+  const [x, y] = coordNorm(e);
+  if (render.pegar(x, y) !== i) return;
+  const ponto = render.pontoNoPlano(x, y, i.Position.Y);
+  if (!ponto) return;
+  arraste = { id: e.pointerId, dx: i.Position.X - ponto.x, dz: i.Position.Z - ponto.z };
+  orbita.enabled = false;
+  canvas.setPointerCapture(e.pointerId);
+}, { capture: true });
+canvas.addEventListener("pointermove", (e) => {
+  if (!arraste || e.pointerId !== arraste.id) return;
+  const i = estado.sel, [x, y] = coordNorm(e);
+  const ponto = render.pontoNoPlano(x, y, i.Position.Y);
+  if (!ponto) return;
+  const passo = 0.5, arred = (v) => Math.round(v / passo) * passo;
+  i.Position = new Vector3(arred(ponto.x + arraste.dx), i.Position.Y, arred(ponto.z + arraste.dz));
+});
+const fimArraste = (e) => {
+  if (!arraste || e.pointerId !== arraste.id) return false;
+  arraste = null; orbita.enabled = true; mudou(); desenharProps();
+  return true;
+};
+canvas.addEventListener("pointercancel", fimArraste);
+
 // clique/toque na cena seleciona
 let inicioToque = null;
 canvas.addEventListener("pointerdown", (e) => { inicioToque = [e.clientX, e.clientY]; });
 canvas.addEventListener("pointerup", (e) => {
+  if (fimArraste(e)) { inicioToque = null; return; }
   if (estado.jogo || !inicioToque) return;
   const movimento = Math.hypot(e.clientX - inicioToque[0], e.clientY - inicioToque[1]);
   inicioToque = null;
@@ -161,7 +249,7 @@ function desenharProps() {
   if (!i || i._destruida) { caixa.replaceChildren(el("p", { class: "vazio" }, "Selecione algo no Explorer ou na cena.")); return; }
   const linhas = [el("p", { class: "vazio" }, `${i.ClassName}`)];
   const linha = (rotulo, campo) => el("div", { class: "prop" }, el("label", {}, rotulo), campo);
-  const marcar = () => { estado.sujo = true; desenharExplorer(); };
+  const marcar = () => { mudou(); desenharExplorer(); };
   const ehServico = i.constructor.naoCriavel;
 
   if (!ehServico) {
@@ -187,6 +275,17 @@ function desenharProps() {
       linhas.push(linha(p, el("input", { type: "number", step: p === "Transparency" ? "0.1" : "1", value: v,
         onchange: (e) => { i[p] = +e.target.value; marcar(); } })));
     } else if (p === "MeshId") linhas.push(linha(p, el("input", { type: "text", value: v, readonly: true })));
+  }
+  if (i instanceof BasePart && !PESADO) {
+    const mexer = (dy, giro = 0) => () => {
+      i.Position = i.Position.add(new Vector3(0, dy, 0));
+      if (giro) i.Rotation = i.Rotation.add(new Vector3(0, giro, 0));
+      mudou(); desenharProps();
+    };
+    linhas.splice(1, 0, el("p", { class: "vazio" }, "Arraste a peça na cena com o dedo para mover."),
+      el("div", { class: "botoesLeve" },
+        el("button", { onclick: mexer(1) }, "⬆ Subir"), el("button", { onclick: mexer(-1) }, "⬇ Descer"),
+        el("button", { onclick: mexer(0, 45) }, "⟳ Girar 45°")));
   }
   if (i instanceof BaseScript) {
     const sel = el("select", { onchange: (e) => mudarLinguagem(i, e.target.value, sel) },
@@ -221,9 +320,52 @@ async function mudarLinguagem(s, lang, select) {
     if (!continuar) { if (select) select.value = s.Linguagem; return; }
   }
   s.definirLinguagem(lang);
-  estado.sujo = true;
-  if (!$("#editorScript").hidden) $("#scriptTexto").value = s.Source;
+  mudou();
+  if (!$("#editorScript").hidden) { $("#scriptTexto").value = s.Source; atualizarRealce(); }
   desenharExplorer(); desenharProps(); atualizarDicaScript(s);
+}
+
+// realce de sintaxe (camada colorida atrás da caixa de texto)
+const PALAVRAS = {
+  lua: new Set("and break do else elseif end false for function goto if in local nil not or repeat return then true until while continue type export".split(" ")),
+  python: new Set("False None True and as assert async await break class continue def del elif else except finally for from global if import in is lambda nonlocal not or pass raise return try while with yield".split(" ")),
+};
+const API = new Set("game workspace Workspace script Instance Vector3 Color3 wait task print warn require spawn delay math string table pairs ipairs tostring tonumber self len range str int float list dict".split(" "));
+const RE_TOKENS = {
+  lua: /(?<com>--\[(?<eqc>=*)\[[\s\S]*?\]\k<eqc>\]|--[^\n]*)|(?<txt>"(?:[^"\\\n]|\\.)*"?|'(?:[^'\\\n]|\\.)*'?|`(?:[^`\\]|\\.)*`?|\[(?<eqs>=*)\[[\s\S]*?\]\k<eqs>\])|(?<num>\b0x[\da-fA-F]+\b|\b\d[\d_]*(?:\.\d+)?(?:[eE][+-]?\d+)?\b)|(?<nome>[A-Za-z_]\w*)/g,
+  python: /(?<com>#[^\n]*)|(?<txt>(?:\b[rbfRBF]{1,2})?(?:"""[\s\S]*?(?:"""|$)|'''[\s\S]*?(?:'''|$)|"(?:[^"\\\n]|\\.)*"?|'(?:[^'\\\n]|\\.)*'?))|(?<num>\b0x[\da-fA-F]+\b|\b\d[\d_]*(?:\.\d+)?(?:[eE][+-]?\d+)?\b)|(?<nome>[A-Za-z_]\w*)/g,
+};
+const esc = (t) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+function realcar(codigo, lang) {
+  let html = "", ultimo = 0;
+  const re = RE_TOKENS[lang] || RE_TOKENS.lua;
+  re.lastIndex = 0;
+  for (let m; (m = re.exec(codigo)); ) {
+    if (m[0] === "") { re.lastIndex++; continue; }
+    html += esc(codigo.slice(ultimo, m.index));
+    const v = m[0];
+    let classe = "";
+    const g = m.groups;
+    if (g.com) classe = "tk-com"; else if (g.txt) classe = "tk-txt"; else if (g.num) classe = "tk-num";
+    else if (g.nome) classe = PALAVRAS[lang]?.has(v) ? "tk-kw" : API.has(v) ? "tk-api" : "";
+    html += classe ? `<span class="${classe}">${esc(v)}</span>` : esc(v);
+    ultimo = m.index + v.length;
+  }
+  html += esc(codigo.slice(ultimo));
+  // a diretiva de linguagem em destaque
+  html = html.replace(/^(\s*)(_\+\+linguagemprogroma\+\+_)/m, '$1<span class="tk-dir">$2</span>');
+  return html + "\n";
+}
+function atualizarRealce() {
+  const t = $("#scriptTexto"), lang = scriptAberto?.Linguagem || "lua";
+  $("#realce code").innerHTML = realcar(t.value, lang);
+  const linhas = t.value.split("\n").length;
+  $("#numeros").textContent = Array.from({ length: linhas }, (_, k) => k + 1).join("\n") + "\n";
+  sincronizarRolagem();
+}
+function sincronizarRolagem() {
+  const t = $("#scriptTexto");
+  $("#realce").scrollTop = t.scrollTop; $("#realce").scrollLeft = t.scrollLeft; $("#numeros").scrollTop = t.scrollTop;
 }
 
 let scriptAberto = null;
@@ -234,6 +376,7 @@ function abrirScript(s) {
   $("#scriptTexto").value = s.Source;
   atualizarDicaScript(s);
   $("#editorScript").hidden = false;
+  atualizarRealce();
   $("#scriptTexto").focus();
 }
 function atualizarDicaScript(s) {
@@ -242,7 +385,7 @@ function atualizarDicaScript(s) {
     (s.Linguagem === "python" ? " — use await wait(1) para esperar." : " — use wait(1) para esperar.");
 }
 function fecharScript() {
-  if (scriptAberto) { scriptAberto.Source = $("#scriptTexto").value; estado.sujo = true; }
+  if (scriptAberto) { scriptAberto.Source = $("#scriptTexto").value; mudou(); }
   scriptAberto = null; $("#editorScript").hidden = true; desenharExplorer(); desenharProps();
 }
 $("#scriptFechar").addEventListener("click", fecharScript);
@@ -251,11 +394,14 @@ $("#scriptLang").addEventListener("change", (e) => {
   scriptAberto.Source = $("#scriptTexto").value;
   mudarLinguagem(scriptAberto, e.target.value, e.target);
 });
+$("#scriptTexto").addEventListener("input", atualizarRealce);
+$("#scriptTexto").addEventListener("scroll", sincronizarRolagem);
 $("#scriptTexto").addEventListener("keydown", (e) => {
   if (e.key === "Tab") {
     e.preventDefault();
     const t = e.target, a = t.selectionStart;
     t.setRangeText("  ", a, t.selectionEnd, "end");
+    atualizarRealce();
   } else if (e.key === "Escape") fecharScript();
 });
 
@@ -284,14 +430,14 @@ function novaParte(classe, forma) {
   p.Anchored = true;
   p.Position = posicaoNaFrente().add(new Vector3(0, p.Size.Y / 2, 0));
   p.Parent = ondeColocar(classe);
-  estado.sujo = true;
+  mudou();
   selecionar(p);
 }
 
 function novoScript(classe) {
   const s = criar(classe);
   s.Parent = ondeColocar(classe);
-  estado.sujo = true;
+  mudou();
   selecionar(s);
   abrirScript(s);
 }
@@ -299,7 +445,10 @@ function novoScript(classe) {
 const acoes = {
   async novo() {
     if (estado.sujo && !(await modal("Descartar as mudanças não salvas?", [{ texto: "Cancelar", valor: false }, { texto: "Descartar", valor: true, destaque: true }]))) return;
-    trocarMundo(mundoInicial(), null);
+    const escolha = await modal([el("p", {}, el("b", {}, "Começar com qual modelo?")), el("div", { class: "lista" },
+      MODELOS.map((x) => el("button", { class: "modelo", onclick: () => { $("#modal").hidden = true; usarModelo(x); } },
+        el("b", {}, x.nome), el("span", { class: "vazio" }, x.descricao))))], [{ texto: "Cancelar", valor: false }]);
+    return escolha;
   },
   async abrir() {
     let lista = [];
@@ -336,20 +485,22 @@ const acoes = {
   script() { novoScript("Script"); },
   localscript() { novoScript("LocalScript"); },
   modulescript() { novoScript("ModuleScript"); },
-  pasta() { const f = criar("Folder"); f.Parent = ondeColocar("Folder"); estado.sujo = true; selecionar(f); },
+  pasta() { const f = criar("Folder"); f.Parent = ondeColocar("Folder"); mudou(); selecionar(f); },
   duplicar() {
     const s = estado.sel; if (!s || s.constructor.naoCriavel) return;
     const c = s.Clone(); c.Parent = s.Parent;
     if (c instanceof BasePart) c.Position = c.Position.add(new Vector3(0, 0, s.Size.Z + 0.5));
-    estado.sujo = true; selecionar(c);
+    mudou(); selecionar(c);
   },
   apagar() {
     const s = estado.sel; if (!s || s.constructor.naoCriavel) return;
-    s.Destroy(); estado.sujo = true; selecionar(null);
+    s.Destroy(); mudou(); selecionar(null);
   },
   mover() { gizmo?.setMode("translate"); marcarBotao("mover"); },
   escalar() { gizmo?.setMode("scale"); marcarBotao("escalar"); },
   limparSaida() { $("#saida").replaceChildren(); },
+  desfazer() { irParaFoto(historico.i - 1); },
+  refazer() { irParaFoto(historico.i + 1); },
   async jogar() { estado.jogo ? pararJogo() : iniciarJogo(); },
 };
 
@@ -368,7 +519,7 @@ $("#arquivoObj").addEventListener("change", async (e) => {
     const { parte, avisos } = await importarNoMundo(estado.mundo, render, arquivos, posicaoNaFrente());
     saida(`Importado: ${parte.Name} (${parte.Size})`, "sistema");
     for (const a of avisos) saida(a, "aviso");
-    estado.sujo = true; selecionar(parte);
+    mudou(); selecionar(parte);
   } catch (err) { modal(err.message); }
   e.target.value = "";
 });
@@ -378,6 +529,11 @@ $("#arquivoRolox").addEventListener("change", async (e) => {
   catch (err) { modal(`Arquivo inválido: ${err.message}`); }
   e.target.value = "";
 });
+
+function usarModelo(x) {
+  trocarMundo(x.criar(), null);
+  if (x.id !== "vazio") { mudou(); saida(`Modelo "${x.nome}" criado. Aperte ▶ Jogar para testar.`, "sistema"); }
+}
 
 async function carregarProjeto(nome) {
   try {
@@ -394,6 +550,7 @@ function trocarMundo(m, nome) {
   render.definirMundo(m);
   estado.mundo = m; estado.nome = nome; estado.sujo = false; estado.sel = null;
   desenharExplorer(); desenharProps();
+  reiniciarHistorico();
 }
 
 // atalhos de teclado (editor)
@@ -405,7 +562,9 @@ document.addEventListener("keydown", (e) => {
     return;
   }
   if (digitando) return;
-  if ((e.ctrlKey || e.metaKey) && e.key === "s") { e.preventDefault(); acoes.salvar(); }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z" && !e.shiftKey) { e.preventDefault(); acoes.desfazer(); }
+  else if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === "y" || (e.key.toLowerCase() === "z" && e.shiftKey))) { e.preventDefault(); acoes.refazer(); }
+  else if ((e.ctrlKey || e.metaKey) && e.key === "s") { e.preventDefault(); acoes.salvar(); }
   else if ((e.ctrlKey || e.metaKey) && e.key === "d") { e.preventDefault(); acoes.duplicar(); }
   else if (e.key === "Delete") acoes.apagar();
   else if (e.key === "w" && PESADO) acoes.mover();
@@ -523,6 +682,7 @@ setInterval(() => {
 
 desenharExplorer();
 desenharProps();
+if (!historico.pilha.length) reiniciarHistorico();
 saida(`Rolox Studio ${PESADO ? "PC (pesado)" : "leve (celular)"} pronto.`, "sistema");
 if (PESADO) carregarPython().catch(() => {});      // no PC já deixa o Python carregando
 window.__studio = { estado, acoes, render };      // para testes e depuração

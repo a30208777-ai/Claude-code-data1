@@ -29,6 +29,10 @@ Opcional, para usar o Python dos scripts sem internet: `python baixar_pyodide.py
 - **Jogar (F5):** testa o jogo no próprio Studio, com personagem em blocos, gravidade, colisão, pulo, `Humanoid` (WalkSpeed, JumpPower, Health, Died) e `Touched`. Ao parar, tudo volta como estava antes do teste.
 - **Controles:** WASD/setas e espaço no PC; joystick e botão de pulo na tela de toque.
 - **Salvar/Abrir:** os projetos ficam na pasta `projetos/`, e dá para exportar e importar um arquivo `.rolox`. Também há um rascunho automático no navegador.
+- **Desfazer/Refazer:** Ctrl+Z e Ctrl+Y (ou os botões ↶ ↷), até 60 passos.
+- **Modelos prontos no "Novo":** *Vazio*; *Obby (parkour)*, com plataformas sobre lava, lava móvel, checkpoint e cronômetro, escrito em Luau; e *Coleta de moedas*, com moedas que giram, pontos e retorno após 5 segundos, escrito em Python.
+- **Studio leve:** arraste a peça selecionada com o dedo, e use os botões Subir, Descer e Girar 45°.
+- **Editor de código:** cores para Lua e Python, números de linha e Tab com 2 espaços.
 
 ## Scripts: Lua (Luau) e Python
 
@@ -78,6 +82,18 @@ async def pegou(outro):
 moeda.Touched.Connect(pegou)
 ```
 
+### Luau
+O Lua roda no Fengari (Lua 5.3), e antes de rodar o Studio traduz o Luau para Lua, mantendo as linhas para que os erros apontem a linha certa. Já funcionam:
+- tipos em `local x: number`, parâmetros, retornos, `for i: number` e genéricos `<T>`;
+- `type X = ...` e `export type`;
+- asserção `valor :: tipo`;
+- `+= -= *= /= //= %= ^= ..=`;
+- strings com crase `` `Olá {nome}` ``;
+- `continue`.
+
+### Python
+`Vector3` funciona com operadores (`p.Position + Vector3.new(0, 1, 0) * 2`). Os filhos podem ser acessados pelo nome (`workspace.Chao`), `GetChildren()` devolve uma lista do Python, e um evento pode ser esperado com `await evento.Wait()`. Os eventos aceitam função normal ou `async def`.
+
 ### O que a API já tem
 `game`, `workspace`, `script`, `game:GetService(...)`, `Instance.new`, `Vector3.new` (com `+ - * /` no Lua), `Color3.new/fromRGB`, `wait`, `task.wait/spawn/delay`, `print`, `warn`, `require`, `:Connect`, `:Wait`, `:Disconnect`, `FindFirstChild`, `FindFirstChildOfClass`, `GetChildren`, `GetDescendants`, `IsA`, `Clone`, `Destroy`, acesso a filhos pelo nome (`workspace.Chao`), `Players.LocalPlayer`, `Character`, `Humanoid`, `RunService.Heartbeat` e `Touched/TouchEnded`.
 
@@ -117,7 +133,7 @@ Pelo Bluetooth a página abre por `http` comum, e a maioria dos navegadores só 
 ## Testes
 ```bash
 pip install pytest && python -m pytest -q     # servidor (14)
-node --test tests/*.test.mjs                  # motor e física (7)
+node --test tests/*.test.mjs                  # motor, física, Luau e modelos (14)
 ```
 Também testei no navegador, como PC e como celular simulado:
 - **Scripts:** Lua e Python, `require`, `Touched`, `Died` e `wait`, inclusive dentro de evento em Python.
@@ -127,8 +143,7 @@ Também testei no navegador, como PC e como celular simulado:
 - **Studio leve:** abas e joystick.
 
 ## Limites desta primeira versão
-- **Luau:** o Lua roda no Fengari (Lua 5.3). Os tipos do Luau (`local x: number`) ainda não funcionam. Já existem `math.clamp`, `math.round`, `string.split` e `table.find`.
-- **Vector3 no Python:** use `v.add(outro)`, `v.sub(outro)` e `v.mul(n)`, porque o `+` ainda não funciona com Vector3 em Python.
+- **Luau:** alguns recursos mais raros ainda não funcionam, como `continue` dentro de `repeat ... until` com variáveis locais declaradas depois dele. As bibliotecas do Luau que existem por enquanto são `math.clamp`, `math.round`, `math.sign`, `string.split` e `table.find`.
 - **Física:** usa caixas alinhadas aos eixos. A Rotation aparece no desenho, mas ainda não entra na colisão.
 - **Servidor e local:** no teste dentro do Studio, os scripts de servidor e os locais rodam no mesmo aparelho. O servidor de jogo de verdade, com multiplayer, é a Fase 13 da arquitetura.
 - **Arquivos do Roblox:** só `.obj` é importado. `.rbxl` e `.rbxm` não são.
