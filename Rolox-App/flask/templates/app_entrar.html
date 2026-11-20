@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block titulo %}Entrando · Rolox{% endblock %}
+{% block conteudo %}
+<p class="logo">ROLOX</p>
+<p class="sub" id="msg">Entrando com a sua conta do app...</p>
+<form id="ir" method="post" hidden><input type="hidden" name="csrf" value="{{ csrf }}"></form>
+{% endblock %}
+{% block scripts %}
+<script>
+  (async () => {
+    const msg = document.getElementById('msg');
+    const dados = new URLSearchParams(location.hash.slice(1));
+    history.replaceState(null, '', location.pathname);           // tira o token da barra e do histórico
+    const token = dados.get('t') || '', mapa = dados.get('mapa') || '';
+    if (!token) { location.href = '{{ url_for("login") }}'; return; }
+    try {
+      const r = await api('{{ url_for("app_sessao") }}', {token});
+      msg.textContent = `Olá, ${r.username}! Abrindo o jogo...`;
+      if (/^[0-9a-f-]{36}$/.test(mapa)) {
+        const f = document.getElementById('ir');
+        f.action = `/jogos/${mapa}/jogar`;
+        f.submit();
+      } else {
+        location.href = dados.get('ir') === 'amigos' ? '{{ url_for("amigos") }}' : '{{ url_for("jogos") }}';
+      }
+    } catch (e) {
+      msg.textContent = 'Não deu para entrar pelo app. Entre com usuário e senha.';
+      setTimeout(() => location.href = '{{ url_for("login") }}', 1500);
+    }
+  })();
+</script>
+{% endblock %}

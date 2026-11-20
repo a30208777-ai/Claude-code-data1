@@ -100,6 +100,8 @@ class SupabaseFalso:
             return Resp(400, {"error_code": "refresh_token_not_found"})
         if p == "/auth/v1/logout":
             return Resp(204)
+        if p == "/auth/v1/user":
+            return Resp(200, {"id": "u1"})
         if p == "/rest/v1/perfis":
             if metodo == "PATCH":
                 self.perfil.update(json)
@@ -960,3 +962,23 @@ def test_amigos_pedir_aceitar_e_entrar_junto(cliente, sb):
     cliente.post(f"/amigos/{bob}/desfazer", data={"csrf": tok})
     assert sb.amizade_chamadas[-1] == ("desfazer_amizade", {"p_outro": bob})
     assert cliente.post("/amigos/nao-uuid/aceitar", data={"csrf": tok}).status_code == 404
+
+
+def test_entrar_pelo_app_vai_direto_para_o_jogo(sb):
+    app = criar_app(lambda s: RoloxAPI(s, url="https://falso", chave="k", http=sb), segredo="teste")
+    app.testing = True
+    c = app.test_client()
+    t = html(c.get("/app/entrar"))
+    assert "history.replaceState" in t and "/api/app/sessao" in t
+    tok = csrf(c)
+    assert c.post("/api/app/sessao", json={"token": "T1"}).status_code == 400          # sem CSRF
+    r = c.post("/api/app/sessao", json={"token": "errado"}, headers={"X-CSRF": tok})
+    assert r.status_code == 401
+    r = c.post("/api/app/sessao", json={"token": "T1"}, headers={"X-CSRF": tok})
+    assert r.get_json() == {"username": "alice"}
+    with c.session_transaction() as sess:
+        assert sess["sb"] == {"access_token": "T1", "refresh_token": "", "user_id": "u1"}
+    assert c.get("/jogos").status_code == 200                                    # já logado
+    # token do app venceu: sem refresh, o site pede login (não fica em loop)
+    sb.token_valido = "T2"
+    assert "/login" in c.get("/jogos").headers["Location"]

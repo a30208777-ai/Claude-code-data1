@@ -10,6 +10,7 @@ Só usa `httpx` (já vem com o Flet), para funcionar no APK sem dependências na
 from __future__ import annotations
 
 import re
+from urllib.parse import urlencode
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
@@ -295,6 +296,19 @@ class RoloxAPI:
 
     async def responder_amizade(self, de: str, aceitar: bool) -> None:
         await self._req("POST", "/rest/v1/rpc/responder_amizade", json={"p_de": de, "p_aceitar": aceitar})
+
+    async def link_entrar_no_site(self, mapa_id: Optional[str] = None, ir: str = "jogos") -> str:
+        """Link que abre o site JÁ LOGADO (e, com mapa_id, direto no jogo).
+        O token vai depois do "#": não chega ao servidor nem aos logs; a página tira da barra."""
+        await self.meu_perfil()                      # renova o token se estiver vencido
+        if not self.sessao:
+            raise ErroRolox("sessao_expirada")
+        dados = {"t": self.sessao.access_token}
+        if mapa_id and re.fullmatch(r"[0-9a-f-]{36}", str(mapa_id)):
+            dados["mapa"] = str(mapa_id)
+        elif ir in ("jogos", "amigos"):
+            dados["ir"] = ir
+        return f"{config.SITE_URL}/app/entrar#{urlencode(dados)}"
 
     @staticmethod
     def link_amigos() -> str:

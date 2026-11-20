@@ -236,6 +236,20 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
             return redirect(url_for("inicio"))
         return render_template("cadastro.html", dados={}, dono=request.args.get("dono") == "1")
 
+    # ------------------------------------------- entrar pelo app (APK)
+    @app.get("/app/entrar")
+    def app_entrar():
+        """O app abre /app/entrar#t=<token>&mapa=<id>: o token fica no "#" (não vai para o
+        servidor nem para os logs); a página manda por POST e já leva para o jogo."""
+        return render_template("app_entrar.html")
+
+    @app.post("/api/app/sessao")
+    def app_sessao():
+        d = request.get_json(silent=True) or {}
+        g.api.entrar_com_token(str(d.get("token", "")))
+        perfil = carregar_perfil()
+        return jsonify({"username": perfil.get("username", "")})
+
     @app.post("/sair-da-conta")
     def sair_da_conta():
         g.api.sair_da_conta()

@@ -203,6 +203,23 @@ class RoloxAPI:
         self.sessao = Sessao(d["access_token"], d["refresh_token"], d["user_id"])
         return self.sessao
 
+    def entrar_com_token(self, access_token: str) -> Sessao:
+        """Login vindo do app: confere o token no Supabase e abre a sessão do site com ele.
+        (Sem refresh token: quando o token vencer, o site pede login de novo.)"""
+        if not access_token or len(access_token) > 4096:
+            raise ErroRolox("sessao_expirada")
+        self.sessao = Sessao(access_token, "", "")
+        try:
+            u = self._req("GET", "/auth/v1/user", renovar_se_expirado=False)
+        except ErroRolox:
+            self.sessao = None
+            raise ErroRolox("sessao_expirada")
+        if not isinstance(u, dict) or not u.get("id"):
+            self.sessao = None
+            raise ErroRolox("sessao_expirada")
+        self.sessao = Sessao(access_token, "", str(u["id"]))
+        return self.sessao
+
     def renovar(self) -> Sessao:
         if not self.sessao:
             raise ErroRolox("sessao_expirada")

@@ -383,3 +383,15 @@ def test_amigos_no_app():
     assert chamadas[-1] == ("/rest/v1/rpc/pedir_amizade", {"p_username": "bob"})
     from rolox.api import RoloxAPI
     assert RoloxAPI.link_amigos().endswith("/amigos")
+
+
+def test_link_entrar_no_site_ja_logado():
+    def h(req):
+        return resposta(200, [{"id": "u1", "username": "ana"}])
+    api = logada(h)
+    url = rodar(api.link_entrar_no_site("123e4567-e89b-12d3-a456-426614174000"))
+    base, frag = url.split("#")
+    assert base.endswith("/app/entrar") and "t=" in frag and "mapa=123e4567-e89b-12d3-a456-426614174000" in frag
+    assert "?" not in base                      # token nunca vai na parte que chega ao servidor
+    assert "ir=amigos" in rodar(api.link_entrar_no_site(None, "amigos"))
+    assert "mapa=" not in rodar(api.link_entrar_no_site("../../x"))

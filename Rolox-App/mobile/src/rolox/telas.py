@@ -124,6 +124,14 @@ class RoloxApp:
         except ValueError as e:
             self.aviso(str(e))
 
+    async def abrir_site(self, mapa_id: Optional[str] = None, ir: str = "jogos") -> None:
+        """Abre o jogo no navegador já logado com a conta do app (o 3D roda no site)."""
+        async def acao():
+            url = await self.api.link_entrar_no_site(mapa_id, ir)
+            self.aviso("Abrindo o jogo no navegador...")
+            await ft.UrlLauncher().launch_url(url)
+        await self.executar(acao)
+
     def nome_jogo(self, gameid: Optional[str]) -> str:
         for j in self.jogos:
             if j["gameid"] == gameid:
@@ -309,7 +317,8 @@ class RoloxApp:
                         overflow=ft.TextOverflow.ELLIPSIS),
                 ft.Text(f"👁 {m.get('visitas') or 0}  ❤ {m.get('curtidas') or 0}", size=12),
                 ft.Text(rec, size=12, max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
-                ft.FilledButton("Jogar", icon=ft.Icons.PLAY_ARROW, url=RoloxAPI.link_jogos(m["id"])),
+                ft.FilledButton("Jogar", icon=ft.Icons.PLAY_ARROW,
+                                on_click=lambda _, mid=m["id"]: self.page.run_task(self.abrir_site, mid)),
             ], spacing=4)))
 
         async def carregar_jogos():
@@ -346,7 +355,8 @@ class RoloxApp:
                     onde_txt = f"🎮 jogando {a['jogo']}" if a.get("jogo") else "🟢 online"
                     linhas.append(ft.Row([ft.Text(a["username"], weight=ft.FontWeight.BOLD),
                                           ft.Text(onde_txt, size=12, expand=True),
-                                          *( [ft.TextButton("Entrar junto", url=RoloxAPI.link_amigos())]
+                                          *( [ft.TextButton("Entrar junto", on_click=lambda _, mid=a.get("mapa_id"):
+                                                            self.page.run_task(self.abrir_site, mid, "amigos"))]
                                              if a.get("server_uid") else [] )]))
             amigos.controls = linhas or [ft.Text("Nenhum amigo online agora.", italic=True, size=13)]
 
@@ -401,12 +411,12 @@ class RoloxApp:
                 ], vertical_alignment=ft.CrossAxisAlignment.START),
                 ft.Divider(),
                 ft.Row([ft.Icon(ft.Icons.PEOPLE), ft.Text("Amigos", size=18, expand=True),
-                        ft.TextButton("Abrir no site", url=RoloxAPI.link_amigos())]),
+                        ft.TextButton("Abrir no site", on_click=lambda _: self.page.run_task(self.abrir_site, None, "amigos"))]),
                 ft.Row([novo_amigo, ft.IconButton(ft.Icons.PERSON_ADD, tooltip="Adicionar amigo", on_click=adicionar)]),
                 amigos,
                 ft.Divider(),
                 ft.Row([ft.Icon(ft.Icons.SPORTS_ESPORTS), ft.Text("Mais jogados", size=18, expand=True),
-                        ft.TextButton("Ver todos", url=RoloxAPI.link_jogos())]),
+                        ft.TextButton("Ver todos", on_click=lambda _: self.page.run_task(self.abrir_site, None, "jogos"))]),
                 jogos,
                 ft.Divider(),
                 ft.Row([ft.Icon(ft.Icons.SHIELD), ft.Text("Alertas de segurança", size=18)]),
