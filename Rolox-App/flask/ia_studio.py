@@ -10,6 +10,7 @@ Cada mensagem custa 10 tickets (o site cobra antes e devolve se nenhuma IA respo
 
 from __future__ import annotations
 
+import logging
 import os
 import time
 from typing import Optional
@@ -20,7 +21,14 @@ CUSTO_TICKETS = 10
 MAX_MENSAGENS = 12          # histórico que vai para a IA
 MAX_CARACTERES = 2000       # por mensagem
 PRAZO_TOTAL_S = 45          # o gunicorn derruba em 60 s
-PRAZO_MODELO_S = 20
+PRAZO_MODELO_S = 12
+
+log = logging.getLogger("rolox.ia")
+if not log.handlers:
+    _h = logging.StreamHandler()
+    _h.setFormatter(logging.Formatter("%(message)s"))
+    log.addHandler(_h)
+    log.setLevel(logging.INFO)
 
 AION_URL = "https://api.aionlabs.ai/v1/chat/completions"
 COHERE_URL = "https://api.cohere.ai/compatibility/v1/chat/completions"
@@ -151,17 +159,27 @@ def perguntar(mensagens: list[dict], http=requests, agora=time.monotonic,
         cab = {"Content-Type": "application/json"}
         if chave:
             cab["Authorization"] = f"Bearer {chave}"
+        inicio = agora()
         try:
             r = http.post(url, headers=cab, json={"model": nome, "messages": historico, "max_tokens": 1200},
                           timeout=min(PRAZO_MODELO_S, resta))
-        except requests.RequestException:
+        except requests.RequestException as e:
+            log.info("IA %s: falhou (%s) em %.1fs", nome, type(e).__name__, agora() - inicio)
             continue
         if r.status_code != 200:
-            continue                         # limite ou erro: próximo modelo
+            # limite ou erro: próximo modelo (registra só o código e o começo do erro, nada do usuário)
+            log.info("IA %s: HTTP %s em %.1fs %s", nome, r.status_code, agora() - inicio,
+                     str(getattr(r, "text", ""))[:160].replace("\n", " "))
+            continue
         try:
-            texto = r.json()["choices"][0]["message"]["content"]
-        except (KeyError, IndexError, ValueError, TypeError):
+            msg = r.json()["choices"][0]["message"]
+            texto = msg.get("content") or ""
+        except (KeyError, IndexError, ValueError, TypeError, AttributeError):
+            log.info("IA %s: resposta em formato inesperado", nome)
             continue
         if isinstance(texto, str) and texto.strip():
+            log.info("IA %s: respondeu em %.1fs", nome, agora() - inicio)
             return nome, texto.strip()[:8000]
+        log.info("IA %s: resposta vazia", nome)
+    log.info("IA: nenhum modelo respondeu (%d tentados)", len(modelos()))
     return None, None
