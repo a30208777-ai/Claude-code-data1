@@ -157,3 +157,7 @@ main.tela-jogo #tela { position: fixed; inset: 0; width: 100vw; height: 100vh; h
 .online-jogo { background: #0008; color: #fff; border-radius: 12px; padding: 0 10px; height: 44px; display: inline-grid;
   place-items: center; font-size: .9rem; font-weight: 600; }
 .cartao:target { outline: 3px solid var(--primaria); outline-offset: 2px; }
+.abas-ordem { display: flex; gap: 8px; margin: 4px 0 8px; }
+.abas-ordem a { padding: 6px 12px; border-radius: 999px; border: 1px solid var(--borda); color: var(--suave); text-decoration: none; font-size: .9rem; }
+.abas-ordem a.ativo { background: var(--primaria); border-color: var(--primaria); color: #fff; font-weight: 600; }
+.btn.curtir { font-size: 1.3rem; padding: 4px 6px; }

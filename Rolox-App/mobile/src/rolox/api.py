@@ -266,8 +266,8 @@ class RoloxAPI:
     async def jogos_publicados(self) -> list[dict]:
         """Mapas aprovados pelo dono (jogáveis no site, com multijogador e chat)."""
         linhas = await self._req("GET", "/rest/v1/mapas", params={
-            "select": "id,nome,descricao,aprovado_em", "caminho_aprovado": "not.is.null",
-            "order": "aprovado_em.desc", "limit": "50"}) or []
+            "select": "id,nome,descricao,aprovado_em,curtidas,visitas", "caminho_aprovado": "not.is.null",
+            "order": "visitas.desc,curtidas.desc,aprovado_em.desc", "limit": "50"}) or []
         return [m for m in linhas if isinstance(m, dict) and m.get("id") and m.get("nome")]
 
     @staticmethod

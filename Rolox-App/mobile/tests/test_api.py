@@ -349,6 +349,7 @@ def test_jogos_publicados_e_link_do_site():
     def h(req):
         assert req.url.path == "/rest/v1/mapas"
         assert req.url.params["caminho_aprovado"] == "not.is.null"
+        assert req.url.params["order"].startswith("visitas.desc")
         return resposta(200, [{"id": "m1", "nome": "Obby", "descricao": "pule"}, {"id": None, "nome": "x"}, "lixo"])
 
     j = rodar(logada(h).jogos_publicados())

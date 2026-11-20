@@ -277,16 +277,30 @@ class RoloxAPI:
     def baixar_mapa(self, caminho: str) -> bytes:
         return self._storage("GET", f"authenticated/{self.BUCKET}/{caminho}").content
 
-    CAMPOS_MAPA = "id,autor_id,nome,descricao,status,motivo,gameid,caminho_enviado,caminho_aprovado,enviado_em,aprovado_em"
+    CAMPOS_MAPA = ("id,autor_id,nome,descricao,status,motivo,gameid,caminho_enviado,caminho_aprovado,enviado_em,"
+                   "aprovado_em,curtidas,visitas")
 
     def mapa(self, mapa_id: str) -> Optional[dict]:
         linhas = self._req("GET", "/rest/v1/mapas", params={"select": self.CAMPOS_MAPA, "id": f"eq.{mapa_id}"})
         return linhas[0] if linhas else None
 
-    def mapas_publicados(self) -> list[dict]:
+    def mapas_publicados(self, ordem: str = "novos") -> list[dict]:
+        """ordem: "novos" (aprovados por último) ou "populares" (mais visitados, depois mais curtidos)."""
+        order = "visitas.desc,curtidas.desc,aprovado_em.desc" if ordem == "populares" else "aprovado_em.desc"
         return self._req("GET", "/rest/v1/mapas", params={
-            "select": self.CAMPOS_MAPA, "caminho_aprovado": "not.is.null", "order": "aprovado_em.desc",
+            "select": self.CAMPOS_MAPA, "caminho_aprovado": "not.is.null", "order": order,
             "limit": "100"}) or []
+
+    def minhas_curtidas(self) -> set:
+        linhas = self._req("GET", "/rest/v1/mapas_curtidas", params={
+            "select": "mapa_id", "user_id": f"eq.{self.user_id}"}) or []
+        return {x["mapa_id"] for x in linhas}
+
+    def curtir_mapa(self, mapa_id: str, curtir: bool) -> dict:
+        return self._req("POST", "/rest/v1/rpc/curtir_mapa", json={"p_id": mapa_id, "p_curtir": curtir})
+
+    def visitar_mapa(self, mapa_id: str) -> None:
+        self._req("POST", "/rest/v1/rpc/visitar_mapa", json={"p_id": mapa_id})
 
     def meus_mapas(self) -> list[dict]:
         return self._req("GET", "/rest/v1/mapas", params={

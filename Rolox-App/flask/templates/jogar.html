@@ -26,6 +26,8 @@
   <a class="btn-jogo" href="{{ url_for('dono') if eh_dono else url_for('jogos') }}" aria-label="Voltar">✕</a>
   {% endif %}
   <strong class="nome-jogo">{{ m.nome }}{% if teste %}<span class="etiqueta neutra">TESTE</span>{% endif %}</strong>
+  {% if not teste %}<button class="btn-jogo" id="curtir" data-curti="{{ '1' if curti else '0' }}"
+    aria-label="Curtir este jogo">{{ '❤️' if curti else '🤍' }}</button>{% endif %}
   {% if s %}<span class="online-jogo" id="online" title="Jogadores no mapa">👥 1</span>{% endif %}
   {% if s %}<button class="btn-jogo" id="abrirChat" aria-label="Chat">💬<span id="naoLidas" hidden></span></button>{% endif %}
 </header>
@@ -89,6 +91,19 @@
   }
 </script>
 
+{% if not teste %}
+<script>
+  document.getElementById('curtir').addEventListener('click', async (ev) => {
+    const b = ev.currentTarget, curtir = b.dataset.curti !== '1';
+    try {
+      await api({{ url_for('jogo_curtir', mapa_id=m.id)|tojson }}, {curtir});
+      b.dataset.curti = curtir ? '1' : '0'; b.textContent = curtir ? '❤️' : '🤍';
+      if (curtir) aviso('Você curtiu este jogo!', 'ok');
+    } catch (e) { aviso(e.message); }
+    b.blur();
+  });
+</script>
+{% endif %}
 {% if s %}
 <script>
   const UID = {{ s.server_uid|tojson }};

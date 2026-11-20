@@ -305,6 +305,7 @@ class RoloxApp:
                 ft.Text(m["nome"], weight=ft.FontWeight.BOLD, max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
                 ft.Text(m.get("descricao") or "Mapa da comunidade", size=12, max_lines=2,
                         overflow=ft.TextOverflow.ELLIPSIS),
+                ft.Text(f"👁 {m.get('visitas') or 0}  ❤ {m.get('curtidas') or 0}", size=12),
                 ft.FilledButton("Jogar", icon=ft.Icons.PLAY_ARROW, url=RoloxAPI.link_jogos(m["id"])),
             ], spacing=4)))
 
@@ -353,7 +354,7 @@ class RoloxApp:
                     ], spacing=4, expand=True),
                 ], vertical_alignment=ft.CrossAxisAlignment.START),
                 ft.Divider(),
-                ft.Row([ft.Icon(ft.Icons.SPORTS_ESPORTS), ft.Text("Jogos da comunidade", size=18, expand=True),
+                ft.Row([ft.Icon(ft.Icons.SPORTS_ESPORTS), ft.Text("Mais jogados", size=18, expand=True),
                         ft.TextButton("Ver todos", url=RoloxAPI.link_jogos())]),
                 jogos,
                 ft.Divider(),

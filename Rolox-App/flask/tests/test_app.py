@@ -60,6 +60,8 @@ class SupabaseFalso:
         self.arquivos = {}
         self.mapas = {}
         self.dono = False
+        self.curtidas = set()
+        self.visitas = set()
 
     def onde(self):
         return next((s for s, m in self.membros.items() if "u1" in m), None)
@@ -119,6 +121,20 @@ class SupabaseFalso:
             r = Resp(200)
             r.content = self.arquivos[chave]
             return r
+        if p == "/rest/v1/rpc/curtir_mapa":
+            m = self.mapas[json["p_id"]]
+            if json["p_curtir"] and m["id"] not in self.curtidas:
+                self.curtidas.add(m["id"]); m["curtidas"] = m.get("curtidas", 0) + 1
+            elif not json["p_curtir"] and m["id"] in self.curtidas:
+                self.curtidas.discard(m["id"]); m["curtidas"] -= 1
+            return Resp(200, {"curtidas": m["curtidas"], "curti": json["p_curtir"]})
+        if p == "/rest/v1/rpc/visitar_mapa":
+            if json["p_id"] not in self.visitas:
+                self.visitas.add(json["p_id"])
+                self.mapas[json["p_id"]]["visitas"] = self.mapas[json["p_id"]].get("visitas", 0) + 1
+            return Resp(204)
+        if p == "/rest/v1/mapas_curtidas":
+            return Resp(200, [{"mapa_id": i} for i in self.curtidas])
         if p == "/rest/v1/rpc/eh_dono":
             return Resp(200, self.dono)
         if p == "/rest/v1/rpc/enviar_mapa":
@@ -149,6 +165,8 @@ class SupabaseFalso:
                 lista = [m for m in lista if m["status"] == q["status"].removeprefix("eq.")]
             if "autor_id" in q:
                 lista = [m for m in lista if m["autor_id"] == q["autor_id"].removeprefix("eq.")]
+            if q.get("order", "").startswith("visitas.desc"):
+                lista.sort(key=lambda m: (-m.get("visitas", 0), -m.get("curtidas", 0)))
             return Resp(200, [dict(m) for m in lista])
         if p == "/rest/v1/jogos":
             return Resp(200, self.jogos)
@@ -836,3 +854,27 @@ def test_multijogador_dois_jogadores_se_veem(cliente, sb, tmp_path, monkeypatch)
     j = cliente.post("/api/sala", json={"passe": passe, "p": [1, 2, 3]}, headers={"X-CSRF": tok}).get_json()["jogadores"]
     assert j[0]["n"] == "bob" and j[0]["p"] == [9.0, 0.0, 9.0]
     assert cliente.post("/api/sala/sair", data={"passe": passe, "csrf": tok}).status_code == 204
+
+
+def test_curtir_e_visitas_mais_jogados(cliente, sb):
+    entrar(cliente)
+    tok = csrf(cliente)
+    sb.dono = True
+    ids = []
+    for nome in ("Obby A", "Obby B"):
+        mid = cliente.post("/api/mapas/enviar", json={"nome": nome, "projeto": PROJETO}, headers={"X-CSRF": tok}).get_json()["id"]
+        cliente.post(f"/dono/{mid}/aprovar", data={"csrf": tok})
+        ids.append(mid)
+    # B é jogado (visita conta 1x) e curtido
+    cliente.post(f"/jogos/{ids[1]}/jogar", data={"csrf": tok})
+    cliente.post(f"/jogos/{ids[1]}/jogar", data={"csrf": tok})
+    assert sb.mapas[ids[1]]["visitas"] == 1
+    r = cliente.post(f"/jogos/{ids[1]}/curtir", data={"csrf": tok, "curtir": "1"})
+    assert r.status_code == 302 and r.headers["Location"].endswith(f"#mapa-{ids[1]}")
+    t = html(cliente.get("/jogos"))
+    assert t.index("Obby B") < t.index("Obby A")                 # mais jogado primeiro
+    assert "👁 1 · ❤ 1" in t and "❤️" in t and "🔥 Mais jogados" in t
+    # pelo jogo (JSON): descurtir
+    assert cliente.post(f"/jogos/{ids[1]}/curtir", json={"curtir": False}, headers={"X-CSRF": tok}).get_json()["curtidas"] == 0
+    t = html(cliente.get(f"/jogar/{ids[1]}?s=s9"))
+    assert 'id="curtir" data-curti="0"' in t

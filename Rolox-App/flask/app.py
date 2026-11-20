@@ -450,8 +450,23 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
     @logado
     def jogos():
         carregar_perfil()
-        return render_template("jogos.html", publicados=g.api.mapas_publicados(), meus=g.api.meus_mapas(),
-                               aba="jogos")
+        ordem = "novos" if request.args.get("ordem") == "novos" else "populares"
+        try:
+            curti = g.api.minhas_curtidas()
+        except ErroRolox:
+            curti = set()
+        return render_template("jogos.html", publicados=g.api.mapas_publicados(ordem), meus=g.api.meus_mapas(),
+                               curti=curti, ordem=ordem, aba="jogos")
+
+    @app.post("/jogos/<mapa_id>/curtir")
+    @logado
+    def jogo_curtir(mapa_id: str):
+        _mapa_ou_404(mapa_id)
+        dados = request.get_json(silent=True) or request.form
+        r = g.api.curtir_mapa(mapa_id, str(dados.get("curtir", "1")) in ("1", "true", "True"))
+        if request.is_json:
+            return jsonify(r)
+        return redirect(url_for("jogos", ordem=request.form.get("ordem") or None) + f"#mapa-{mapa_id}")
 
     @app.post("/jogos/<mapa_id>/jogar")
     @logado
@@ -462,6 +477,10 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
             flash("Esse jogo ainda não foi aprovado pelo dono.", "erro")
             return redirect(url_for("jogos"))
         perfil = g.api.meu_perfil()
+        try:
+            g.api.visitar_mapa(mapa_id)           # conta 1 visita por jogador por dia
+        except ErroRolox:
+            pass
         hack = perfil.get("jogo_mod") == m["gameid"]
         livres = [x for x in g.api.servidores() if x["gameid"] == m["gameid"] and x["status"] == "aberto"
                   and x["is_hack_server"] == hack and x["humanos"] < x["capacidade"]]
@@ -494,7 +513,11 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
             abort(404)
         avatar = avatar_mod.normalizar(perfil.get("avatar"))
         passe = passes.criar(s["server_uid"], g.api.user_id, perfil.get("username", "Jogador"), avatar) if s else None
-        return render_template("jogar.html", m=m, s=s, teste=teste, eu=perfil.get("username", "Jogador"),
+        try:
+            curti = mapa_id in g.api.minhas_curtidas()
+        except ErroRolox:
+            curti = False
+        return render_template("jogar.html", m=m, s=s, teste=teste, eu=perfil.get("username", "Jogador"), curti=curti,
                                avatar=avatar, passe=passe,
                                host=bool(s) and s["host_id"] == g.api.user_id,
                                url_mapa=url_for("mapa_dados", mapa_id=mapa_id, versao="enviada" if teste else "aprovada"))

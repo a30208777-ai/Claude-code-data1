@@ -5,6 +5,10 @@
   <h1 class="cresce">🎮 Jogos</h1>
   <a class="btn texto" href="{{ url_for('servidores') }}">Servidores</a>
 </div>
+<div class="abas-ordem">
+  <a href="{{ url_for('jogos') }}" class="{{ 'ativo' if ordem == 'populares' }}">🔥 Mais jogados</a>
+  <a href="{{ url_for('jogos', ordem='novos') }}" class="{{ 'ativo' if ordem == 'novos' }}">🆕 Novos</a>
+</div>
 <p class="nota">Mapas feitos pela comunidade no ROLOX Studio e aprovados pelo dono. Toque em Jogar: você entra
   num servidor com a galera e com chat.</p>
 
@@ -14,7 +18,14 @@
     <div class="info">
       <div class="titulo">{{ m.nome }}</div>
       {% if m.descricao %}<div class="detalhe">{{ m.descricao }}</div>{% endif %}
+      <div class="detalhe">👁 {{ m.visitas or 0 }} · ❤ {{ m.curtidas or 0 }}</div>
     </div>
+    <form method="post" action="{{ url_for('jogo_curtir', mapa_id=m.id) }}">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <input type="hidden" name="curtir" value="{{ '0' if m.id in curti else '1' }}">
+      <input type="hidden" name="ordem" value="{{ 'novos' if ordem == 'novos' else '' }}">
+      <button class="btn texto curtir" aria-label="{{ 'Descurtir' if m.id in curti else 'Curtir' }}">{{ '❤️' if m.id in curti else '🤍' }}</button>
+    </form>
     <form method="post" action="{{ url_for('jogar_entrar', mapa_id=m.id) }}">
       <input type="hidden" name="csrf" value="{{ csrf }}">
       <button class="btn pequeno">▶ Jogar</button>
