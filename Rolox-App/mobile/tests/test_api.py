@@ -368,3 +368,18 @@ def test_recordes_pega_o_melhor_de_cada_jogo():
     r = rodar(logada(h).recordes(["m1", "m2", None]))
     assert r["m1"]["username"] == "bia" and r["m2"]["username"] == "leo"
     assert rodar(logada(h).recordes([])) == {}
+
+
+def test_amigos_no_app():
+    chamadas = []
+    def h(req):
+        chamadas.append((req.url.path, json.loads(req.content or b"{}")))
+        if req.url.path.endswith("meus_amigos"):
+            return resposta(200, [{"id": "u2", "username": "bob", "tipo": "amigo", "online": True}, {"id": None}, "x"])
+        return resposta(200, {"status": "pendente"})
+    api = logada(h)
+    assert rodar(api.meus_amigos()) == [{"id": "u2", "username": "bob", "tipo": "amigo", "online": True}]
+    assert rodar(api.pedir_amizade(" Bob ")) == {"status": "pendente"}
+    assert chamadas[-1] == ("/rest/v1/rpc/pedir_amizade", {"p_username": "bob"})
+    from rolox.api import RoloxAPI
+    assert RoloxAPI.link_amigos().endswith("/amigos")

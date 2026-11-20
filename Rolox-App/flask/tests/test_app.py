@@ -62,6 +62,8 @@ class SupabaseFalso:
         self.dono = False
         self.curtidas = set()
         self.placares = {}
+        self.amigos = []
+        self.amizade_chamadas = []
         self.visitas = set()
 
     def onde(self):
@@ -142,6 +144,13 @@ class SupabaseFalso:
             linhas = [v for (m, _), v in self.placares.items() if m == mid] + \
                      [{"user_id": "u7", "username": "bob", "estatistica": "Moedas", "valor": 5, "atualizado_em": "y"}]
             return Resp(200, sorted(linhas, key=lambda x: -x["valor"]))
+        if p == "/rest/v1/rpc/meus_amigos":
+            return Resp(200, self.amigos)
+        if p in ("/rest/v1/rpc/pedir_amizade", "/rest/v1/rpc/responder_amizade", "/rest/v1/rpc/desfazer_amizade"):
+            self.amizade_chamadas.append((p.rsplit("/", 1)[1], json))
+            if p.endswith("pedir_amizade") and json["p_username"] == "fantasma":
+                return Resp(400, {"code": "P0001", "message": "jogador não encontrado"})
+            return Resp(200, {"status": "pendente"} if p.endswith("pedir_amizade") else None)
         if p == "/rest/v1/rpc/visitar_mapa":
             if json["p_id"] not in self.visitas:
                 self.visitas.add(json["p_id"])
@@ -177,6 +186,8 @@ class SupabaseFalso:
                 lista = [m for m in lista if m["caminho_aprovado"]]
             if "status" in q:
                 lista = [m for m in lista if m["status"] == q["status"].removeprefix("eq.")]
+            if "gameid" in q:
+                lista = [m for m in lista if m.get("gameid") == q["gameid"].removeprefix("eq.")]
             if "autor_id" in q:
                 lista = [m for m in lista if m["autor_id"] == q["autor_id"].removeprefix("eq.")]
             if q.get("order", "").startswith("visitas.desc"):
@@ -914,3 +925,38 @@ def test_placar_recorde_e_ranking(cliente, sb):
     cliente.post(f"/jogos/{mid}/jogar", data={"csrf": tok})
     t = html(cliente.get(f"/jogar/{mid}?s=s9"))
     assert f"/api/placar/{mid}" in t and "enviar: (estatistica, valor) =>" in t
+
+
+def test_amigos_pedir_aceitar_e_entrar_junto(cliente, sb):
+    entrar(cliente)
+    tok = csrf(cliente)
+    r = cliente.post("/amigos/pedir", data={"csrf": tok, "usuario": " Bob "})
+    assert r.status_code == 302 and sb.amizade_chamadas[-1] == ("pedir_amizade", {"p_username": "bob"})
+    cliente.post("/amigos/pedir", data={"csrf": tok, "usuario": "fantasma"})
+    assert "jogador não encontrado" in html(cliente.get("/amigos")).lower()
+    bob = "22222222-2222-2222-2222-222222222222"
+    sb.amigos = [{"id": bob, "username": "bob", "tipo": "recebido", "avatar": {}, "online": False}]
+    assert "quer ser seu amigo" in html(cliente.get("/amigos"))
+    cliente.post(f"/amigos/{bob}/aceitar", data={"csrf": tok})
+    assert sb.amizade_chamadas[-1] == ("responder_amizade", {"p_de": bob, "p_aceitar": True})
+    # bob jogando um mapa: aparece no Início com "Entrar junto"
+    mid = cliente.post("/api/mapas/enviar", json={"nome": "Obby", "projeto": PROJETO}, headers={"X-CSRF": tok}).get_json()["id"]
+    sb.dono = True
+    cliente.post(f"/dono/{mid}/aprovar", data={"csrf": tok})
+    sb.servidores.append({"server_uid": "s5", "gameid": sb.mapas[mid]["gameid"], "host_id": "u2", "capacidade": 10,
+                          "is_hack_server": False, "status": "aberto"})
+    sb.membros["s5"] = ["u2"]
+    sb.amigos = [{"id": bob, "username": "bob", "tipo": "amigo", "avatar": {}, "online": True,
+                  "server_uid": "s5", "jogo": "Obby", "mapa_id": mid}]
+    t = html(cliente.get("/inicio"))
+    assert "jogando Obby" in t and "/amigos/entrar/s5" in t
+    r = cliente.post("/amigos/entrar/s5", data={"csrf": tok})
+    assert r.headers["Location"].endswith(f"/jogar/{mid}?s=s5")
+    # já no jogo: Início leva de volta ao JOGO (não ao chat antigo)
+    assert cliente.get("/inicio").headers["Location"].endswith(f"/jogar/{mid}?s=s5")
+    assert cliente.get("/api/status").get_json()["destino"].endswith(f"/jogar/{mid}?s=s5")
+    # servidor que o amigo não está: recusa
+    assert cliente.post("/amigos/entrar/s1", data={"csrf": tok}).headers["Location"].endswith("/amigos")
+    cliente.post(f"/amigos/{bob}/desfazer", data={"csrf": tok})
+    assert sb.amizade_chamadas[-1] == ("desfazer_amizade", {"p_outro": bob})
+    assert cliente.post("/amigos/nao-uuid/aceitar", data={"csrf": tok}).status_code == 404

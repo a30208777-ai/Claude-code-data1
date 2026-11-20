@@ -172,6 +172,15 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
             return f(*a, **kw)
         return interna
 
+    def destino_do_servidor(uid: str) -> str:
+        """Jogo 3D (mapa) -> /jogar com o chat; servidor antigo (só chat) -> /chat."""
+        s = g.api.servidor(uid)
+        if s:
+            m = g.api.mapa_do_jogo(s["gameid"])
+            if m:
+                return url_for("jogar", mapa_id=m["id"], s=uid)
+        return url_for("chat", uid=uid)
+
     def nomes_jogos() -> dict:
         return {j["gameid"]: j["nome"] for j in g.api.jogos()}
 
@@ -239,13 +248,17 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
     def inicio():
         onde = g.api.onde_estou()
         if onde["servidor"]:
-            return redirect(url_for("chat", uid=onde["servidor"]))
+            return redirect(destino_do_servidor(onde["servidor"]))
         presente = g.api.receber_tickets()
         if presente.get("ganhou"):
             flash(f"🎟️ Presente do dia: +{presente['ganhou']} tickets! "
                   f"Amanhã você ganha {presente['amanha']}.", "ok")
+        try:
+            amigos = [a for a in g.api.meus_amigos() if a["tipo"] == "amigo" and a.get("online")]
+        except ErroRolox:
+            amigos = []
         return render_template("inicio.html", perfil=carregar_perfil(), onde=onde,
-                               alertas=g.api.alertas(), aba="inicio")
+                               alertas=g.api.alertas(), amigos_online=amigos, aba="inicio")
 
     @app.get("/api/status")
     @logado
@@ -253,6 +266,7 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
         onde = g.api.onde_estou()
         alertas = g.api.alertas()
         return jsonify({"onde": onde, "alertas": len(alertas),
+                        "destino": destino_do_servidor(onde["servidor"]) if onde["servidor"] else None,
                         "nao_lidos": sum(1 for a in alertas if not a["lido"])})
 
     @app.post("/api/alertas/<int:alerta_id>/senha")
@@ -594,6 +608,55 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
         conteudo = json.dumps(projeto, ensure_ascii=False, separators=(",", ":")).encode()
         r = g.api.enviar_mapa(mapa_id, str(d.get("nome", "")), str(d.get("descricao", "")), conteudo)
         return jsonify(r)
+
+    # ------------------------------------------------------------ amigos
+    @app.get("/amigos")
+    @logado
+    def amigos():
+        carregar_perfil()
+        lista = g.api.meus_amigos()
+        return render_template("amigos.html", amigos=[a for a in lista if a["tipo"] == "amigo"],
+                               recebidos=[a for a in lista if a["tipo"] == "recebido"],
+                               enviados=[a for a in lista if a["tipo"] == "enviado"], aba="inicio")
+
+    @app.post("/amigos/pedir")
+    @logado
+    def amigos_pedir():
+        nome = request.form.get("usuario", "").strip().lower()
+        r = g.api.pedir_amizade(nome)
+        flash(f"Agora você e {nome} são amigos! 🎉" if r.get("status") == "aceita"
+              else f"Pedido de amizade enviado para {nome}.", "ok")
+        return redirect(url_for("amigos"))
+
+    @app.post("/amigos/<outro>/<acao>")
+    @logado
+    def amigos_acao(outro: str, acao: str):
+        try:
+            uuid.UUID(outro)
+        except ValueError:
+            abort(404)
+        if acao in ("aceitar", "recusar"):
+            g.api.responder_amizade(outro, acao == "aceitar")
+            flash("Pedido aceito! 🎉" if acao == "aceitar" else "Pedido recusado.", "ok")
+        elif acao == "desfazer":
+            g.api.desfazer_amizade(outro)
+            flash("Amizade desfeita.", "ok")
+        else:
+            abort(404)
+        return redirect(url_for("amigos"))
+
+    @app.post("/amigos/entrar/<uid>")
+    @logado
+    def amigos_entrar(uid: str):
+        """Entrar junto: vai para o mesmo servidor do amigo (se tiver vaga, senão fila)."""
+        if not any(a.get("server_uid") == uid for a in g.api.meus_amigos() if a["tipo"] == "amigo"):
+            flash("Esse amigo não está mais nesse servidor.", "erro")
+            return redirect(url_for("amigos"))
+        r = g.api.entrar(uid)
+        if r["resultado"] == "fila":
+            flash(f"Servidor cheio. Você está na fila, posição {r['posicao']}.", "ok")
+            return redirect(url_for("inicio"))
+        return redirect(destino_do_servidor(uid))
 
     # --------------------------------------------------------------- dono
     @app.get("/dono")

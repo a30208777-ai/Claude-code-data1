@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block titulo %}Amigos · Rolox{% endblock %}
+{% block conteudo %}
+<h1>👥 Amigos</h1>
+<form method="post" action="{{ url_for('amigos_pedir') }}" class="linha">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <input type="text" name="usuario" class="cresce" placeholder="Nome de usuário" autocapitalize="none" autocorrect="off" maxlength="32" required>
+  <button class="btn pequeno">Adicionar</button>
+</form>
+<p class="nota">Onde seus amigos estão jogando só aparece se eles marcaram "Mostrar para amigos onde estou jogando" no Perfil.</p>
+
+{% if recebidos %}
+<h2>Pedidos para você ({{ recebidos|length }})</h2>
+{% for a in recebidos %}
+  <div class="cartao">
+    <div class="avatar-mini">{{ desenhar_avatar(a.avatar, 28) }}</div>
+    <div class="info"><div class="titulo">{{ a.username }}</div><div class="detalhe">quer ser seu amigo</div></div>
+    <form method="post" action="{{ url_for('amigos_acao', outro=a.id, acao='aceitar') }}">
+      <input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn pequeno">Aceitar</button></form>
+    <form method="post" action="{{ url_for('amigos_acao', outro=a.id, acao='recusar') }}">
+      <input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn pequeno contorno">Recusar</button></form>
+  </div>
+{% endfor %}
+{% endif %}
+
+<h2>Meus amigos ({{ amigos|length }})</h2>
+{% for a in amigos %}
+  <div class="cartao">
+    <div class="avatar-mini">{{ desenhar_avatar(a.avatar, 28) }}</div>
+    <div class="info">
+      <div class="titulo">{{ a.username }}</div>
+      <div class="detalhe">{% if a.jogo %}🎮 jogando {{ a.jogo }}{% elif a.online %}🟢 online{% else %}⚪ offline{% endif %}</div>
+    </div>
+    {% if a.server_uid %}
+    <form method="post" action="{{ url_for('amigos_entrar', uid=a.server_uid) }}">
+      <input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn pequeno">Entrar junto</button></form>
+    {% endif %}
+    <form method="post" action="{{ url_for('amigos_acao', outro=a.id, acao='desfazer') }}"
+          data-nome="{{ a.username }}" onsubmit="return confirm('Desfazer a amizade com ' + this.dataset.nome + '?')">
+      <input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn texto" aria-label="Desfazer amizade">✕</button></form>
+  </div>
+{% else %}
+  <p class="muted">Você ainda não tem amigos aqui. Adicione pelo nome de usuário!</p>
+{% endfor %}
+
+{% if enviados %}
+<h2>Pedidos enviados</h2>
+{% for a in enviados %}
+  <div class="cartao">
+    <div class="info"><div class="titulo">{{ a.username }}</div><div class="detalhe">esperando resposta</div></div>
+    <form method="post" action="{{ url_for('amigos_acao', outro=a.id, acao='desfazer') }}">
+      <input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn pequeno contorno">Cancelar</button></form>
+  </div>
+{% endfor %}
+{% endif %}
+{% endblock %}

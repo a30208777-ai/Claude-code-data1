@@ -284,6 +284,22 @@ class RoloxAPI:
                 melhores[x["mapa_id"]] = x
         return melhores
 
+    # ------------------------------------------------------------ amigos
+    async def meus_amigos(self) -> list[dict]:
+        r = await self._req("POST", "/rest/v1/rpc/meus_amigos", json={})
+        return [a for a in (r or []) if isinstance(a, dict) and a.get("id") and a.get("username")]
+
+    async def pedir_amizade(self, username: str) -> dict:
+        return await self._req("POST", "/rest/v1/rpc/pedir_amizade",
+                               json={"p_username": (username or "").strip().lower()})
+
+    async def responder_amizade(self, de: str, aceitar: bool) -> None:
+        await self._req("POST", "/rest/v1/rpc/responder_amizade", json={"p_de": de, "p_aceitar": aceitar})
+
+    @staticmethod
+    def link_amigos() -> str:
+        return f"{config.SITE_URL}/amigos"
+
     @staticmethod
     def link_jogos(mapa_id: Optional[str] = None) -> str:
         """Página do site para jogar (o login é o mesmo do app)."""

@@ -324,9 +324,48 @@ class RoloxApp:
             jogos.controls = [cartao_jogo(m, recs.get(m["id"])) for m in lista_jogos[:12]] or [
                 ft.Text("Nenhum jogo aprovado ainda. Crie um no Studio!", italic=True, size=13)]
 
+        amigos = ft.Column(spacing=4)
+        novo_amigo = ft.TextField(label="Nome de usuário", dense=True, expand=True, max_length=32,
+                                  capitalization=ft.TextCapitalization.NONE)
+
+        async def carregar_amigos():
+            try:
+                lista_a = await self.api.meus_amigos()
+            except ErroRolox:
+                return
+            linhas = []
+            for a in lista_a:
+                if a["tipo"] == "recebido":
+                    async def aceitar(_, de=a["id"]):
+                        await self.executar(lambda: self.api.responder_amizade(de, True))
+                        await carregar_amigos(); self.page.update()
+                    linhas.append(ft.Row([ft.Icon(ft.Icons.MAIL, size=18),
+                                          ft.Text(f"{a['username']} quer ser seu amigo", expand=True),
+                                          ft.TextButton("Aceitar", on_click=aceitar)]))
+                elif a["tipo"] == "amigo" and a.get("online"):
+                    onde_txt = f"🎮 jogando {a['jogo']}" if a.get("jogo") else "🟢 online"
+                    linhas.append(ft.Row([ft.Text(a["username"], weight=ft.FontWeight.BOLD),
+                                          ft.Text(onde_txt, size=12, expand=True),
+                                          *( [ft.TextButton("Entrar junto", url=RoloxAPI.link_amigos())]
+                                             if a.get("server_uid") else [] )]))
+            amigos.controls = linhas or [ft.Text("Nenhum amigo online agora.", italic=True, size=13)]
+
+        async def adicionar(_):
+            nome = (novo_amigo.value or "").strip()
+            if not nome:
+                return
+            async def acao():
+                r = await self.api.pedir_amizade(nome)
+                self.aviso("Agora vocês são amigos! 🎉" if r.get("status") == "aceita" else f"Pedido enviado para {nome}.")
+                novo_amigo.value = ""
+                await carregar_amigos()
+            await self.executar(acao)
+            self.page.update()
+
         async def atualizar():
             if not jogos.controls:
                 await carregar_jogos()
+            await carregar_amigos()
             onde = await self.api.onde_estou()
             if onde["servidor"]:
                 status.value = "Você está em um servidor."
@@ -360,6 +399,11 @@ class RoloxApp:
                                 size=12, italic=True),
                     ], spacing=4, expand=True),
                 ], vertical_alignment=ft.CrossAxisAlignment.START),
+                ft.Divider(),
+                ft.Row([ft.Icon(ft.Icons.PEOPLE), ft.Text("Amigos", size=18, expand=True),
+                        ft.TextButton("Abrir no site", url=RoloxAPI.link_amigos())]),
+                ft.Row([novo_amigo, ft.IconButton(ft.Icons.PERSON_ADD, tooltip="Adicionar amigo", on_click=adicionar)]),
+                amigos,
                 ft.Divider(),
                 ft.Row([ft.Icon(ft.Icons.SPORTS_ESPORTS), ft.Text("Mais jogados", size=18, expand=True),
                         ft.TextButton("Ver todos", url=RoloxAPI.link_jogos())]),

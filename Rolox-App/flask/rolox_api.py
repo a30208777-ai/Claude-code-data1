@@ -308,6 +308,24 @@ class RoloxAPI:
             "select": "user_id,username,estatistica,valor,atualizado_em", "mapa_id": f"eq.{mapa_id}",
             "order": "valor.desc,atualizado_em.asc", "limit": str(limite)}) or []
 
+    def mapa_do_jogo(self, gameid: str) -> Optional[dict]:
+        linhas = self._req("GET", "/rest/v1/mapas", params={"select": "id,nome", "gameid": f"eq.{gameid}", "limit": "1"})
+        return linhas[0] if linhas else None
+
+    # ------------------------------------------------------------ amigos
+    def meus_amigos(self) -> list[dict]:
+        r = self._req("POST", "/rest/v1/rpc/meus_amigos", json={})
+        return r if isinstance(r, list) else []
+
+    def pedir_amizade(self, username: str) -> dict:
+        return self._req("POST", "/rest/v1/rpc/pedir_amizade", json={"p_username": (username or "").strip().lower()})
+
+    def responder_amizade(self, de: str, aceitar: bool) -> None:
+        self._req("POST", "/rest/v1/rpc/responder_amizade", json={"p_de": de, "p_aceitar": aceitar})
+
+    def desfazer_amizade(self, outro: str) -> None:
+        self._req("POST", "/rest/v1/rpc/desfazer_amizade", json={"p_outro": outro})
+
     def visitar_mapa(self, mapa_id: str) -> None:
         self._req("POST", "/rest/v1/rpc/visitar_mapa", json={"p_id": mapa_id})
 
