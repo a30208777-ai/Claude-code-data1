@@ -154,3 +154,4 @@ a.botao-link { display: inline-flex; align-items: center; padding: 6px 10px; bor
 #iaForm { display: flex; gap: 6px; }
 #iaForm textarea { flex: 1; resize: none; background: var(--fundo); border: 1px solid var(--borda); border-radius: 8px; padding: 6px; }
 @media (max-width: 700px) { #painelIA { top: auto; height: 70vh; left: 8px; right: 8px; width: auto; } }
+.msgIA.acoes { border: 1px solid var(--ok); font-size: 13px; display: grid; gap: 2px; }

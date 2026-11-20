@@ -436,11 +436,13 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
         @logado
         def studio_ia():
             """IA do Studio: cobra 10 tickets, pergunta aos modelos e devolve os tickets se ninguém responder."""
-            mensagens = ia_studio.limpar_historico((request.get_json(silent=True) or {}).get("mensagens"))
+            dados = request.get_json(silent=True) or {}
+            mensagens = ia_studio.limpar_historico(dados.get("mensagens"))
+            cena = str(dados.get("cena") or "")[:ia_studio.MAX_CENA]
             if not mensagens or mensagens[-1]["role"] != "user":
                 return jsonify({"erro": "vazio", "mensagem": "Escreva uma pergunta."}), 400
             cobranca = g.api.gastar_tickets_studio_ia()          # erro "tickets insuficientes" vira 400
-            modelo, texto = ia_studio.perguntar(mensagens)
+            modelo, texto = ia_studio.perguntar(mensagens, cena=cena)
             if texto is None:
                 saldo = cobranca.get("tickets")
                 if cobranca.get("cobranca"):

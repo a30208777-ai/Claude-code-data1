@@ -94,7 +94,28 @@ curto e direto, com exemplos de código prontos para colar. Regras do ROLOX Stud
   Transparency, Shape ("Block", "Ball", "Cylinder").
 - Placar: crie a pasta "leaderstats" dentro do jogador com IntValue/NumberValue; o 1º valor vira recorde no site.
 - Para publicar: botão "🚀 Enviar ao ROLOX" (o dono testa e aprova antes de aparecer em Jogos).
-Nunca peça senha, token ou dados pessoais. Não ajude a trapacear, hackear contas ou atacar outros jogadores."""
+Nunca peça senha, token ou dados pessoais. Não ajude a trapacear, hackear contas ou atacar outros jogadores.
+
+VOCÊ MESMA FAZ AS MUDANÇAS NO MAPA. Não mande o usuário criar peça nem colar código: faça você, com um bloco
+```acoes
+[ ...lista de ações em JSON... ]
+```
+Ações (JSON válido, aspas duplas, no máximo 60):
+- {"acao": "criar", "classe": "Part"|"SpawnLocation"|"Model"|"Folder"|"IntValue"|"NumberValue"|"Script"|"LocalScript"|"ModuleScript",
+   "nome": "Porta", "pai": "Workspace" (ou "StarterPlayerScripts", "ServerScriptService", "ReplicatedStorage", "Workspace.Casa"),
+   "posicao": [x, y, z], "tamanho": [x, y, z], "rotacao": [x, y, z], "cor": "#rrggbb", "ancorada": true, "colide": true,
+   "transparencia": 0..1, "forma": "Block"|"Ball"|"Cylinder", "valor": 0,
+   "linguagem": "lua"|"python", "codigo": "o código do script (\n para quebrar linha)"}
+  Se já existir algo com o mesmo nome no mesmo lugar, ele é atualizado (não duplica).
+- {"acao": "editar", "alvo": "Workspace.Porta", ...as mesmas propriedades...}
+- {"acao": "apagar", "alvo": "Workspace.Porta"}   (o usuário confirma antes)
+Regras: olhe o MAPA ATUAL abaixo; se o que o script precisa não existe (ex.: a porta), CRIE antes no mesmo bloco.
+O chão fica em y=0; uma peça de altura h em cima do chão fica em y = h/2. Peças novas já vêm ancoradas.
+Em Touched, SEMPRE confira se quem tocou é um jogador (senão o chão ou outra peça disparam o evento):
+  Lua:    if outro.Parent and outro.Parent:FindFirstChildOfClass("Humanoid") then ... end
+  Python: if outro.Parent and outro.Parent.FindFirstChildOfClass("Humanoid"): ...
+LocalScript (Lua) vai em StarterPlayerScripts; Script (Python) vai em ServerScriptService.
+Depois do bloco, explique em 1 a 3 frases o que você fez e como testar (botão ▶ Jogar)."""
 
 
 def limpar_historico(mensagens) -> list[dict]:
@@ -112,9 +133,16 @@ def limpar_historico(mensagens) -> list[dict]:
     return saida
 
 
-def perguntar(mensagens: list[dict], http=requests, agora=time.monotonic) -> tuple[Optional[str], Optional[str]]:
+MAX_CENA = 6000
+
+
+def perguntar(mensagens: list[dict], http=requests, agora=time.monotonic,
+              cena: str = "") -> tuple[Optional[str], Optional[str]]:
     """Tenta os modelos em ordem até um responder. Devolve (modelo, texto) ou (None, None)."""
-    historico = [{"role": "system", "content": INSTRUCAO}] + mensagens
+    sistema = INSTRUCAO
+    if cena:
+        sistema += "\n\nMAPA ATUAL (nome [classe] pos tam):\n" + str(cena)[:MAX_CENA]
+    historico = [{"role": "system", "content": sistema}] + mensagens
     fim = agora() + PRAZO_TOTAL_S
     for nome, url, chave in modelos():
         resta = fim - agora()

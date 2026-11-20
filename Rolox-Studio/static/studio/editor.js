@@ -11,6 +11,7 @@ import { importarNoMundo } from "./importar_obj.js";
 import { PCtoCelular, ehCelular, LIMITES } from "./pctocelular.js";
 import { carregarPython } from "./scripts.js";
 import { MODELOS } from "./modelos.js";
+import { extrairAcoes, aplicarAcoes, resumoCena } from "./agente_ia.js";
 
 const MODO = document.body.dataset.modo;           // "leve" | "pesado"
 const PESADO = MODO === "pesado";
@@ -763,6 +764,24 @@ window.__studio = { estado, acoes, render };      // para testes e depuração
     caixa.scrollTop = caixa.scrollHeight;
   }
 
+  // a IA põe a mão na massa: cria/edita peças e scripts direto no mapa (↶ desfaz tudo de uma vez)
+  async function executarAcoesDaIA(acoes) {
+    if (estado.jogo) pararJogo();
+    const confirmar = (texto) => modal(texto, [{ texto: "Não", valor: false }, { texto: "Pode apagar", valor: true, destaque: true }]);
+    const { log, criados } = await aplicarAcoes(estado.mundo, acoes, { confirmar, limitePartes: LIMITE_PARTES });
+    mudou();
+    desenharExplorer();
+    const peca = criados.find((c) => c instanceof BasePart) || criados[0];
+    if (peca && !peca._destruida) selecionar(peca);
+    if (scriptAberto && !scriptAberto._destruida) { $("#scriptTexto").value = scriptAberto.Source; atualizarRealce(); }
+    const bolha = el("div", { class: "msgIA acoes" }, el("b", {}, "O que a IA fez no mapa:"),
+      ...log.map((l) => el("div", {}, l)),
+      el("small", { class: "vazio" }, "Não gostou? Use ↶ (Desfazer)."));
+    caixa.append(bolha);
+    caixa.scrollTop = caixa.scrollHeight;
+    log.forEach((l) => saida("IA: " + l, "sistema"));
+  }
+
   function colarNoScript(codigo) {
     if (!scriptAberto) { modal("Abra um Script ou LocalScript (no Explorer) e toque de novo em ➕."); return; }
     const t = $("#scriptTexto");
@@ -782,7 +801,7 @@ window.__studio = { estado, acoes, render };      // para testes e depuração
     try {
       const r = await fetch("/api/studio/ia", {
         method: "POST", headers: { "Content-Type": "application/json", "X-CSRF": csrf },
-        body: JSON.stringify({ mensagens: historico }),
+        body: JSON.stringify({ mensagens: historico, cena: resumoCena(estado.mundo) }),
       });
       const d = await r.json().catch(() => ({}));
       if (d.tickets !== undefined && d.tickets !== null) $("#iaTickets").textContent = "🎟️ " + d.tickets;
@@ -792,7 +811,10 @@ window.__studio = { estado, acoes, render };      // para testes e depuração
         return;
       }
       historico.push({ role: "assistant", content: d.resposta });
-      mostrar(d.resposta, "ia", d.modelo);
+      const { acoes, texto: explicacao, erro } = extrairAcoes(d.resposta);
+      mostrar(explicacao || "Feito!", "ia", d.modelo);
+      if (erro) mostrar(erro, "erro");
+      if (acoes.length) await executarAcoesDaIA(acoes);
     } catch {
       historico.pop();
       mostrar("Sem conexão com o site. Tente de novo.", "erro");
