@@ -12,6 +12,7 @@
 {% endblock %}
 {% block conteudo %}
 <h1>{{ perfil.username }}{{ selo(perfil.is_parceiro) }}</h1>
+<p><a class="btn pequeno" href="{{ url_for('loja') }}">🛒 Loja</a></p>
 <p><b>🎟️ Tickets: {% if perfil.is_adm %}∞ (ADM){% else %}{{ perfil.tickets }}{% endif %}</b></p>
 <form method="post" class="pilha" id="form-perfil">
   <input type="hidden" name="csrf" value="{{ csrf }}">
@@ -21,10 +22,10 @@
   <div class="grade-avatar">
     <label>Pele<select name="pele" data-avatar>{% for n, v in av.PELES.items() %}<option value="{{ v }}" {{ 'selected' if avatar.pele == v }}>{{ n }}</option>{% endfor %}</select></label>
     <label>Cabelo<select name="cabelo" data-avatar>{% for v, n in av.CABELOS.items() %}<option value="{{ v }}" {{ 'selected' if avatar.cabelo == v }}>{{ n }}</option>{% endfor %}</select></label>
-    <label>Cor do cabelo<select name="cor_cabelo" data-avatar>{% for n, v in av.CORES.items() %}<option value="{{ v }}" {{ 'selected' if avatar.cor_cabelo == v }}>{{ n }}</option>{% endfor %}</select></label>
+    <label>Cor do cabelo<select name="cor_cabelo" data-avatar>{% for n, v in av.CORES.items() %}<option value="{{ v }}" {{ 'selected' if avatar.cor_cabelo == v }}>{{ n }}</option>{% endfor %}{% for n, v in av.ESPECIAIS.items() if v in comprados.get('cor_cabelo', ()) %}<option value="{{ v }}" {{ 'selected' if avatar.cor_cabelo == v }}>⭐ {{ n }}</option>{% endfor %}</select></label>
     <label>Acessório<select name="acessorio" data-avatar>{% for v, n in av.ACESSORIOS.items() %}<option value="{{ v }}" {{ 'selected' if avatar.acessorio == v }}>{{ n }}</option>{% endfor %}</select></label>
-    <label>Camisa<select name="camisa" data-avatar>{% for n, v in av.CORES.items() %}<option value="{{ v }}" {{ 'selected' if avatar.camisa == v }}>{{ n }}</option>{% endfor %}</select></label>
-    <label>Calça<select name="calca" data-avatar>{% for n, v in av.CORES.items() %}<option value="{{ v }}" {{ 'selected' if avatar.calca == v }}>{{ n }}</option>{% endfor %}</select></label>
+    <label>Camisa<select name="camisa" data-avatar>{% for n, v in av.CORES.items() %}<option value="{{ v }}" {{ 'selected' if avatar.camisa == v }}>{{ n }}</option>{% endfor %}{% for n, v in av.ESPECIAIS.items() if v in comprados.get('camisa', ()) %}<option value="{{ v }}" {{ 'selected' if avatar.camisa == v }}>⭐ {{ n }}</option>{% endfor %}</select></label>
+    <label>Calça<select name="calca" data-avatar>{% for n, v in av.CORES.items() %}<option value="{{ v }}" {{ 'selected' if avatar.calca == v }}>{{ n }}</option>{% endfor %}{% for n, v in av.ESPECIAIS.items() if v in comprados.get('calca', ()) %}<option value="{{ v }}" {{ 'selected' if avatar.calca == v }}>⭐ {{ n }}</option>{% endfor %}</select></label>
   </div>
   <h2>⚙️ Configurações (config)</h2>
   <label>Idioma do chat

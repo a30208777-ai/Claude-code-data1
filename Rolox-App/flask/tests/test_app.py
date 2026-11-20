@@ -338,6 +338,22 @@ class SupabaseFalso:
         if p == "/rest/v1/servidores_logados":
             depois = int(q["id"].split(".")[1])
             return Resp(200, [m for m in self.chat if m["id"] > depois])
+        if p in ("/rest/v1/loja_itens", "/rest/v1/itens_comprados", "/rest/v1/rpc/comprar_item"):
+            itens = [{"codigo": "dourado", "nome": "Dourado", "campo": "camisa", "valor": "#ffc400", "preco": 50, "emoji": "✨"},
+                     {"codigo": "neon", "nome": "Neon azul", "campo": "calca", "valor": "#00e5ff", "preco": 30, "emoji": "💡"}]
+            self.compras = getattr(self, "compras", set())
+            if p == "/rest/v1/loja_itens":
+                return Resp(200, itens)
+            if p == "/rest/v1/itens_comprados":
+                return Resp(200, [{"codigo": c} for c in self.compras])
+            it = next((i for i in itens if i["codigo"] == json["p_codigo"]), None)
+            if json["p_codigo"] in self.compras:
+                return Resp(200, {"ja_tinha": True})
+            if self.perfil["tickets"] < it["preco"]:
+                return Resp(400, {"code": "P0001", "message": f"tickets insuficientes: {it['nome']} custa {it['preco']} tickets"})
+            self.perfil["tickets"] -= it["preco"]
+            self.compras.add(it["codigo"])
+            return Resp(200, {"ja_tinha": False, "tickets": self.perfil["tickets"]})
         if p == "/rest/v1/rpc/receber_tickets_diarios":
             r = dict(self.presente)
             if r.get("ganhou"):
@@ -1349,3 +1365,23 @@ def test_midias_som_e_video_conferidos_pelo_arquivo(cliente, sb):
     assert r.status_code == 400 and "5 MB" in r.get_json()["mensagem"]
     t = html(cliente.get("/studio/leve"))
     assert 'data-acao="midia"' in t and "window.ROLOX_MIDIAS" in t
+
+
+def test_loja_comprar_e_usar_cor_especial(cliente, sb):
+    entrar(cliente)
+    tok = csrf(cliente)
+    t = html(cliente.get("/loja"))
+    assert "Dourado" in t and "🎟️ 50 tickets" in t and "disabled" in t
+    cliente.post("/loja/dourado/comprar", data={"csrf": tok}, headers={"Referer": "http://localhost/loja"})
+    assert "dourado" not in getattr(sb, "compras", set()) and sb.perfil["tickets"] == 0
+    assert "insuficientes" in html(cliente.get("/loja"))
+    sb.perfil["tickets"] = 80
+    r = cliente.post("/loja/dourado/comprar", data={"csrf": tok})
+    assert r.headers["Location"].endswith("/loja#item-dourado")
+    assert sb.perfil["tickets"] == 30 and sb.perfil["avatar"]["camisa"] == "#ffc400"
+    t = html(cliente.get("/loja"))
+    assert "✅ Comprado" in t and "usando agora" in t
+    assert "⭐ Dourado" in html(cliente.get("/perfil"))
+    assert cliente.post("/loja/nada/comprar", data={"csrf": tok}).status_code == 404
+    assert cliente.post("/loja/dourado/comprar").status_code in (302, 400, 403)     # sem CSRF
+    assert sb.perfil["tickets"] == 30

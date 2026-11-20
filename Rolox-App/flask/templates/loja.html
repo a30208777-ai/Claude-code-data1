@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block titulo %}Loja · Rolox{% endblock %}
+{% block conteudo %}
+<div class="linha">
+  <h1 class="cresce">🛒 Loja</h1>
+  <b>🎟️ {% if perfil.is_adm %}∞{% else %}{{ perfil.tickets }}{% endif %}</b>
+</div>
+<p class="nota">Cores especiais para o seu avatar, compradas com tickets. Comprou, é seu para sempre (troque quando quiser).</p>
+<div style="text-align:center"><img alt="Seu avatar" width="120" height="200" src="{{ url_for('avatar_svg', **avatar) }}"></div>
+{% for i in itens %}
+  <div class="cartao" id="item-{{ i.codigo }}">
+    <span class="bolinha grande" style="background: {{ i.valor }}"></span>
+    <div class="info">
+      <div class="titulo">{{ i.emoji }} {{ i.nome }}</div>
+      <div class="detalhe">{% if i.codigo in compras %}✅ Comprado{% else %}🎟️ {{ i.preco }} tickets{% endif %}
+        {% if avatar.get(i.campo) == i.valor %} · usando agora{% endif %}</div>
+    </div>
+    {% if avatar.get(i.campo) != i.valor %}
+    <form method="post" action="{{ url_for('loja_acao', codigo=i.codigo, acao='usar' if i.codigo in compras else 'comprar') }}">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <button class="btn pequeno {{ 'contorno' if i.codigo in compras }}"
+        {% if i.codigo not in compras and not perfil.is_adm and perfil.tickets < i.preco %}disabled title="Tickets insuficientes"{% endif %}>
+        {{ 'Usar' if i.codigo in compras else 'Comprar' }}</button>
+    </form>
+    {% endif %}
+  </div>
+{% endfor %}
+<p class="nota">Ganhe tickets todo dia no presente diário (no Início).</p>
+{% endblock %}

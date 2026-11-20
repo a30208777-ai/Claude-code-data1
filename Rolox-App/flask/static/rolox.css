@@ -233,3 +233,5 @@ body > .tela-rolox { position: fixed; }
 @keyframes tela-surge { from { transform: scale(.7); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 .emblemas { display: flex; flex-wrap: wrap; gap: 6px; }
 .emblema { background: var(--cartao); border: 1px solid var(--borda); border-radius: 999px; padding: 4px 10px; font-size: .85rem; }
+.bolinha.grande { width: 34px; height: 34px; }
+.btn:disabled { opacity: .45; cursor: not-allowed; }

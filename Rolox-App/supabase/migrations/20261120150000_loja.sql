@@ -72,6 +72,5 @@ begin
   end loop;
   return new;
 end $$;
-drop trigger if exists proteger_avatar_loja on public.perfis;
 create trigger proteger_avatar_loja before update on public.perfis
   for each row execute function public.proteger_avatar_loja();

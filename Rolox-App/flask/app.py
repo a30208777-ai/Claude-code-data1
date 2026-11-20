@@ -411,7 +411,15 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
             flash("Perfil salvo.", "ok")
             return redirect(url_for("perfil"))
         perfil = carregar_perfil()
-        return render_template("perfil.html", perfil=perfil, jogos=nomes_jogos(), idiomas=IDIOMAS,
+        try:
+            compras = g.api.minhas_compras()
+            comprados: dict = {}
+            for i in g.api.loja_itens():
+                if i["codigo"] in compras:
+                    comprados.setdefault(i["campo"], set()).add(i["valor"])
+        except ErroRolox:
+            comprados = {}
+        return render_template("perfil.html", perfil=perfil, jogos=nomes_jogos(), idiomas=IDIOMAS, comprados=comprados,
                                av=avatar_mod, avatar=avatar_mod.normalizar(perfil.get("avatar")),
                                aba="perfil")
 
@@ -875,6 +883,34 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
         flash("Denúncia " + ("resolvida." if acao == "resolvida" else "descartada."), "ok")
         voltar = request.form.get("voltar", "")
         return redirect(voltar if voltar in ("/adm", "/dono") else url_for("inicio"))
+
+    # -------------------------------------------------------------- loja
+    @app.get("/loja")
+    @logado
+    def loja():
+        perfil = carregar_perfil()
+        try:
+            compras = g.api.minhas_compras()
+        except ErroRolox:
+            compras = set()
+        return render_template("loja.html", perfil=perfil, itens=g.api.loja_itens(), compras=compras,
+                               avatar=avatar_mod.normalizar(perfil.get("avatar")), aba="perfil")
+
+    @app.post("/loja/<codigo>/<acao>")
+    @logado
+    def loja_acao(codigo: str, acao: str):
+        item = {i["codigo"]: i for i in g.api.loja_itens()}.get(codigo)
+        if not item or acao not in ("comprar", "usar"):
+            abort(404)
+        if acao == "comprar":
+            r = g.api.comprar_item(codigo)
+            flash("Você já tinha esse item." if r.get("ja_tinha") else f"🛒 Comprou {item['nome']}! Já está no seu avatar.", "ok")
+        avatar = avatar_mod.normalizar(carregar_perfil().get("avatar"))
+        avatar[item["campo"]] = item["valor"]
+        g.api.atualizar_perfil(avatar=avatar)            # o banco recusa se não foi comprado
+        if acao == "usar":
+            flash(f"Usando {item['nome']}.", "ok")
+        return redirect(url_for("loja") + f"#item-{codigo}")
 
     # ---------------------------------------------------------- parceria
     @app.route("/parceria", methods=["GET", "POST"])

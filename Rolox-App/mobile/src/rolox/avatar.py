@@ -30,7 +30,13 @@ PADRAO = {
     "camisa": "#1e88e5", "calca": "#37474f", "acessorio": "nenhum",
 }
 
-_CORES_VALIDAS = set(PELES.values()) | set(CORES.values())
+# cores da Loja (compradas com tickets; o banco confere se a pessoa comprou antes de deixar usar)
+ESPECIAIS = {
+    "Dourado": "#ffc400", "Neon azul": "#00e5ff", "Rosa neon": "#ff4081",
+    "Verde neon": "#00e676", "Prata": "#b0bec5", "Galáxia": "#311b92",
+}
+
+_CORES_VALIDAS = set(PELES.values()) | set(CORES.values()) | set(ESPECIAIS.values())
 
 
 def normalizar(avatar: dict | None) -> dict:
