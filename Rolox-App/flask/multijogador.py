@@ -93,6 +93,7 @@ class Salas:
                 f.seek(0)
                 f.truncate()
                 f.write(json.dumps(dados, separators=(",", ":")))
+                f.flush()                 # grava ANTES de destravar (senão outro processo lê a versão velha)
                 return resultado
             finally:
                 fcntl.flock(f, fcntl.LOCK_UN)
