@@ -451,6 +451,61 @@ registrar(class Cofre extends Servico {
   }
 }, "Cofre");
 
+// ----------------------------------------------------------- Tela e Sons
+// O que aparece por cima do jogo e os sons — de CADA jogador (para todos verem, use a Rede).
+//   Tela:Texto("placar", "Moedas: 3", "topo")      lugares: topo, centro, baixo, esquerda, direita
+//   Tela:Botao("abrir", "Abrir a porta", "baixo")   +  Tela.Clicado:Connect(function(id) ... end)
+//   Tela:Barra("vida", 80, 100, "topo")             Tela:Aviso("Você venceu!", 3)
+//   Tela:Remover("placar") / Tela:Limpar()
+//   Sons:Tocar("moeda")   (moeda, pulo, vitoria, dano, clique, porta, explosao, erro)
+//   Sons:Musica("calma")  (calma, acao; "" para parar) — sons gerados na hora, sem arquivos
+export const TELA_LUGARES = ["topo", "centro", "baixo", "esquerda", "direita"];
+export const SONS = ["moeda", "pulo", "vitoria", "dano", "clique", "porta", "explosao", "erro"];
+export const MUSICAS = ["calma", "acao"];
+const TELA_ID = /^[A-Za-z0-9_-]{1,30}$/;
+registrar(class Tela extends Servico {
+  constructor() {
+    super("Tela");
+    this._itens = new Map();                 // id -> {tipo, texto, lugar, valor, maximo}
+    this.Clicado = new Sinal("Clicado");
+    this.Mudou = new Sinal("Mudou");         // para quem desenha (página do jogo)
+  }
+  _id(id) { const k = String(id ?? ""); if (!TELA_ID.test(k)) throw new Error("Tela: id inválido (letras, números, _ ou -)"); return k; }
+  _lugar(l) { return TELA_LUGARES.includes(l) ? l : "topo"; }
+  _por(id, item) {
+    if (!this._itens.has(id) && this._itens.size >= 40) throw new Error("Tela: no máximo 40 itens");
+    this._itens.set(id, item); this.Mudou.Fire(id, item);
+  }
+  Texto(id, texto, lugar) { const k = this._id(id); this._por(k, { tipo: "texto", texto: String(texto ?? "").slice(0, 200), lugar: this._lugar(lugar) }); }
+  Botao(id, texto, lugar) { const k = this._id(id); this._por(k, { tipo: "botao", texto: String(texto ?? "").slice(0, 40), lugar: this._lugar(lugar ?? "baixo") }); }
+  Barra(id, valor, maximo, lugar) {
+    const k = this._id(id), max = Math.max(1, Number(maximo) || 100);
+    this._por(k, { tipo: "barra", valor: Math.max(0, Math.min(max, Number(valor) || 0)), maximo: max, lugar: this._lugar(lugar) });
+  }
+  Aviso(texto, segundos) {
+    const id = `_aviso${Date.now()}${Math.floor(Math.random() * 1000)}`;
+    this._itens.set(id, { tipo: "aviso", texto: String(texto ?? "").slice(0, 200), lugar: "centro" });
+    this.Mudou.Fire(id, this._itens.get(id));
+    setTimeout(() => this.Remover(id), Math.max(0.5, Math.min(30, Number(segundos) || 3)) * 1000);
+  }
+  Remover(id) { const k = String(id ?? ""); if (this._itens.delete(k)) this.Mudou.Fire(k, null); }
+  Limpar() { for (const k of [...this._itens.keys()]) this.Remover(k); }
+  _clicar(id) { if (this._itens.get(id)?.tipo === "botao") this.Clicado.Fire(id); }
+}, "Tela");
+registrar(class Sons extends Servico {
+  constructor() { super("Sons"); this.Tocou = new Sinal("Tocou"); this.musica = ""; }
+  Tocar(nome) {
+    const n = String(nome ?? "");
+    if (!SONS.includes(n)) throw new Error(`Sons: use ${SONS.join(", ")}`);
+    this.Tocou.Fire("som", n);
+  }
+  Musica(nome) {
+    const n = String(nome ?? "");
+    if (n && !MUSICAS.includes(n)) throw new Error(`Sons: músicas ${MUSICAS.join(", ")} (ou "" para parar)`);
+    this.musica = n; this.Tocou.Fire("musica", n);
+  }
+}, "Sons");
+
 export class DataModel extends Instance {
   constructor() { super("Jogo"); }
   static naoCriavel = true;
@@ -467,6 +522,8 @@ export class DataModel extends Instance {
   get RunService() { return this.GetService("RunService"); }
   get Rede() { return this.GetService("Rede"); }
   get Cofre() { return this.GetService("Cofre"); }
+  get Tela() { return this.GetService("Tela"); }
+  get Sons() { return this.GetService("Sons"); }
 }
 registrar(DataModel, "DataModel");
 
@@ -477,7 +534,7 @@ export class Mundo {
     this.assets = {};        // malhas importadas: id -> {obj, mtl, texturas}
     this.game = new DataModel();
     this.game._mundo = this;
-    for (const s of ["Workspace", "Players", "ReplicatedStorage", "ServerScriptService", "StarterPlayer", "RunService", "Rede", "Cofre"]) {
+    for (const s of ["Workspace", "Players", "ReplicatedStorage", "ServerScriptService", "StarterPlayer", "RunService", "Rede", "Cofre", "Tela", "Sons"]) {
       const c = new CLASSES[s](); c._nome = s; c.Parent = this.game;
     }
     const sps = new CLASSES.StarterPlayerScripts(); sps.Parent = this.game.StarterPlayer;
@@ -520,7 +577,7 @@ export function carregarInstancia(d, pai) {
 export function salvarMundo(m, nome = "Meu jogo") {
   const servicos = {};
   for (const s of m.game.GetChildren()) {
-    if (s.ClassName === "Players" || s.ClassName === "RunService" || s.ClassName === "Rede" || s.ClassName === "Cofre") continue;
+    if (s.ClassName === "Players" || s.ClassName === "RunService" || ["Rede", "Cofre", "Tela", "Sons"].includes(s.ClassName)) continue;
     servicos[s.ClassName] = s.GetChildren().filter((f) => !f._temporaria).map(salvarInstancia);
   }
   return { formato: "rolox-studio", versao: VERSAO_ARQUIVO, nome, servicos, assets: m.assets };

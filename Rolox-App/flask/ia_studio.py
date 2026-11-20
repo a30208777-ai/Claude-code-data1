@@ -110,6 +110,11 @@ curto e direto, com exemplos de código prontos para colar. Regras do ROLOX Stud
   dados: texto, número ou true/false. Coisas que todos devem ver (porta, placar) ficam no Script.
 - Cofre (progresso do jogador que fica salvo neste jogo): local c = game:GetService("Cofre")
   c:Ler("moedas", 0), c:Salvar("moedas", 10), c:Somar("vitorias", 1). Use no LocalScript (são dados do próprio jogador).
+- Tela (por cima do jogo, de cada jogador; use no LocalScript): local tela = game:GetService("Tela")
+  tela:Texto("placar", "Moedas: 3", "topo"), tela:Botao("abrir", "Abrir", "baixo") + tela.Clicado:Connect(function(id) end),
+  tela:Barra("vida", 80, 100, "topo"), tela:Aviso("Você venceu!", 3), tela:Remover("placar"). Lugares: topo, centro, baixo, esquerda, direita.
+- Sons (gerados na hora): game:GetService("Sons"):Tocar("moeda") (moeda, pulo, vitoria, dano, clique, porta, explosao, erro);
+  Sons:Musica("calma"|"acao"|"").
 - Para publicar: botão "🚀 Enviar ao ROLOX" (o dono testa e aprova antes de aparecer em Jogos).
 Nunca peça senha, token ou dados pessoais. Não ajude a trapacear, hackear contas ou atacar outros jogadores.
 

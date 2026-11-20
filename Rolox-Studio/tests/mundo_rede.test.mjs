@@ -91,3 +91,27 @@ test("Cofre: ler com padrão, salvar, somar, apagar e o que falta enviar", () =>
   assert.throws(() => c.Salvar("a b", 1)); assert.throws(() => c.Salvar("x", { t: 1 })); assert.throws(() => c.Salvar("x", NaN));
   assert.ok(!("Cofre" in salvarMundo(m).servicos));
 });
+
+test("Tela: texto, botão (clique), barra, aviso, remover; Sons validados", async () => {
+  const m = mundoInicial();
+  const tela = m.game.GetService("Tela"), sons = m.game.GetService("Sons");
+  const visto = [], cliques = [], tocou = [];
+  tela.Mudou.Connect((id, item) => visto.push([id, item && item.tipo]));
+  tela.Clicado.Connect((id) => cliques.push(id));
+  sons.Tocou.Connect((t, n) => tocou.push(t + ":" + n));
+  tela.Texto("placar", "Moedas: 3", "topo");
+  tela.Botao("abrir", "Abrir", "lugar-inventado");
+  tela.Barra("vida", 150, 100);
+  assert.equal(tela._itens.get("abrir").lugar, "baixo".replace("baixo", "topo"));   // lugar inválido vira topo
+  assert.equal(tela._itens.get("vida").valor, 100);                                    // não passa do máximo
+  tela._clicar("abrir"); tela._clicar("placar");                                       // texto não é clicável
+  assert.deepEqual(cliques, ["abrir"]);
+  tela.Remover("placar");
+  assert.deepEqual(visto.slice(-1), [["placar", null]]);
+  assert.throws(() => tela.Texto("<b>", "x"));
+  sons.Tocar("moeda"); sons.Musica("calma"); sons.Musica("");
+  assert.deepEqual(tocou, ["som:moeda", "musica:calma", "musica:"]);
+  assert.throws(() => sons.Tocar("grito"));
+  tela.Limpar();
+  assert.equal(tela._itens.size, 0);
+});

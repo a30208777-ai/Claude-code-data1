@@ -12,6 +12,7 @@ import { PCtoCelular, ehCelular, LIMITES } from "./pctocelular.js";
 import { carregarPython } from "./scripts.js";
 import { MODELOS } from "./modelos.js";
 import { extrairAcoes, aplicarAcoes, resumoCena } from "./agente_ia.js";
+import { ligarTela, ligarSons } from "./tela_jogo.js";
 
 const MODO = document.body.dataset.modo;           // "leve" | "pesado"
 const PESADO = MODO === "pesado";
@@ -620,6 +621,8 @@ async function iniciarJogo() {
     controlesExtras: () => (pc2cel && !CELULAR ? pc2cel.controles() : []),
   });
   estado.jogo = jogo;
+  jogo._camadaTela = ligarTela(jogo, $("#painelCena"));
+  jogo._pararMusica = ligarSons(jogo);
   try { await jogo.iniciar(); }
   catch (err) { saida(`Erro ao iniciar: ${err.message}`, "erro"); pararJogo(); return; }
   $("#controlesToque").hidden = !(CELULAR || "ontouchstart" in window);
@@ -628,6 +631,7 @@ async function iniciarJogo() {
 function pararJogo() {
   const jogo = estado.jogo; if (!jogo) return;
   jogo.parar();
+  jogo._camadaTela?.remove(); jogo._pararMusica?.();
   estado.jogo = null;
   render.definirMundo(estado.mundo);
   orbita.enabled = true;
