@@ -2,15 +2,15 @@
 <!-- Cada "###" é uma resposta. Linha "Palavras:" = gatilhos. Atualizado 20/11/2026. -->
 
 ### !rolox
-Palavras: rolox, o que é, roblox
-🎮 Plataforma de jogos da comunidade: Studio para criar jogos (Lua e Python), IAs no chat, servidores separados para hack/mod, tickets e avatar. É **independente** (não é o Roblox) e está **em teste**, sem data de lançamento.
+Palavras: rolox, o que é, sobre
+🎮 **ROLOX** é uma plataforma de jogos da comunidade: Studio para criar jogos (Lua e Python), IAs no chat, servidores separados para hack/mod, tickets e avatar. Está **em teste**, sem data de lançamento.
 
 ### !fases
 Palavras: fase, fases, progresso, roadmap, falta
 ✅ Contas, login protegido, painel ADM, tempo real, servidores, fila, localização, perfil/avatar, chat
 🟡 Recuperar conta, acesso pelo PC, anticheat, mapas no GitHub, tradução no chat, mural de sugestões
 ⏳ Multiplayer em tempo real, launcher do PC, transmissão de tela, lançamento
-➕ Prontos: Rolox Studio, PCtoCelular, tickets, IAs
+➕ Prontos: ROLOX Studio, PCtoCelular, tickets, IAs
 
 ### !instalar
 Palavras: instalar, abrir app, termux, flet
