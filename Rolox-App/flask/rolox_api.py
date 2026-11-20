@@ -426,6 +426,18 @@ class RoloxAPI:
     def adm_resolver_denuncia(self, denuncia_id: int, status: str, nota: str = "") -> None:
         self._req("POST", "/rest/v1/rpc/adm_resolver_denuncia", json={"p_id": denuncia_id, "p_status": status, "p_nota": nota[:300]})
 
+    def dar_emblema(self, mapa_id: str, codigo: str, nome: str, emoji: str) -> dict:
+        return self._req("POST", "/rest/v1/rpc/dar_emblema", json={
+            "p_mapa": mapa_id, "p_codigo": codigo, "p_nome": (nome or "")[:40], "p_emoji": (emoji or "🏅")[:8]})
+
+    def meus_emblemas(self, mapa_id: str) -> list:
+        r = self._req("POST", "/rest/v1/rpc/meus_emblemas", json={"p_mapa": mapa_id})
+        return r if isinstance(r, list) else []
+
+    def emblemas_de(self, username: str) -> list[dict]:
+        r = self._req("POST", "/rest/v1/rpc/emblemas_de", json={"p_username": username})
+        return r if isinstance(r, list) else []
+
     def visitar_mapa(self, mapa_id: str) -> None:
         self._req("POST", "/rest/v1/rpc/visitar_mapa", json={"p_id": mapa_id})
 

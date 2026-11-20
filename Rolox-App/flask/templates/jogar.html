@@ -128,6 +128,7 @@
     const jogo = window.roloxJogo = await jogarMapa({
       canvas: document.getElementById("tela"), urlMapa: {{ url_mapa|tojson }},
       nomeJogador: {{ eu|tojson }}, avatar: {{ avatar|tojson }}, saida, multijogador: {{ 'true' if passe else 'false' }},
+      emblemas: {% if teste %}null{% else %}{ url: {{ url_for('emblemas_meus', mapa_id=m.id)|tojson }}, csrf: CSRF }{% endif %},
       cofre: {% if teste %}null{% else %}{ url: {{ url_for('cofre_ler', mapa_id=m.id)|tojson }}, csrf: CSRF }{% endif %},
     });
     carregando.remove();

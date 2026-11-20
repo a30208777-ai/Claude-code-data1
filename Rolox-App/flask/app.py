@@ -667,6 +667,20 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
         g.api.cofre_salvar(mapa_id, dados)
         return jsonify({"ok": True})
 
+    # Emblemas: os que eu já tenho neste jogo / ganhar um novo
+    @app.get("/api/emblemas/<mapa_id>")
+    @logado
+    def emblemas_meus(mapa_id: str):
+        _mapa_ou_404(mapa_id)
+        return jsonify(g.api.meus_emblemas(mapa_id))
+
+    @app.post("/api/emblemas/<mapa_id>")
+    @logado
+    def emblema_ganhar(mapa_id: str):
+        d = request.get_json(silent=True) or {}
+        return jsonify(g.api.dar_emblema(mapa_id, str(d.get("codigo", ""))[:30], str(d.get("nome", "")),
+                                         str(d.get("emoji", "🏅"))))
+
     @app.get("/api/mapas/<mapa_id>/dados")
     @logado
     def mapa_dados(mapa_id: str):
@@ -850,7 +864,15 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
             abort(404)
         redes = [(k, *REDES_SOCIAIS[k], url) for k, url in (p.get("redes") or {}).items()
                  if k in REDES_SOCIAIS and isinstance(url, str) and url.startswith("https://")]
-        return render_template("jogador.html", p=p, redes=redes, eu_nome=carregar_perfil().get("username"), aba="inicio")
+        try:
+            emblemas = g.api.emblemas_de(p["username"])
+        except ErroRolox:
+            emblemas = []
+        por_jogo: dict = {}
+        for e in emblemas:
+            por_jogo.setdefault(e["jogo"], []).append(e)
+        return render_template("jogador.html", p=p, redes=redes, eu_nome=carregar_perfil().get("username"),
+                               emblemas=por_jogo, total_emblemas=len(emblemas), aba="inicio")
 
     @app.post("/dono/parcerias/criar")
     @logado

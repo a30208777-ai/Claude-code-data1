@@ -3,6 +3,11 @@
 
 export function ligarTela(jogo, container) {
   const tela = jogo.mundo.game.Tela;
+  // emblema ganho: aviso + som (no jogo do site e no Studio)
+  jogo.mundo.game.Emblemas.Ganhou.Connect((codigo, nome, emoji) => {
+    tela.Aviso(`${emoji} Emblema ganho: ${nome}`, 4);
+    try { jogo.mundo.game.Sons.Tocar("vitoria"); } catch { /* sem som */ }
+  });
   const camada = document.createElement("div");
   camada.className = "tela-rolox";
   const lugares = {};

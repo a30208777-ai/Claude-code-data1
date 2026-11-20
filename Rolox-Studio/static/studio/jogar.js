@@ -11,7 +11,7 @@ import { ligarTela, ligarSons } from "./tela_jogo.js";
 const ehToque = () => matchMedia("(pointer: coarse)").matches || "ontouchstart" in window;
 
 export async function jogarMapa({ canvas, urlMapa, nomeJogador = "Jogador", avatar = {}, saida = () => {}, aoCarregar = () => {},
-                                  multijogador = false, cofre = null }) {
+                                  multijogador = false, cofre = null, emblemas = null }) {
   const r = await fetch(urlMapa, { cache: "no-store" });
   if (!r.ok) throw new Error(r.status === 404 ? "mapa não encontrado" : `não deu para baixar o mapa (${r.status})`);
   const mundo = carregarMundo(await r.json());
@@ -25,6 +25,17 @@ export async function jogarMapa({ canvas, urlMapa, nomeJogador = "Jogador", avat
   mundoRede.ligar();
   if (multijogador) mundoRede.modoConvidado();      // sozinho: não precisa espelhar nada
   jogo.mundoRede = mundoRede;
+  // Emblemas: os que já tenho (para não dar de novo) e salvar os novos
+  if (emblemas?.url) {
+    try {
+      const re = await fetch(emblemas.url, { cache: "no-store" });
+      if (re.ok) jogo.mundo.game.Emblemas._carregar(await re.json());
+    } catch { /* sem rede */ }
+    jogo.mundo.game.Emblemas.Ganhou.Connect((codigo, nome, emoji) => {
+      fetch(emblemas.url, { method: "POST", headers: { "Content-Type": "application/json", "X-CSRF": emblemas.csrf },
+                            body: JSON.stringify({ codigo, nome, emoji }) }).catch(() => {});
+    });
+  }
   ligarTela(jogo, document.body);        // antes dos scripts: o que eles mostram logo no começo aparece
   ligarSons(jogo);
   // Cofre: dados salvos do jogador neste jogo (carrega ANTES dos scripts rodarem)

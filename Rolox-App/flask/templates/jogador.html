@@ -9,6 +9,16 @@
     <p class="muted">No ROLOX desde {{ p.criado_em|data }}</p>
   </div>
 </div>
+<h2>🏅 Emblemas ({{ total_emblemas }})</h2>
+{% for jogo, lista in emblemas.items() %}
+  <p class="muted" style="margin:8px 0 4px">🎮 {{ jogo }}</p>
+  <div class="emblemas">
+    {% for e in lista %}<span class="emblema" title="{{ e.nome }} · {{ e.ganho_em|data }}">{{ e.emoji }} {{ e.nome }}</span>{% endfor %}
+  </div>
+{% else %}
+  <p class="muted"><i>Nenhum emblema ainda. Eles são ganhos jogando.</i></p>
+{% endfor %}
+
 {% if redes %}
   <h2>📣 Redes sociais</h2>
   {% for chave, emoji, nome, exemplo, url in redes %}

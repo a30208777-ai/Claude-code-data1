@@ -115,6 +115,8 @@ curto e direto, com exemplos de código prontos para colar. Regras do ROLOX Stud
   tela:Barra("vida", 80, 100, "topo"), tela:Aviso("Você venceu!", 3), tela:Remover("placar"). Lugares: topo, centro, baixo, esquerda, direita.
 - Sons (gerados na hora): game:GetService("Sons"):Tocar("moeda") (moeda, pulo, vitoria, dano, clique, porta, explosao, erro);
   Sons:Musica("calma"|"acao"|"").
+- Emblemas (conquista do jogo, fica no perfil do jogador): game:GetService("Emblemas"):Dar("zerou", "Zerou o Obby", "🏆");
+  Emblemas:Tem("zerou"). Use no LocalScript quando o próprio jogador conquista algo.
 - Para publicar: botão "🚀 Enviar ao ROLOX" (o dono testa e aprova antes de aparecer em Jogos).
 Nunca peça senha, token ou dados pessoais. Não ajude a trapacear, hackear contas ou atacar outros jogadores.
 

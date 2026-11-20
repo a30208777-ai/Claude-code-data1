@@ -198,6 +198,19 @@ class SupabaseFalso:
                 else:
                     atual[k] = v
             return Resp(200, {"ok": True})
+        if p in ("/rest/v1/rpc/dar_emblema", "/rest/v1/rpc/meus_emblemas", "/rest/v1/rpc/emblemas_de"):
+            self.emblemas = getattr(self, "emblemas", {})
+            if p.endswith("dar_emblema"):
+                if not self.mapas.get(json["p_mapa"], {}).get("caminho_aprovado"):
+                    return Resp(400, {"code": "P0001", "message": "jogo não encontrado"})
+                chave = (json["p_mapa"], json["p_codigo"])
+                novo = chave not in self.emblemas
+                self.emblemas.setdefault(chave, {"jogo": self.mapas[json["p_mapa"]]["nome"], "codigo": json["p_codigo"],
+                                                  "nome": json["p_nome"], "emoji": json["p_emoji"], "ganho_em": "2026-11-20T20:00:00Z"})
+                return Resp(200, {"novo": novo})
+            if p.endswith("meus_emblemas"):
+                return Resp(200, [c for (m, c) in self.emblemas if m == json["p_mapa"]])
+            return Resp(200, list(self.emblemas.values()) if json["p_username"] == "alice" else [])
         if p == "/rest/v1/rpc/meus_amigos":
             return Resp(200, self.amigos)
         if p in ("/rest/v1/rpc/pedir_amizade", "/rest/v1/rpc/responder_amizade", "/rest/v1/rpc/desfazer_amizade"):
@@ -1275,3 +1288,20 @@ def test_denuncias_jogador_e_moderacao(cliente, sb, monkeypatch):
     cliente.post("/moderacao/denuncias/1/resolvida", data={"csrf": tok, "voltar": "/dono"})
     assert "Denúncias abertas (1)" in html(cliente.get("/dono"))
     assert cliente.post("/moderacao/denuncias/1/apagar", data={"csrf": tok}).status_code == 404
+
+
+def test_emblemas_ganhar_e_mostrar_no_perfil(cliente, sb):
+    entrar(cliente)
+    tok = csrf(cliente)
+    mid = cliente.post("/api/mapas/enviar", json={"nome": "Obby", "projeto": PROJETO}, headers={"X-CSRF": tok}).get_json()["id"]
+    sb.dono = True
+    cliente.post(f"/dono/{mid}/aprovar", data={"csrf": tok})
+    assert cliente.get(f"/api/emblemas/{mid}").get_json() == []
+    r = cliente.post(f"/api/emblemas/{mid}", json={"codigo": "zerou", "nome": "Zerou o Obby", "emoji": "🏆"}, headers={"X-CSRF": tok})
+    assert r.get_json() == {"novo": True}
+    assert cliente.post(f"/api/emblemas/{mid}", json={"codigo": "zerou"}, headers={"X-CSRF": tok}).get_json() == {"novo": False}
+    assert cliente.get(f"/api/emblemas/{mid}").get_json() == ["zerou"]
+    t = html(cliente.get("/jogador/alice"))
+    assert "Emblemas (1)" in t and "🏆 Zerou o Obby" in t and "🎮 Obby" in t
+    cliente.post(f"/jogos/{mid}/jogar", data={"csrf": tok})
+    assert f"/api/emblemas/{mid}" in html(cliente.get(f"/jogar/{mid}?s=s9"))

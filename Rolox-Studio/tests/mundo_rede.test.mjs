@@ -115,3 +115,19 @@ test("Tela: texto, botão (clique), barra, aviso, remover; Sons validados", asyn
   tela.Limpar();
   assert.equal(tela._itens.size, 0);
 });
+
+test("Emblemas: dá uma vez só, Tem, limite e código inválido", () => {
+  const m = mundoInicial();
+  const e = m.game.GetService("Emblemas");
+  const ganhos = [];
+  e.Ganhou.Connect((c, n, em) => ganhos.push([c, n, em]));
+  e._carregar(["velho"]);
+  assert.equal(e.Dar("velho", "Já tinha"), false);
+  assert.equal(e.Dar("zerou", "Zerou o Obby", "🏆"), true);
+  assert.equal(e.Dar("zerou", "de novo"), false);
+  assert.ok(e.Tem("zerou") && !e.Tem("nada"));
+  assert.deepEqual(ganhos, [["zerou", "Zerou o Obby", "🏆"]]);
+  assert.throws(() => e.Dar("a b"));
+  for (let i = 0; i < 28; i++) e.Dar("e" + i);
+  assert.throws(() => e.Dar("demais"));
+});

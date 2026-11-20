@@ -506,6 +506,30 @@ registrar(class Sons extends Servico {
   }
 }, "Sons");
 
+// -------------------------------------------------------------- Emblemas
+// Conquistas do jogo, dadas pelos scripts. Ficam para sempre na página do jogador.
+//   game:GetService("Emblemas"):Dar("zerou", "Zerou o Obby", "🏆")   -- uma vez só por jogador
+//   if Emblemas:Tem("zerou") then ... end
+export const EMBLEMA_CODIGO = /^[A-Za-z0-9_]{1,30}$/;
+registrar(class Emblemas extends Servico {
+  constructor() {
+    super("Emblemas");
+    this._tem = new Set();
+    this.Ganhou = new Sinal("Ganhou");        // (codigo, nome, emoji) — só na 1ª vez
+  }
+  Dar(codigo, nome, emoji) {
+    const c = String(codigo ?? "");
+    if (!EMBLEMA_CODIGO.test(c)) throw new Error("Emblemas: código inválido (letras, números ou _, até 30)");
+    if (this._tem.has(c)) return false;
+    if (this._tem.size >= 30) throw new Error("Emblemas: até 30 por jogo");
+    this._tem.add(c);
+    this.Ganhou.Fire(c, String(nome ?? c).slice(0, 40), String(emoji ?? "🏅").slice(0, 8) || "🏅");
+    return true;
+  }
+  Tem(codigo) { return this._tem.has(String(codigo ?? "")); }
+  _carregar(lista) { this._tem = new Set(Array.isArray(lista) ? lista.map(String) : []); }
+}, "Emblemas");
+
 export class DataModel extends Instance {
   constructor() { super("Jogo"); }
   static naoCriavel = true;
@@ -524,6 +548,7 @@ export class DataModel extends Instance {
   get Cofre() { return this.GetService("Cofre"); }
   get Tela() { return this.GetService("Tela"); }
   get Sons() { return this.GetService("Sons"); }
+  get Emblemas() { return this.GetService("Emblemas"); }
 }
 registrar(DataModel, "DataModel");
 
@@ -534,7 +559,7 @@ export class Mundo {
     this.assets = {};        // malhas importadas: id -> {obj, mtl, texturas}
     this.game = new DataModel();
     this.game._mundo = this;
-    for (const s of ["Workspace", "Players", "ReplicatedStorage", "ServerScriptService", "StarterPlayer", "RunService", "Rede", "Cofre", "Tela", "Sons"]) {
+    for (const s of ["Workspace", "Players", "ReplicatedStorage", "ServerScriptService", "StarterPlayer", "RunService", "Rede", "Cofre", "Tela", "Sons", "Emblemas"]) {
       const c = new CLASSES[s](); c._nome = s; c.Parent = this.game;
     }
     const sps = new CLASSES.StarterPlayerScripts(); sps.Parent = this.game.StarterPlayer;
@@ -577,7 +602,7 @@ export function carregarInstancia(d, pai) {
 export function salvarMundo(m, nome = "Meu jogo") {
   const servicos = {};
   for (const s of m.game.GetChildren()) {
-    if (s.ClassName === "Players" || s.ClassName === "RunService" || ["Rede", "Cofre", "Tela", "Sons"].includes(s.ClassName)) continue;
+    if (s.ClassName === "Players" || s.ClassName === "RunService" || ["Rede", "Cofre", "Tela", "Sons", "Emblemas"].includes(s.ClassName)) continue;
     servicos[s.ClassName] = s.GetChildren().filter((f) => !f._temporaria).map(salvarInstancia);
   }
   return { formato: "rolox-studio", versao: VERSAO_ARQUIVO, nome, servicos, assets: m.assets };
