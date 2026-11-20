@@ -399,6 +399,58 @@ registrar(class Rede extends Servico {
   }
 }, "Rede");
 
+// ----------------------------------------------------------------- Cofre
+// Dados do PRÓPRIO jogador que ficam salvos neste jogo (voltam na próxima vez que ele jogar).
+//   local moedas = game:GetService("Cofre"):Ler("moedas", 0)
+//   game:GetService("Cofre"):Salvar("moedas", moedas + 1)
+//   game:GetService("Cofre"):Somar("vitorias", 1)       -- soma e devolve o novo valor
+// Chaves: letras, números e _ (até 40). Valores: texto (até 1000), número ou verdadeiro/falso.
+// Salva sozinho a cada 3 s e ao sair. No Studio e no modo teste fica só na memória.
+export const COFRE_CHAVE = /^[A-Za-z0-9_]{1,40}$/;
+registrar(class Cofre extends Servico {
+  constructor() {
+    super("Cofre");
+    this._dados = {};
+    this._sujos = new Set();
+    this.Salvo = new Sinal("Salvo");
+  }
+  _chave(chave) {
+    const k = String(chave ?? "");
+    if (!COFRE_CHAVE.test(k)) throw new Error("Cofre: chave inválida (use letras, números ou _, até 40)");
+    return k;
+  }
+  Ler(chave, padrao) {
+    const k = this._chave(chave);
+    return k in this._dados ? this._dados[k] : (padrao === undefined ? null : padrao);
+  }
+  Salvar(chave, valor) {
+    const k = this._chave(chave);
+    if (valor === undefined || valor === null) delete this._dados[k];
+    else {
+      if (typeof valor === "string") valor = valor.slice(0, 1000);
+      else if (typeof valor === "number") { if (!Number.isFinite(valor)) throw new Error("Cofre: número inválido"); }
+      else if (typeof valor !== "boolean") throw new Error("Cofre: guarde texto, número ou verdadeiro/falso");
+      if (!(k in this._dados) && Object.keys(this._dados).length >= 50) throw new Error("Cofre: até 50 chaves por jogo");
+      this._dados[k] = valor;
+    }
+    this._sujos.add(k);
+    return valor ?? null;
+  }
+  Somar(chave, n = 1) {
+    const atual = Number(this.Ler(chave, 0)) || 0;
+    return this.Salvar(chave, atual + (Number(n) || 0));
+  }
+  Apagar(chave) { this.Salvar(chave, null); }
+  _carregar(obj) { if (obj && typeof obj === "object") this._dados = { ...obj }; this._sujos.clear(); }
+  _pendentes() {
+    if (!this._sujos.size) return null;
+    const r = {};
+    for (const k of this._sujos) r[k] = k in this._dados ? this._dados[k] : null;
+    this._sujos.clear();
+    return r;
+  }
+}, "Cofre");
+
 export class DataModel extends Instance {
   constructor() { super("Jogo"); }
   static naoCriavel = true;
@@ -414,6 +466,7 @@ export class DataModel extends Instance {
   get StarterPlayer() { return this.GetService("StarterPlayer"); }
   get RunService() { return this.GetService("RunService"); }
   get Rede() { return this.GetService("Rede"); }
+  get Cofre() { return this.GetService("Cofre"); }
 }
 registrar(DataModel, "DataModel");
 
@@ -424,7 +477,7 @@ export class Mundo {
     this.assets = {};        // malhas importadas: id -> {obj, mtl, texturas}
     this.game = new DataModel();
     this.game._mundo = this;
-    for (const s of ["Workspace", "Players", "ReplicatedStorage", "ServerScriptService", "StarterPlayer", "RunService", "Rede"]) {
+    for (const s of ["Workspace", "Players", "ReplicatedStorage", "ServerScriptService", "StarterPlayer", "RunService", "Rede", "Cofre"]) {
       const c = new CLASSES[s](); c._nome = s; c.Parent = this.game;
     }
     const sps = new CLASSES.StarterPlayerScripts(); sps.Parent = this.game.StarterPlayer;
@@ -467,7 +520,7 @@ export function carregarInstancia(d, pai) {
 export function salvarMundo(m, nome = "Meu jogo") {
   const servicos = {};
   for (const s of m.game.GetChildren()) {
-    if (s.ClassName === "Players" || s.ClassName === "RunService" || s.ClassName === "Rede") continue;
+    if (s.ClassName === "Players" || s.ClassName === "RunService" || s.ClassName === "Rede" || s.ClassName === "Cofre") continue;
     servicos[s.ClassName] = s.GetChildren().filter((f) => !f._temporaria).map(salvarInstancia);
   }
   return { formato: "rolox-studio", versao: VERSAO_ARQUIVO, nome, servicos, assets: m.assets };

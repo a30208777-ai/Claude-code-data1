@@ -77,3 +77,17 @@ test("Rede sozinho: ParaServidor chega no Recebido e ParaTodos no RecebidoDoServ
   // o projeto salvo não leva a Rede (é um serviço do jogo rodando)
   assert.ok(!("Rede" in salvarMundo(m).servicos));
 });
+
+test("Cofre: ler com padrão, salvar, somar, apagar e o que falta enviar", () => {
+  const m = mundoInicial();
+  const c = m.game.GetService("Cofre");
+  c._carregar({ moedas: 5 });
+  assert.equal(c.Ler("moedas", 0), 5);
+  assert.equal(c.Ler("fase", "inicio"), "inicio");
+  assert.equal(c.Somar("moedas", 2), 7);
+  c.Salvar("fase", "lava"); c.Apagar("fase");
+  assert.deepEqual(c._pendentes(), { moedas: 7, fase: null });
+  assert.equal(c._pendentes(), null);
+  assert.throws(() => c.Salvar("a b", 1)); assert.throws(() => c.Salvar("x", { t: 1 })); assert.throws(() => c.Salvar("x", NaN));
+  assert.ok(!("Cofre" in salvarMundo(m).servicos));
+});

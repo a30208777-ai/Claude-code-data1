@@ -108,6 +108,8 @@ curto e direto, com exemplos de código prontos para colar. Regras do ROLOX Stud
              Script -> Rede:ParaTodos("nome", dados) / Rede:ParaJogador(jogador, "nome", dados)
              LocalScript -> Rede.RecebidoDoServidor:Connect(function(nome, dados) ... end)
   dados: texto, número ou true/false. Coisas que todos devem ver (porta, placar) ficam no Script.
+- Cofre (progresso do jogador que fica salvo neste jogo): local c = game:GetService("Cofre")
+  c:Ler("moedas", 0), c:Salvar("moedas", 10), c:Somar("vitorias", 1). Use no LocalScript (são dados do próprio jogador).
 - Para publicar: botão "🚀 Enviar ao ROLOX" (o dono testa e aprova antes de aparecer em Jogos).
 Nunca peça senha, token ou dados pessoais. Não ajude a trapacear, hackear contas ou atacar outros jogadores.
 

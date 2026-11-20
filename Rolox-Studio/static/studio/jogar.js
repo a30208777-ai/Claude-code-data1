@@ -10,7 +10,7 @@ import { MundoRede } from "./mundo_rede.js";
 const ehToque = () => matchMedia("(pointer: coarse)").matches || "ontouchstart" in window;
 
 export async function jogarMapa({ canvas, urlMapa, nomeJogador = "Jogador", avatar = {}, saida = () => {}, aoCarregar = () => {},
-                                  multijogador = false }) {
+                                  multijogador = false, cofre = null }) {
   const r = await fetch(urlMapa, { cache: "no-store" });
   if (!r.ok) throw new Error(r.status === 404 ? "mapa não encontrado" : `não deu para baixar o mapa (${r.status})`);
   const mundo = carregarMundo(await r.json());
@@ -24,6 +24,23 @@ export async function jogarMapa({ canvas, urlMapa, nomeJogador = "Jogador", avat
   mundoRede.ligar();
   if (multijogador) mundoRede.modoConvidado();      // sozinho: não precisa espelhar nada
   jogo.mundoRede = mundoRede;
+  // Cofre: dados salvos do jogador neste jogo (carrega ANTES dos scripts rodarem)
+  if (cofre?.url) {
+    try {
+      const rc = await fetch(cofre.url, { cache: "no-store" });
+      if (rc.ok) jogo.mundo.game.Cofre._carregar(await rc.json());
+    } catch { /* sem rede: começa vazio, salva depois */ }
+    const enviar = (keepalive = false) => {
+      const dados = jogo.mundo.game.Cofre._pendentes();
+      if (!dados) return;
+      fetch(cofre.url, { method: "POST", keepalive, headers: { "Content-Type": "application/json", "X-CSRF": cofre.csrf },
+                         body: JSON.stringify({ dados }) })
+        .then((r) => { if (r.ok) jogo.mundo.game.Cofre.Salvo.Fire(); else saida("Cofre: não deu para salvar", "erro"); })
+        .catch(() => { for (const [k, v] of Object.entries(dados)) jogo.mundo.game.Cofre._sujos.add(k); });
+    };
+    setInterval(enviar, 3000);
+    addEventListener("pagehide", () => enviar(true));
+  }
   jogo.render = render;
   jogo.extras = [];          // ex.: multijogador (quadro(dt) antes da física, nomes() depois de desenhar)
   await jogo.iniciar();

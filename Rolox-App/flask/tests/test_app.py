@@ -185,6 +185,19 @@ class SupabaseFalso:
             return Resp(200, [{"id": m["id"], "nome": m["nome"], "descricao": m.get("descricao", ""), "curtidas": 0,
                                "visitas": 0, "nivel": 1} for m in self.mapas.values()
                               if m.get("caminho_aprovado") and json["p_termo"] in m["nome"].lower()])
+        if p == "/rest/v1/rpc/cofre_ler":
+            return Resp(200, getattr(self, "cofre", {}).get(json["p_mapa"], {}))
+        if p == "/rest/v1/rpc/cofre_salvar":
+            if not self.mapas.get(json["p_mapa"], {}).get("caminho_aprovado"):
+                return Resp(400, {"code": "P0001", "message": "jogo não encontrado"})
+            self.cofre = getattr(self, "cofre", {})
+            atual = self.cofre.setdefault(json["p_mapa"], {})
+            for k, v in json["p_dados"].items():
+                if v is None:
+                    atual.pop(k, None)
+                else:
+                    atual[k] = v
+            return Resp(200, {"ok": True})
         if p == "/rest/v1/rpc/meus_amigos":
             return Resp(200, self.amigos)
         if p in ("/rest/v1/rpc/pedir_amizade", "/rest/v1/rpc/responder_amizade", "/rest/v1/rpc/desfazer_amizade"):
@@ -1191,3 +1204,21 @@ def test_buscar_itens_ordem():
     assert nomes[:3] == ["Camisa Azul", "Camisa Amarelo"][:2] + nomes[2:3]
     assert buscar.buscar_itens("oculos")[0]["nome"] == "Óculos"
     assert buscar.buscar_itens("x") == [] and buscar.nivel("Cabelo Moicano", "moi") == 2
+
+
+def test_cofre_salva_e_volta(cliente, sb):
+    entrar(cliente)
+    tok = csrf(cliente)
+    mid = cliente.post("/api/mapas/enviar", json={"nome": "Moedas", "projeto": PROJETO}, headers={"X-CSRF": tok}).get_json()["id"]
+    assert cliente.post(f"/api/cofre/{mid}", json={"dados": {"moedas": 3}}, headers={"X-CSRF": tok}).status_code == 400   # não aprovado
+    sb.dono = True
+    cliente.post(f"/dono/{mid}/aprovar", data={"csrf": tok})
+    assert cliente.get(f"/api/cofre/{mid}").get_json() == {}
+    cliente.post(f"/api/cofre/{mid}", json={"dados": {"moedas": 3, "fase": "lava"}}, headers={"X-CSRF": tok})
+    cliente.post(f"/api/cofre/{mid}", json={"dados": {"moedas": 7, "fase": None}}, headers={"X-CSRF": tok})
+    assert cliente.get(f"/api/cofre/{mid}").get_json() == {"moedas": 7}
+    assert cliente.post(f"/api/cofre/{mid}", json={"dados": "lixo"}, headers={"X-CSRF": tok}).status_code == 400
+    assert cliente.post(f"/api/cofre/{mid}", json={"dados": {"a": 1}}).status_code == 400                # sem CSRF
+    cliente.post(f"/jogos/{mid}/jogar", data={"csrf": tok})
+    assert f"/api/cofre/{mid}" in html(cliente.get(f"/jogar/{mid}?s=s9"))
+    assert "cofre: null" in html(cliente.get(f"/jogar/{mid}?teste=1"))           # modo teste não salva

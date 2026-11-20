@@ -648,6 +648,24 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
         salas.sair(_passe_meu())
         return ("", 204)
 
+    # Cofre: dados salvos do jogador em cada jogo
+    @app.get("/api/cofre/<mapa_id>")
+    @logado
+    def cofre_ler(mapa_id: str):
+        _mapa_ou_404(mapa_id)
+        return jsonify(g.api.cofre_ler(mapa_id))
+
+    @app.post("/api/cofre/<mapa_id>")
+    @logado
+    def cofre_salvar(mapa_id: str):
+        if len(request.get_data(cache=True)) > 64 * 1024:
+            abort(413)
+        dados = (request.get_json(silent=True) or {}).get("dados")
+        if not isinstance(dados, dict) or len(dados) > 50:
+            abort(400)
+        g.api.cofre_salvar(mapa_id, dados)
+        return jsonify({"ok": True})
+
     @app.get("/api/mapas/<mapa_id>/dados")
     @logado
     def mapa_dados(mapa_id: str):

@@ -399,6 +399,13 @@ class RoloxAPI:
     def dono_revogar_parceria(self, chave_id: int) -> None:
         self._req("POST", "/rest/v1/rpc/dono_revogar_parceria", json={"p_id": chave_id})
 
+    def cofre_ler(self, mapa_id: str) -> dict:
+        r = self._req("POST", "/rest/v1/rpc/cofre_ler", json={"p_mapa": mapa_id})
+        return r if isinstance(r, dict) else {}
+
+    def cofre_salvar(self, mapa_id: str, dados: dict) -> None:
+        self._req("POST", "/rest/v1/rpc/cofre_salvar", json={"p_mapa": mapa_id, "p_dados": dados})
+
     def visitar_mapa(self, mapa_id: str) -> None:
         self._req("POST", "/rest/v1/rpc/visitar_mapa", json={"p_id": mapa_id})
 
