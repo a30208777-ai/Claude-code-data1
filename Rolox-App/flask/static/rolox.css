@@ -200,3 +200,4 @@ a.nome-link:hover { text-decoration: underline; }
 .nivel.n1 { border-color: var(--primaria); color: var(--primaria); }
 .bolinha { display: inline-block; width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--borda); vertical-align: middle; }
 a.cartao { color: inherit; text-decoration: none; }
+.online-jogo.anfitriao::before { content: "👑 "; }

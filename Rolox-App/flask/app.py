@@ -640,7 +640,7 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
     def sala_atualizar():
         passe = _passe_meu()
         estado = request.get_json(silent=True) or {}
-        return jsonify({"jogadores": salas.atualizar(passe, estado)})
+        return jsonify(salas.trocar(passe, estado))
 
     @app.post("/api/sala/sair")
     @logado

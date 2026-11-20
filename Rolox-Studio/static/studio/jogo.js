@@ -7,7 +7,9 @@ import { ExecutorLua, ExecutorPython, carregarPython, criarApi } from "./scripts
 import { CameraJogador } from "./camera.js";
 
 export class Jogo {
-  constructor({ mundoEditor, render, saida, nomeJogador = "Jogador1", controlesExtras = () => [], avatar = {} }) {
+  constructor({ mundoEditor, render, saida, nomeJogador = "Jogador1", controlesExtras = () => [], avatar = {},
+                rodarServidor = true }) {
+    this.rodarServidor = rodarServidor;      // false = convidado: os Scripts rodam no anfitrião
     this.avatar = avatar;
     this.saida = saida;
     this.render = render;
@@ -46,8 +48,19 @@ export class Jogo {
       catch (e) { this.saida(`Não foi possível carregar o Python: ${e.message}`, "erro"); }
     }
     this.rodando = true;
-    for (const s of [...servidor, ...cliente]) this._rodarScript(s);
+    this._scriptsServidor = servidor;
+    for (const s of [...(this.rodarServidor ? servidor : []), ...cliente]) this._rodarScript(s);
+    this.servidorRodando = this.rodarServidor;
     this.ultimo = performance.now();
+  }
+
+  /** Convidado que virou anfitrião: começa a rodar os Scripts do jogo agora. */
+  virarAnfitriao() {
+    if (this.servidorRodando || !this.rodando) return false;
+    this.servidorRodando = true;
+    for (const s of this._scriptsServidor || []) this._rodarScript(s);
+    this.saida("👑 Você virou o anfitrião: os Scripts do jogo rodam no seu aparelho.", "sistema");
+    return true;
   }
 
   _spawn(player, indice) {

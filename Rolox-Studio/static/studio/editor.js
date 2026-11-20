@@ -212,7 +212,7 @@ requestAnimationFrame(loop);
 const ICONES = {
   Workspace: "🌍", Part: "▫️", SpawnLocation: "🟩", MeshPart: "🧊", Model: "📦", Folder: "📁",
   Script: "🐍", LocalScript: "📜", ModuleScript: "🧩", ServerScriptService: "🖥️", ReplicatedStorage: "🗄️",
-  StarterPlayer: "🧍", StarterPlayerScripts: "📂",
+  StarterPlayer: "🧍", StarterPlayerScripts: "📂", Rede: "📡", IntValue: "🔢", NumberValue: "🔢",
 };
 const SERVICOS_VISIVEIS = ["Workspace", "ServerScriptService", "ReplicatedStorage", "StarterPlayer"];
 

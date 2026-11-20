@@ -934,7 +934,7 @@ def test_multijogador_dois_jogadores_se_veem(cliente, sb, tmp_path, monkeypatch)
     passe = re.search(r'passe: ("[^"]+")', t).group(1).strip('"')
     assert "Multijogador" in t
     r = cliente.post("/api/sala", json={"passe": passe, "p": [1, 2, 3]}, headers={"X-CSRF": tok})
-    assert r.status_code == 200 and r.get_json() == {"jogadores": []}
+    assert r.status_code == 200 and r.get_json()["jogadores"] == [] and r.get_json()["anfitriao"] == "u1"
     # passe falso / sem CSRF
     assert cliente.post("/api/sala", json={"passe": passe + "x", "p": [0, 0, 0]}, headers={"X-CSRF": tok}).status_code == 403
     assert cliente.post("/api/sala", json={"passe": passe}).status_code == 400

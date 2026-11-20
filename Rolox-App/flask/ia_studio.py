@@ -101,6 +101,13 @@ curto e direto, com exemplos de código prontos para colar. Regras do ROLOX Stud
 - Peças: Part, SpawnLocation, MeshPart, Model, Folder; propriedades Position, Size, Color, Anchored, CanCollide,
   Transparency, Shape ("Block", "Ball", "Cylinder").
 - Placar: crie a pasta "leaderstats" dentro do jogador com IntValue/NumberValue; o 1º valor vira recorde no site.
+- Multijogador (modelo ANFITRIÃO do ROLOX): os Scripts rodam no aparelho de UM jogador (o anfitrião) e o que eles mudam
+  nas peças (posição, cor, transparência, colisão, peças criadas/apagadas) aparece para todos. LocalScripts rodam em cada um.
+  Mensagens: LocalScript -> game:GetService("Rede"):ParaServidor("nome", dados)
+             Script -> Rede.Recebido:Connect(function(jogador, nome, dados) ... end)
+             Script -> Rede:ParaTodos("nome", dados) / Rede:ParaJogador(jogador, "nome", dados)
+             LocalScript -> Rede.RecebidoDoServidor:Connect(function(nome, dados) ... end)
+  dados: texto, número ou true/false. Coisas que todos devem ver (porta, placar) ficam no Script.
 - Para publicar: botão "🚀 Enviar ao ROLOX" (o dono testa e aprova antes de aparecer em Jogos).
 Nunca peça senha, token ou dados pessoais. Não ajude a trapacear, hackear contas ou atacar outros jogadores.
 

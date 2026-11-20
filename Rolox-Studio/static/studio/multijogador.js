@@ -7,13 +7,25 @@
 
 import * as THREE from "three";
 import { criarPersonagem } from "./fisica.js";
-import { Vector3 } from "./motor.js";
+import { Player, Vector3 } from "./motor.js";
 
 const INTERVALO_MS = 140;
 const SUAVIDADE = 12;          // quanto maior, mais rápido alcança a posição recebida
 
 export class Multijogador {
-  constructor({ jogo, render, passe, csrf, camada, url = "/api/sala", aoMudar = () => {} }) {
+  constructor({ jogo, render, passe, csrf, camada, url = "/api/sala", aoMudar = () => {}, mundoRede = null,
+                aoAnfitriao = () => {} }) {
+    this.mundoRede = mundoRede;    // mundo compartilhado (anfitrião roda os Scripts)
+    this.aoAnfitriao = aoAnfitriao;
+    this.mv = 0;                   // versão do mundo que eu já tenho
+    this.saidaRede = [];           // mensagens da Rede esperando para sair
+    this.eu = null;
+    this.anfitriao = null;
+    const rede = jogo.mundo.game.Rede;
+    rede._enviar = (para, nome, dados) => {
+      if (this.saidaRede.length >= 60) throw new Error("Rede: mensagens demais de uma vez");
+      this.saidaRede.push({ para: para === "eu" ? (this.eu || "servidor") : para, nome, dados });
+    };
     this.jogo = jogo;
     this.render = render;
     this.passe = passe;
@@ -48,8 +60,12 @@ export class Multijogador {
     const raiz = this.jogo.local?.raiz;
     if (!raiz) return null;
     const p = raiz.Position, m = this.jogo.local.humanoid.MoveDirection;
-    return { passe: this.passe, p: [p.X, p.Y, p.Z], r: raiz._rotY || 0,
-             m: !!m && m.Magnitude > 0.05, v: this.jogo.local.humanoid.Health > 0 };
+    const estado = { passe: this.passe, p: [p.X, p.Y, p.Z], r: raiz._rotY || 0,
+                     m: !!m && m.Magnitude > 0.05, v: this.jogo.local.humanoid.Health > 0, mv: this.mv };
+    const mundo = this.mundoRede?.colher();
+    if (mundo) estado.mundo = mundo;
+    if (this.saidaRede.length) estado.eventos = this.saidaRede.splice(0, 20);
+    return estado;
   }
 
   async _trocar() {
@@ -63,10 +79,44 @@ export class Multijogador {
       });
       if (!r.ok) throw new Error(String(r.status));
       this.falhas = 0;
-      this._aplicar((await r.json()).jogadores || []);
+      const d = await r.json();
+      this.eu = d.eu || this.eu;
+      this._aplicar(d.jogadores || []);
+      this._papel(d.anfitriao);
+      if (this.mundoRede && Array.isArray(d.mundo)) {
+        this.mundoRede.aplicar(d.mundo);
+        if (Number.isFinite(d.mv)) this.mv = d.mv;
+      }
+      this._entregar(d.eventos || []);
     } catch {
       if (++this.falhas > 25) this._aplicar([]);       // ~3 s sem resposta: some todo mundo
     } finally { this.enviando = false; }
+  }
+
+  /** Quem roda os Scripts: o anfitrião (o site escolhe: quem chegou primeiro). */
+  _papel(anfitriao) {
+    this.anfitriao = anfitriao;
+    if (anfitriao && anfitriao === this.eu && this.mundoRede && !this.mundoRede.anfitriao) {
+      this.mundoRede.modoAnfitriao();
+      this.jogo.virarAnfitriao();
+      this.aoAnfitriao(true);
+    }
+  }
+
+  /** Mensagens da Rede que chegaram para mim. */
+  _entregar(eventos) {
+    const rede = this.jogo.mundo.game.Rede;
+    for (const e of eventos) {
+      if (!e || typeof e.nome !== "string") continue;
+      if (e.para === "servidor") {
+        if (!this.mundoRede?.anfitriao && this.mundoRede) continue;            // só o anfitrião trata
+        const jogador = e.de === this.eu ? this.jogo.mundo.game.Players.LocalPlayer
+          : this.outros.get(e.de)?.player || null;
+        rede.Recebido.Fire(jogador, e.nome, e.dados ?? null);
+      } else {
+        rede.RecebidoDoServidor.Fire(e.nome, e.dados ?? null);
+      }
+    }
   }
 
   _aplicar(lista) {
@@ -93,7 +143,11 @@ export class Multijogador {
     nome.className = "nome-jogador";
     nome.textContent = j.n + (j.pc ? " 🤝" : "");   // texto puro: nome nunca vira HTML; 🤝 = parceiro
     this.camada?.appendChild(nome);
-    const o = { modelo: p.modelo, raiz: p.raiz, alvo: p.raiz.Position, giro: j.r, nome, vivo: true };
+    // vira um Player no jogo (os Scripts do anfitrião enxergam: PlayerAdded, leaderstats, Rede...)
+    const players = this.jogo.mundo.game.Players;
+    const pl = new Player(j.n); pl._redeId = j.id; pl.Parent = players; pl.Character = p.modelo;
+    try { players.PlayerAdded.Fire(pl); } catch { /* script com erro não derruba a rede */ }
+    const o = { modelo: p.modelo, raiz: p.raiz, alvo: p.raiz.Position, giro: j.r, nome, vivo: true, player: pl };
     this.outros.set(j.id, o);
     return o;
   }
@@ -101,6 +155,8 @@ export class Multijogador {
   _remover(id) {
     const o = this.outros.get(id);
     if (!o) return;
+    try { this.jogo.mundo.game.Players.PlayerRemoving.Fire(o.player); } catch { /* idem */ }
+    o.player?.Destroy();
     o.modelo.Destroy();
     o.nome.remove();
     this.outros.delete(id);

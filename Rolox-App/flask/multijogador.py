@@ -29,6 +29,93 @@ MAX_JOGADORES = 100
 LIMITE_COORD = 100_000.0
 SALA_VALIDA = re.compile(r"^[A-Za-z0-9-]{1,64}$")
 
+# ---- mundo compartilhado (anfitrião) e Rede
+MAX_EVENTOS = 20                 # por troca
+MAX_CAIXA = 200                  # mensagens esperando por jogador
+MAX_MUNDO = 4000                 # peças guardadas por sala
+MAX_ITENS_ENVIO = 300
+MAX_RESPOSTA_MUNDO = 1000
+CHAVE = re.compile(r"^(w(/\d{1,4}){0,12}|n\d{1,7}-[a-z0-9]{1,6})$")
+CLASSES = {"Part", "SpawnLocation", "Model", "Folder"}
+NOME_EVENTO = re.compile(r"^[A-Za-z0-9_À-ÿ -]{1,40}$")
+COR = re.compile(r"^#[0-9a-fA-F]{6}$")
+UID = re.compile(r"^[0-9a-f-]{36}$")
+
+
+def _vetor(v):
+    if isinstance(v, list) and len(v) == 3:
+        n = [_num(x, None) for x in v]
+        if None not in n:
+            return [round(x, 3) for x in n]
+    return None
+
+
+def limpar_props(props) -> dict:
+    """Só as propriedades replicadas, com tipos e limites certos."""
+    if not isinstance(props, dict):
+        return {}
+    r = {}
+    for k in ("Position", "Rotation", "Size"):
+        if k in props and (v := _vetor(props[k])) is not None:
+            r[k] = v
+    if isinstance(props.get("Color"), str) and COR.match(props["Color"]):
+        r["Color"] = props["Color"]
+    if "Transparency" in props:
+        t = _num(props["Transparency"], None)
+        if t is not None:
+            r["Transparency"] = max(0.0, min(1.0, t))
+    for k in ("CanCollide", "Anchored"):
+        if isinstance(props.get(k), bool):
+            r[k] = props[k]
+    if props.get("Shape") in ("Block", "Ball", "Cylinder"):
+        r["Shape"] = props["Shape"]
+    if isinstance(props.get("Name"), str):
+        r["Name"] = props["Name"][:60]
+    return r
+
+
+def _gravar_mundo(dados: dict, mudancas: dict) -> None:
+    lista = mudancas.get("m") if isinstance(mudancas.get("m"), list) else []
+    apagar = mudancas.get("d") if isinstance(mudancas.get("d"), list) else []
+    mundo = dados["mundo"]
+    for it in lista[:MAX_ITENS_ENVIO]:
+        if not isinstance(it, dict) or not isinstance(it.get("k"), str) or not CHAVE.match(it["k"]):
+            continue
+        k = it["k"]
+        atual = mundo.get(k)
+        if atual is None and len(mundo) >= MAX_MUNDO:
+            continue
+        dados["v"] += 1
+        novo = {"props": {**((atual or {}).get("props") or {}), **limpar_props(it.get("props"))}, "v": dados["v"]}
+        if it.get("c") in CLASSES:
+            p = it.get("p")
+            novo.update(c=it["c"], p=p if isinstance(p, str) and CHAVE.match(p) else "w")
+        elif atual and atual.get("c"):
+            novo.update(c=atual["c"], p=atual.get("p", "w"))
+        mundo[k] = novo
+    for k in apagar[:MAX_ITENS_ENVIO]:
+        if isinstance(k, str) and CHAVE.match(k) and k != "w":
+            dados["v"] += 1
+            mundo[k] = {"x": 1, "v": dados["v"]}
+
+
+def _evento_valido(ev) -> Optional[dict]:
+    if not isinstance(ev, dict) or not isinstance(ev.get("nome"), str) or not NOME_EVENTO.match(ev["nome"]):
+        return None
+    para = ev.get("para")
+    if not (para in ("servidor", "todos") or (isinstance(para, str) and UID.match(para))):
+        return None
+    d = ev.get("dados")
+    if isinstance(d, bool) or d is None:
+        pass
+    elif isinstance(d, (int, float)):
+        d = _num(d, None)
+    elif isinstance(d, str):
+        d = d[:500]
+    else:
+        return None
+    return {"para": para, "nome": ev["nome"], "dados": d}
+
 
 class Passes:
     def __init__(self, segredo: str, validade_s: int = 8 * 3600):
@@ -99,19 +186,75 @@ class Salas:
                 fcntl.flock(f, fcntl.LOCK_UN)
 
     def atualizar(self, passe: dict, estado: dict, agora: Optional[float] = None) -> list[dict]:
-        """Grava o meu estado e devolve os OUTROS jogadores (sem os que sumiram)."""
+        """Compatível: só os OUTROS jogadores."""
+        return self.trocar(passe, estado, agora)["jogadores"]
+
+    def trocar(self, passe: dict, estado: dict, agora: Optional[float] = None) -> dict:
+        """Grava o meu estado e devolve: outros jogadores, quem é o anfitrião, o que mudou no mundo
+        desde a versão que eu tenho (mv) e as mensagens da Rede para mim."""
         agora = agora if agora is not None else time.time()
         eu = passe["u"]
+        estado = estado if isinstance(estado, dict) else {}
 
         def mudar(dados):
-            for k in [k for k, v in dados.items() if agora - v.get("t", 0) > SUMIU_APOS]:
-                dados.pop(k)
-            if eu in dados or len(dados) < MAX_JOGADORES:
-                dados[eu] = {"n": passe["n"], "a": passe.get("a") or {}, "pc": bool(passe.get("pc")),
-                             **limpar_estado(estado), "t": agora}
-            return [{"id": k, **{c: v.get(c) for c in ("n", "a", "p", "r", "m", "v", "pc")}}
-                    for k, v in dados.items() if k != eu]
+            if not isinstance(dados.get("j"), dict):          # sala nova (ou formato antigo)
+                dados.clear()
+                dados.update({"j": {}, "mundo": {}, "v": 0, "caixas": {}})
+            jog = dados["j"]
+            for k in [k for k, v in jog.items() if agora - v.get("t", 0) > SUMIU_APOS]:
+                jog.pop(k)
+                dados["caixas"].pop(k, None)
+            if not jog:                                       # sala vazia: o mundo começa de novo
+                dados.update({"mundo": {}, "v": 0, "caixas": {}})
+            if eu in jog or len(jog) < MAX_JOGADORES:
+                jog[eu] = {"n": passe["n"], "a": passe.get("a") or {}, "pc": bool(passe.get("pc")),
+                           **limpar_estado(estado), "t": agora, "e": jog.get(eu, {}).get("e", agora)}
+            anfitriao = min(jog, key=lambda k: (jog[k]["e"], k)) if jog else None
+
+            # mundo: só o anfitrião escreve
+            if eu == anfitriao and isinstance(estado.get("mundo"), dict):
+                _gravar_mundo(dados, estado["mundo"])
+            # mensagens da Rede
+            for ev in (estado.get("eventos") if isinstance(estado.get("eventos"), list) else [])[:MAX_EVENTOS]:
+                ev = _evento_valido(ev)
+                if not ev:
+                    continue
+                para = ev["para"]
+                if para != "servidor" and eu != anfitriao:
+                    continue                                   # só o anfitrião manda para os jogadores
+                alvos = [anfitriao] if para == "servidor" else list(jog) if para == "todos" else [para]
+                for alvo in alvos:
+                    if alvo in jog:
+                        caixa = dados["caixas"].setdefault(alvo, [])
+                        if len(caixa) < MAX_CAIXA:
+                            caixa.append({"de": eu, "nome": ev["nome"], "dados": ev["dados"],
+                                          "para": "servidor" if para == "servidor" else "jogadores"})
+            eventos = dados["caixas"].pop(eu, [])
+
+            mundo, mv = [], dados["v"]
+            if eu != anfitriao:
+                try:
+                    desde = int(estado.get("mv") or 0)
+                except (TypeError, ValueError):
+                    desde = 0
+                if desde > dados["v"]:
+                    desde = 0                                   # o mundo recomeçou
+                novos = sorted(((k, it) for k, it in dados["mundo"].items() if it["v"] > desde), key=lambda x: x[1]["v"])
+                if len(novos) > MAX_RESPOSTA_MUNDO:
+                    novos = novos[:MAX_RESPOSTA_MUNDO]
+                    mv = novos[-1][1]["v"]
+                for k, it in novos:
+                    mundo.append({"k": k, "x": 1} if it.get("x") else
+                                 {"k": k, **({"c": it["c"], "p": it.get("p", "w")} if it.get("c") else {}),
+                                  "props": it.get("props", {})})
+            outros = [{"id": k, **{c: v.get(c) for c in ("n", "a", "p", "r", "m", "v", "pc")}}
+                      for k, v in jog.items() if k != eu]
+            return {"jogadores": outros, "anfitriao": anfitriao, "eu": eu, "mundo": mundo, "mv": mv,
+                    "eventos": eventos}
         return self._com_trava(passe["s"], mudar)
 
     def sair(self, passe: dict) -> None:
-        self._com_trava(passe["s"], lambda dados: dados.pop(passe["u"], None))
+        def mudar(dados):
+            if isinstance(dados.get("j"), dict):
+                dados["j"].pop(passe["u"], None)
+        self._com_trava(passe["s"], mudar)

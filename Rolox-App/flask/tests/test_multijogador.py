@@ -52,3 +52,78 @@ def test_muitos_ao_mesmo_tempo_nao_corrompe(tmp_path):
     ts = [threading.Thread(target=jogar, args=(i,)) for i in range(8)]
     [t.start() for t in ts]; [t.join() for t in ts]
     assert len(salas.atualizar(passe("x"), {}, agora=1000.3)) == 8
+
+
+# ------------------------------------------------ anfitrião, mundo compartilhado e Rede
+A, B, C = ("aaaaaaaa-0000-0000-0000-000000000001", "bbbbbbbb-0000-0000-0000-000000000002",
+           "cccccccc-0000-0000-0000-000000000003")
+
+
+def ps(u):
+    return {"s": "s9", "u": u, "n": u[:4], "a": {}}
+
+
+def test_primeiro_a_entrar_e_o_anfitriao_e_outro_assume(tmp_path):
+    salas = mj.Salas(tmp_path)
+    assert salas.trocar(ps(A), {}, agora=100)["anfitriao"] == A
+    assert salas.trocar(ps(B), {}, agora=101)["anfitriao"] == A
+    # A some (6 s sem atualizar): B vira anfitrião
+    assert salas.trocar(ps(B), {}, agora=100 + mj.SUMIU_APOS + 2)["anfitriao"] == B
+
+
+def test_so_o_anfitriao_muda_o_mundo_e_quem_chega_depois_recebe(tmp_path):
+    salas = mj.Salas(tmp_path)
+    salas.trocar(ps(A), {}, agora=100)
+    porta = {"k": "w/2", "props": {"Transparency": 0.8, "CanCollide": False, "Position": [0, 3, -12]}}
+    salas.trocar(ps(A), {"mundo": {"m": [porta, {"k": "n1-ab12c", "c": "Part", "p": "w", "props": {"Name": "Bala"}}],
+                                    "d": ["w/5"]}}, agora=100.1)
+    # B tenta trapacear: mexe no mundo sem ser anfitrião (ignorado)
+    salas.trocar(ps(B), {"mundo": {"m": [{"k": "w/2", "props": {"Transparency": 0}}]}}, agora=100.2)
+    r = salas.trocar(ps(B), {"mv": 0}, agora=100.3)
+    porK = {it["k"]: it for it in r["mundo"]}
+    assert porK["w/2"]["props"] == {"Transparency": 0.8, "CanCollide": False, "Position": [0.0, 3.0, -12.0]}
+    assert porK["n1-ab12c"]["c"] == "Part" and porK["w/5"] == {"k": "w/5", "x": 1}
+    # já atualizado: nada novo
+    assert salas.trocar(ps(B), {"mv": r["mv"]}, agora=100.4)["mundo"] == []
+    # o anfitrião não recebe o próprio mundo de volta
+    assert salas.trocar(ps(A), {"mv": 0}, agora=100.5)["mundo"] == []
+
+
+def test_mundo_rejeita_lixo(tmp_path):
+    salas = mj.Salas(tmp_path)
+    salas.trocar(ps(A), {"mundo": {"m": [
+        {"k": "../../etc", "props": {}}, {"k": "w/1", "c": "Script", "props": {"Source": "rm -rf"}},
+        {"k": "w/2", "props": {"Color": "red; x", "Transparency": "muito", "Position": [1, "a", 3], "Shape": "Pizza",
+                               "Name": "x" * 500}}]}}, agora=1)
+    r = salas.trocar(ps(B), {"mv": 0}, agora=2)
+    porK = {it["k"]: it for it in r["mundo"]}
+    assert "../../etc" not in porK
+    assert "c" not in porK["w/1"] and porK["w/1"]["props"] == {}
+    assert porK["w/2"]["props"] == {"Name": "x" * 60}
+
+
+def test_rede_jogador_para_anfitriao_e_anfitriao_para_todos(tmp_path):
+    salas = mj.Salas(tmp_path)
+    salas.trocar(ps(A), {}, agora=1)
+    salas.trocar(ps(B), {}, agora=1.1)
+    salas.trocar(ps(C), {}, agora=1.2)
+    # B pede ao servidor (anfitrião A)
+    salas.trocar(ps(B), {"eventos": [{"para": "servidor", "nome": "abrirPorta", "dados": 7},
+                                       {"para": "todos", "nome": "trapaca", "dados": 1},       # só o anfitrião pode
+                                       {"para": "servidor", "nome": "<script>", "dados": 1},    # nome inválido
+                                       {"para": "servidor", "nome": "x", "dados": {"obj": 1}}]}, agora=1.3)
+    r = salas.trocar(ps(A), {}, agora=1.4)
+    assert r["eventos"] == [{"de": B, "nome": "abrirPorta", "dados": 7.0, "para": "servidor"}]
+    # A responde para todos (inclusive ele) e para C em particular
+    salas.trocar(ps(A), {"eventos": [{"para": "todos", "nome": "portaAberta", "dados": True},
+                                      {"para": C, "nome": "segredo", "dados": "só seu"}]}, agora=1.5)
+    assert salas.trocar(ps(B), {}, agora=1.6)["eventos"] == [{"de": A, "nome": "portaAberta", "dados": True, "para": "jogadores"}]
+    assert [e["nome"] for e in salas.trocar(ps(C), {}, agora=1.6)["eventos"]] == ["portaAberta", "segredo"]
+    assert salas.trocar(ps(C), {}, agora=1.7)["eventos"] == []           # entregue uma vez só
+
+
+def test_sala_vazia_recomeca_o_mundo(tmp_path):
+    salas = mj.Salas(tmp_path)
+    salas.trocar(ps(A), {"mundo": {"m": [{"k": "w/2", "props": {"Transparency": 1}}]}}, agora=1)
+    r = salas.trocar(ps(B), {"mv": 0}, agora=100)        # A sumiu e a sala ficou vazia antes de B
+    assert r["anfitriao"] == B and r["mundo"] == []

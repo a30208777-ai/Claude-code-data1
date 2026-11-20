@@ -209,10 +209,10 @@ export class BasePart extends Instance {
     this._tam = new Vector3(4, 1, 2);
     this._rot = new Vector3(0, 0, 0);
     this._cor = Color3.fromHex("#a3a2a5");
-    this.Anchored = false;
-    this.CanCollide = true;
+    this._ancorada = false;
+    this._colide = true;
     this._transp = 0;
-    this.Shape = "Block";
+    this._forma = "Block";
     this.Velocity = new Vector3();
     this.Touched = new Sinal("Touched");
     this.TouchEnded = new Sinal("TouchEnded");
@@ -231,6 +231,13 @@ export class BasePart extends Instance {
   set BrickColor(v) { this.Color = v; }
   get Transparency() { return this._transp; }
   set Transparency(v) { this._transp = Math.min(1, Math.max(0, +v || 0)); this._mudou("Transparency"); }
+  // estas também avisam quando mudam (o render e o mundo compartilhado precisam saber)
+  get Anchored() { return this._ancorada; }
+  set Anchored(v) { v = !!v; if (v === this._ancorada) return; this._ancorada = v; this._mudou("Anchored"); }
+  get CanCollide() { return this._colide; }
+  set CanCollide(v) { v = !!v; if (v === this._colide) return; this._colide = v; this._mudou("CanCollide"); }
+  get Shape() { return this._forma; }
+  set Shape(v) { v = ["Block", "Ball", "Cylinder"].includes(v) ? v : "Block"; if (v === this._forma) return; this._forma = v; this._mudou("Shape"); }
   Destroy() { this.Touched.limpar(); this.TouchEnded.limpar(); super.Destroy(); }
   static props = ["Name", "Position", "Size", "Rotation", "Color", "Anchored", "CanCollide", "Transparency", "Shape"];
 }
@@ -351,6 +358,47 @@ registrar(class RunService extends Servico {
   IsStudio() { return true; }
 }, "RunService");
 
+// ------------------------------------------------------------------ Rede
+// Mensagens entre os jogadores e o ANFITRIÃO (o jogador que roda os Scripts do jogo).
+//   LocalScript: Rede:ParaServidor("abrirPorta", dados)         -> chega no anfitrião
+//   Script:      Rede.Recebido:Connect(function(jogador, nome, dados) ... end)
+//   Script:      Rede:ParaTodos("placar", dados) / Rede:ParaJogador(jogador, "oi", dados)
+//   LocalScript: Rede.RecebidoDoServidor:Connect(function(nome, dados) ... end)
+// dados: texto, número, verdadeiro/falso (ou nada). Jogando sozinho, tudo funciona igual (local).
+export const REDE_NOME = /^[A-Za-z0-9_À-ÿ -]{1,40}$/;
+export function dadosRede(v) {
+  if (v === undefined || v === null) return null;
+  if (typeof v === "boolean") return v;
+  if (typeof v === "number") return Number.isFinite(v) ? v : null;
+  if (typeof v === "string") return v.slice(0, 500);
+  throw new Error("Rede: os dados precisam ser texto, número ou verdadeiro/falso");
+}
+registrar(class Rede extends Servico {
+  constructor() {
+    super("Rede");
+    this.Recebido = new Sinal("Recebido");                       // no anfitrião: (jogador, nome, dados)
+    this.RecebidoDoServidor = new Sinal("RecebidoDoServidor");   // em todos: (nome, dados)
+    this._enviar = null;                                         // posto pelo multijogador
+  }
+  _mandar(para, nome, dados) {
+    nome = String(nome ?? "");
+    if (!REDE_NOME.test(nome)) throw new Error("Rede: nome da mensagem inválido (use letras, números, _ ou -)");
+    const d = dadosRede(dados);
+    if (this._enviar) { this._enviar(para, nome, d); return; }
+    // sozinho (Studio ou jogo sem multijogador): entrega aqui mesmo, no próximo quadro
+    const eu = this._pai?.FindFirstChild?.("Players")?.LocalPlayer;
+    setTimeout(() => {
+      if (para === "servidor") this.Recebido.Fire(eu, nome, d);
+      else this.RecebidoDoServidor.Fire(nome, d);
+    }, 0);
+  }
+  ParaServidor(nome, dados) { this._mandar("servidor", nome, dados); }
+  ParaTodos(nome, dados) { this._mandar("todos", nome, dados); }
+  ParaJogador(jogador, nome, dados) {
+    this._mandar(jogador?._redeId ? String(jogador._redeId) : "eu", nome, dados);
+  }
+}, "Rede");
+
 export class DataModel extends Instance {
   constructor() { super("Jogo"); }
   static naoCriavel = true;
@@ -365,6 +413,7 @@ export class DataModel extends Instance {
   get ServerScriptService() { return this.GetService("ServerScriptService"); }
   get StarterPlayer() { return this.GetService("StarterPlayer"); }
   get RunService() { return this.GetService("RunService"); }
+  get Rede() { return this.GetService("Rede"); }
 }
 registrar(DataModel, "DataModel");
 
@@ -375,7 +424,7 @@ export class Mundo {
     this.assets = {};        // malhas importadas: id -> {obj, mtl, texturas}
     this.game = new DataModel();
     this.game._mundo = this;
-    for (const s of ["Workspace", "Players", "ReplicatedStorage", "ServerScriptService", "StarterPlayer", "RunService"]) {
+    for (const s of ["Workspace", "Players", "ReplicatedStorage", "ServerScriptService", "StarterPlayer", "RunService", "Rede"]) {
       const c = new CLASSES[s](); c._nome = s; c.Parent = this.game;
     }
     const sps = new CLASSES.StarterPlayerScripts(); sps.Parent = this.game.StarterPlayer;
@@ -418,7 +467,7 @@ export function carregarInstancia(d, pai) {
 export function salvarMundo(m, nome = "Meu jogo") {
   const servicos = {};
   for (const s of m.game.GetChildren()) {
-    if (s.ClassName === "Players" || s.ClassName === "RunService") continue;
+    if (s.ClassName === "Players" || s.ClassName === "RunService" || s.ClassName === "Rede") continue;
     servicos[s.ClassName] = s.GetChildren().filter((f) => !f._temporaria).map(salvarInstancia);
   }
   return { formato: "rolox-studio", versao: VERSAO_ARQUIVO, nome, servicos, assets: m.assets };

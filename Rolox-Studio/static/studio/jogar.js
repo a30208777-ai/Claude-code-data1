@@ -5,17 +5,25 @@
 import { carregarMundo } from "./motor.js";
 import { Render } from "./render.js";
 import { Jogo } from "./jogo.js";
+import { MundoRede } from "./mundo_rede.js";
 
 const ehToque = () => matchMedia("(pointer: coarse)").matches || "ontouchstart" in window;
 
-export async function jogarMapa({ canvas, urlMapa, nomeJogador = "Jogador", avatar = {}, saida = () => {}, aoCarregar = () => {} }) {
+export async function jogarMapa({ canvas, urlMapa, nomeJogador = "Jogador", avatar = {}, saida = () => {}, aoCarregar = () => {},
+                                  multijogador = false }) {
   const r = await fetch(urlMapa, { cache: "no-store" });
   if (!r.ok) throw new Error(r.status === 404 ? "mapa não encontrado" : `não deu para baixar o mapa (${r.status})`);
   const mundo = carregarMundo(await r.json());
   const modo = ehToque() ? "leve" : "pesado";
   const render = new Render(canvas, mundo, modo);
   render.grade.visible = false;                       // no jogo publicado não tem grade do editor
-  const jogo = new Jogo({ mundoEditor: mundo, render, saida, nomeJogador, avatar });
+  // multijogador: começa como convidado; o site diz em seguida quem é o anfitrião (quem roda os Scripts)
+  const jogo = new Jogo({ mundoEditor: mundo, render, saida, nomeJogador, avatar, rodarServidor: !multijogador });
+  const mundoRede = new MundoRede(jogo.mundo);
+  mundoRede.indexar();                 // antes de criar personagens e rodar scripts
+  mundoRede.ligar();
+  if (multijogador) mundoRede.modoConvidado();      // sozinho: não precisa espelhar nada
+  jogo.mundoRede = mundoRede;
   jogo.render = render;
   jogo.extras = [];          // ex.: multijogador (quadro(dt) antes da física, nomes() depois de desenhar)
   await jogo.iniciar();

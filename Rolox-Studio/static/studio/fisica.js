@@ -49,7 +49,7 @@ export class Fisica {
     const g = this.mundo.workspace.Gravity ?? 196.2;
     const partes = this.mundo.partes();
     const solidas = partes.filter((p) => p.CanCollide && !p._visual);
-    const moveis = partes.filter((p) => !p.Anchored && !p._visual);
+    const moveis = partes.filter((p) => !p.Anchored && !p._visual && !p._rede);   // _rede: quem move é o anfitrião
 
     for (const p of moveis) {
       const v = p.Velocity;

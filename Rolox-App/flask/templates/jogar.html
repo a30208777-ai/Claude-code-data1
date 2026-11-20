@@ -78,9 +78,9 @@
     : "WASD anda · espaço pula · arraste ou Q/E gira · roda do mouse ou I/O zoom";
   setTimeout(() => document.getElementById("dica").classList.add("some"), 6000);
   try {
-    const jogo = await jogarMapa({
+    const jogo = window.roloxJogo = await jogarMapa({
       canvas: document.getElementById("tela"), urlMapa: {{ url_mapa|tojson }},
-      nomeJogador: {{ eu|tojson }}, avatar: {{ avatar|tojson }}, saida,
+      nomeJogador: {{ eu|tojson }}, avatar: {{ avatar|tojson }}, saida, multijogador: {{ 'true' if passe else 'false' }},
     });
     carregando.remove();
     jogo.extras.push(new Placar({
@@ -91,6 +91,8 @@
     const mj = new Multijogador({
       jogo, render: jogo.render, passe: {{ passe|tojson }}, csrf: CSRF, camada: document.getElementById("nomes"),
       aoMudar: (n) => { document.getElementById("online").textContent = "👥 " + (n + 1); },
+      mundoRede: jogo.mundoRede,
+      aoAnfitriao: () => { const o = document.getElementById("online"); o.classList.add("anfitriao"); o.title = "Você é o anfitrião: os Scripts do jogo rodam no seu aparelho"; },
     });
     jogo.extras.push(mj);
     mj.iniciar();
