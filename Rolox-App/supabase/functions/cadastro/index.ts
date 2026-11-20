@@ -8,14 +8,14 @@
 // Deploy: supabase functions deploy cadastro --no-verify-jwt
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
-import { cors, ipDoCliente, json } from "./http.ts";
+import { cors, iguais, ipDoCliente, json } from "./http.ts";
 
 const URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const ANON = Deno.env.get("SUPABASE_ANON_KEY")!;
 
 export const DOMINIO_INTERNO = "jogador.rolox.invalid";
-const USERNAME = /^[a-z0-9]([a-z0-9-]{1,30}[a-z0-9])$/;
+const USERNAME = /^[a-z0-9]([a-z0-9._-]{1,30}[a-z0-9])$/;
 const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
 const admin = createClient(URL, SERVICE, { auth: { persistSession: false } });
@@ -24,13 +24,14 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return json({ erro: "metodo_invalido" }, 405);
 
-  let username = "", senha = "", email = "", localizacao = false;
+  let username = "", senha = "", email = "", localizacao = false, codigoDono = "";
   try {
     const c = await req.json();
     username = String(c.username ?? "").trim().toLowerCase();
     senha = String(c.senha ?? "");
     email = String(c.email ?? "").trim().toLowerCase();
     localizacao = c.aceitou_localizacao === true;
+    codigoDono = String(c.codigo_dono ?? "").trim().toUpperCase();
   } catch {
     return json({ erro: "corpo_invalido" }, 400);
   }
@@ -38,6 +39,15 @@ Deno.serve(async (req) => {
   if (!USERNAME.test(username)) return json({ erro: "username_invalido" }, 400);
   if (senha.length < 8 || senha.length > 72) return json({ erro: "senha_curta" }, 400);
   if (email && (email.length > 254 || !EMAIL.test(email))) return json({ erro: "email_invalido" }, 400);
+
+  // nome do dono é reservado: só cria com o código do dono (config_servidor)
+  const { data: cfg } = await admin.from("config_servidor").select("nome, valor").in("nome", ["dono_username", "dono_codigo"]);
+  const conf = Object.fromEntries((cfg ?? []).map((l: { nome: string; valor: string }) => [l.nome, l.valor]));
+  if (conf.dono_username && username === conf.dono_username) {
+    if (!conf.dono_codigo || !iguais(codigoDono, conf.dono_codigo.toUpperCase())) {
+      return json({ erro: "username_reservado" }, 403);
+    }
+  }
 
   const ip = await ipDoCliente(req, admin);
   if (!ip) return json({ erro: "ip_desconhecido" }, 400);

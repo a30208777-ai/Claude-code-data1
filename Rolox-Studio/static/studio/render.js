@@ -185,4 +185,24 @@ export class Render {
   }
 
   objetoDe(i) { return this.objetos.get(i?.id); }
+
+  /**
+   * Até onde dá para "enxergar" a partir de `origem` na direção `dir` (normalizada),
+   * no máximo `max`. Ignora personagens, peças quase invisíveis e o Set `ignorar`.
+   * Usado pela câmera do jogador para não atravessar paredes.
+   */
+  distanciaLivre(origem, dir, max, ignorar) {
+    const r = this._raioLivre || (this._raioLivre = new THREE.Raycaster());
+    r.set(new THREE.Vector3(origem.x, origem.y, origem.z), new THREE.Vector3(dir.x, dir.y, dir.z).normalize());
+    r.near = 0; r.far = max;
+    const hits = r.intersectObjects([...this.objetos.values()], true);
+    for (const h of hits) {
+      let o = h.object;
+      while (o && !o.userData.instancia) o = o.parent;
+      const i = o?.userData.instancia;
+      if (!i || !o.visible || i._personagem || i._visual || ignorar?.has(i) || (i.Transparency ?? 0) >= 0.9) continue;
+      return h.distance;
+    }
+    return max;
+  }
 }

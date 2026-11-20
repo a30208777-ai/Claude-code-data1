@@ -18,7 +18,7 @@ import httpx
 from . import avatar as avatar_mod
 from . import config
 
-USERNAME_VALIDO = re.compile(r"^[a-z0-9]([a-z0-9-]{1,30}[a-z0-9])$")
+USERNAME_VALIDO = re.compile(r"^[a-z0-9]([a-z0-9._-]{1,30}[a-z0-9])$")
 EMAIL_VALIDO = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 MENSAGENS = {
@@ -28,7 +28,7 @@ MENSAGENS = {
     "email_nao_confirmado": "Confirme seu e-mail (veja a caixa de entrada) antes de entrar.",
     "confirme_por_email": "Muitas tentativas. Enviamos um e-mail para você redefinir a senha.",
     "dados_invalidos": "Preencha usuário e senha.",
-    "username_invalido": "O usuário deve ter 3 a 32 letras minúsculas, números ou hífen "
+    "username_invalido": "O usuário deve ter 3 a 32 letras minúsculas, números, ponto, _ ou hífen "
                          "(sem hífen no começo ou no fim).",
     "senha_curta": "A senha precisa ter pelo menos 8 caracteres.",
     "email_invalido": "E-mail inválido.",

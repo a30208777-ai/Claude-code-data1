@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
   <title>Rolox Studio {{ 'Leve' if modo == 'leve' else 'PC' }}</title>
+  {% if site %}<meta name="csrf" content="{{ csrf }}">{% endif %}
   <link rel="stylesheet" href="{{ url_for('static', filename='studio/studio.css') }}">
   <script type="importmap">
     { "imports": {
@@ -23,6 +24,8 @@
       <button data-acao="salvar" title="Salvar (Ctrl+S)">Salvar</button>
       <button data-acao="exportar" title="Baixar arquivo .rolox">Exportar</button>
       <button data-acao="importarRolox" title="Abrir arquivo .rolox">Importar .rolox</button>
+      {% if site %}<button data-acao="enviarRolox" class="destaque" title="Mandar para o dono aprovar">🚀 Enviar ao ROLOX</button>
+      <a href="/jogos" class="botao-link" title="Voltar ao site">← Site</a>{% endif %}
     </div>
     <div class="grupo">
       <button data-acao="part">+ Bloco</button>

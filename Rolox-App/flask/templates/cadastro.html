@@ -4,9 +4,14 @@
 <h1>Criar conta</h1>
 <form method="post" class="pilha">
   <input type="hidden" name="csrf" value="{{ csrf }}">
-  <label>Usuário (minúsculas, números e hífen, 3 a 32)
-    <input type="text" name="usuario" value="{{ dados.get('usuario', '') }}" pattern="[a-z0-9]([a-z0-9-]{1,30}[a-z0-9])" autocapitalize="none" autocorrect="off" required>
+  <label>Usuário (minúsculas, números, ponto, _ e hífen, 3 a 32)
+    <input type="text" name="usuario" value="{{ dados.get('usuario', '') }}" pattern="[a-z0-9]([a-z0-9._\-]{1,30}[a-z0-9])" autocapitalize="none" autocorrect="off" required>
   </label>
+  {% if dono %}
+  <label>Código do dono
+    <input type="text" name="codigo_dono" value="{{ dados.get('codigo_dono', '') }}" autocapitalize="characters" autocomplete="off" required>
+  </label>
+  {% endif %}
   <label>Senha (mínimo 8)
     <input type="password" name="senha" minlength="8" autocomplete="new-password" required>
   </label>

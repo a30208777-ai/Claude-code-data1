@@ -469,6 +469,32 @@ const acoes = {
     estado.nome = nome; estado.sujo = false;
     saida(`Projeto "${nome}" salvo.`, "sistema");
   },
+  /** Site do ROLOX: manda o mapa para o bucket; o dono testa e aprova. */
+  async enviarRolox() {
+    if (estado.jogo) pararJogo();
+    const csrf = document.querySelector('meta[name="csrf"]')?.content;
+    if (!csrf) { modal("Enviar ao ROLOX só funciona no site."); return; }
+    const nome = await perguntar("Nome do jogo (aparece na lista de Jogos):", estado.nome || "Meu jogo");
+    if (!nome) return;
+    const descricao = await perguntar("Descrição curta (opcional):", "");
+    if (descricao === null) return;
+    const chave = "rolox-mapa-" + (estado.nome || nome);
+    let mapaId = null;
+    try { mapaId = localStorage.getItem(chave); } catch { /* sem armazenamento */ }
+    saida("Enviando o mapa...", "sistema");
+    try {
+      const r = await fetch("/api/mapas/enviar", {
+        method: "POST", headers: { "Content-Type": "application/json", "X-CSRF": csrf },
+        body: JSON.stringify({ mapa_id: mapaId, nome, descricao, projeto: salvarMundo(estado.mundo, nome) }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d.mensagem || `erro ${r.status}`);
+      try { localStorage.setItem(chave, d.id); } catch { /* ok */ }
+      saida(`Mapa "${nome}" enviado! O dono vai testar e aprovar.`, "sistema");
+      modal(`🚀 "${nome}" foi enviado para o dono do ROLOX. Quando ele aprovar, aparece em Jogos para todo mundo. ` +
+            `Se mandar de novo, a versão nova substitui a que está em análise.`);
+    } catch (err) { modal(`Não foi possível enviar: ${err.message}`); }
+  },
   exportar() {
     const nome = estado.nome || "meu-jogo";
     const blob = new Blob([JSON.stringify(salvarMundo(estado.mundo, nome))], { type: "application/json" });

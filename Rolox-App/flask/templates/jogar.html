@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% block titulo %}{{ m.nome }} · Rolox{% endblock %}
+{% block classe_main %}tela-jogo{% endblock %}
+{% block conteudo %}
+<script type="importmap">
+  { "imports": {
+      "three": "/static/vendor/three/three.module.js",
+      "three/addons/": "/static/vendor/three/addons/"
+  } }
+</script>
+<script src="/static/vendor/fengari/fengari-web.js"></script>
+
+<canvas id="tela" aria-label="Jogo {{ m.nome }}"></canvas>
+
+<div id="carregando">⏳ Carregando {{ m.nome }}...</div>
+
+<header class="barra-jogo">
+  {% if s %}
+  <form method="post" action="{{ url_for('sair_servidor', uid=s.server_uid) }}">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <input type="hidden" name="voltar" value="jogos">
+    <button class="btn-jogo" aria-label="Sair do jogo">✕</button>
+  </form>
+  {% else %}
+  <a class="btn-jogo" href="{{ url_for('dono') if eh_dono else url_for('jogos') }}" aria-label="Voltar">✕</a>
+  {% endif %}
+  <strong class="nome-jogo">{{ m.nome }}{% if teste %}<span class="etiqueta neutra">TESTE</span>{% endif %}</strong>
+  {% if s %}<button class="btn-jogo" id="abrirChat" aria-label="Chat">💬<span id="naoLidas" hidden></span></button>{% endif %}
+</header>
+
+{% if teste %}
+<p class="aviso-teste">Modo teste: versão {{ 'em análise' if m.status == 'em_analise' else 'atual' }} do mapa, só você vê.</p>
+{% endif %}
+
+<div id="toque" hidden>
+  <div id="joystick"><div id="manche"></div></div>
+  <button id="botaoPulo" aria-label="Pular">⤒</button>
+</div>
+<p id="dica" class="dica-jogo"></p>
+
+{% if s %}
+<section id="painelChat" class="chat-jogo" hidden aria-label="Chat do servidor">
+  <div class="topo-chat"><b>Chat</b><span class="nota">filtro SELECT · IA usa 1 ticket</span>
+    <button class="btn-jogo pequeno" id="fecharChat" aria-label="Fechar chat">▾</button></div>
+  <div id="mensagens" aria-live="polite"></div>
+  <form id="envio" class="linha">
+    <input type="text" id="texto" class="cresce" maxlength="500" placeholder="Mensagem" autocomplete="off">
+    <button class="btn pequeno" aria-label="Enviar">➤</button>
+  </form>
+</section>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script type="module">
+  import { jogarMapa, ligarToque } from "/static/studio/jogar.js";
+
+  const toque = matchMedia("(pointer: coarse)").matches || "ontouchstart" in window;
+  const carregando = document.getElementById("carregando");
+  const saida = (texto, tipo) => { if (tipo === "erro") console.warn(texto); };
+  document.getElementById("dica").textContent = toque
+    ? "Joystick para andar · ⤒ pula · arraste a tela para girar · pinça para zoom"
+    : "WASD anda · espaço pula · arraste ou Q/E gira · roda do mouse ou I/O zoom";
+  setTimeout(() => document.getElementById("dica").classList.add("some"), 6000);
+  try {
+    const jogo = await jogarMapa({
+      canvas: document.getElementById("tela"), urlMapa: {{ url_mapa|tojson }},
+      nomeJogador: {{ eu|tojson }}, saida,
+    });
+    carregando.remove();
+    if (toque) {
+      document.getElementById("toque").hidden = false;
+      ligarToque(jogo, { base: document.getElementById("joystick"), manche: document.getElementById("manche"),
+                         pulo: document.getElementById("botaoPulo") });
+    }
+  } catch (e) {
+    carregando.textContent = "Não deu para abrir o jogo: " + e.message;
+  }
+</script>
+
+{% if s %}
+<script>
+  const UID = {{ s.server_uid|tojson }};
+  const painel = document.getElementById('painelChat');
+  const caixa = document.getElementById('mensagens');
+  const badge = document.getElementById('naoLidas');
+  let ultimo = 0, puxando = false, naoLidas = 0, primeira = true;
+
+  function abrir(v) {
+    painel.hidden = !v;
+    if (v) { naoLidas = 0; badge.hidden = true; caixa.scrollTop = caixa.scrollHeight; }
+  }
+  document.getElementById('abrirChat').addEventListener('click', () => abrir(painel.hidden));
+  document.getElementById('fecharChat').addEventListener('click', () => abrir(false));
+  if (matchMedia('(min-width: 900px)').matches) abrir(true);
+  // Enter abre o chat no PC; Esc fecha
+  addEventListener('keydown', (e) => {
+    const campo = document.getElementById('texto');
+    if (e.key === 'Enter' && document.activeElement !== campo) { abrir(true); campo.focus(); e.preventDefault(); }
+    else if (e.key === 'Escape' && document.activeElement === campo) campo.blur();
+  });
+
+  async function puxar() {
+    if (puxando) return; puxando = true;
+    try {
+      const d = await api(`/api/chat/${UID}?depois=${ultimo}`);
+      const noFim = caixa.scrollHeight - caixa.scrollTop - caixa.clientHeight < 40;
+      for (const m of d.mensagens) {
+        ultimo = Math.max(ultimo, m.id);
+        const p = document.createElement('p');
+        const b = document.createElement('b'); b.textContent = m.username;
+        p.append(b);
+        if (m.bot_id) { const t = document.createElement('span'); t.className = 'etiqueta'; t.textContent = 'IA'; p.append(t); }
+        p.append(document.createTextNode(': ' + m.mensagem_filtrada));
+        caixa.appendChild(p);
+        if (painel.hidden && !primeira) naoLidas++;
+      }
+      primeira = false;
+      if (naoLidas) { badge.hidden = false; badge.textContent = naoLidas > 9 ? '9+' : naoLidas; }
+      if (noFim || d.mensagens.length) caixa.scrollTop = caixa.scrollHeight;
+      if (!d.ainda_no_servidor) {
+        aviso('Você saiu do servidor (ele foi encerrado ou você foi removido).');
+        setTimeout(() => location.href = '{{ url_for("jogos") }}', 1500);
+      }
+    } catch (e) {} finally { puxando = false; }
+  }
+
+  document.getElementById('envio').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const campo = document.getElementById('texto');
+    const texto = campo.value.trim();
+    if (!texto) return;
+    try { await api(`/api/chat/${UID}`, {texto}); campo.value = ''; await puxar(); }
+    catch (e) { aviso(e.message); }
+  });
+
+  puxar();
+  setInterval(puxar, 2000);
+  {% if host %}setInterval(() => api(`/api/heartbeat/${UID}`, {}).catch(() => {}), 15000);{% endif %}
+</script>
+{% endif %}
+{% endblock %}

@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import functools
 import ipaddress
+import uuid
 import os
 import secrets
 from datetime import datetime, timedelta
@@ -128,6 +129,7 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
     def globais():
         return {"csrf": session.get("csrf", ""), "logado": "sb" in session,
                 "eh_adm": bool(session.get("adm")) and "sb" in session,
+                "eh_dono": bool(session.get("dono")) and "sb" in session,
                 "desenhar_avatar": lambda a, largura=120: Markup(avatar_mod.svg(a, largura))}
 
     def carregar_perfil() -> dict:
@@ -135,6 +137,10 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
         quem decide de verdade é o Supabase em cada ação de ADM)."""
         p = g.api.meu_perfil()
         session["adm"] = bool(p.get("is_adm"))
+        try:
+            session["dono"] = g.api.eh_dono()
+        except ErroRolox:
+            session["dono"] = False
         return p
 
     @app.errorhandler(ErroRolox)
@@ -206,17 +212,17 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
             f = request.form
             try:
                 g.api.cadastrar(f.get("usuario", ""), f.get("senha", ""),
-                                f.get("localizacao") == "on")
+                                f.get("localizacao") == "on", codigo_dono=f.get("codigo_dono", ""))
             except ErroRolox as e:
                 flash(e.mensagem, "erro")
-                return render_template("cadastro.html", dados=f), 400
+                return render_template("cadastro.html", dados=f, dono=bool(f.get("codigo_dono"))), 400
             try:
                 g.api.atualizar_local("menu")
             except ErroRolox:
                 pass
             flash("Conta criada! Bem-vindo ao Rolox.", "ok")
             return redirect(url_for("inicio"))
-        return render_template("cadastro.html", dados={})
+        return render_template("cadastro.html", dados={}, dono=request.args.get("dono") == "1")
 
     @app.post("/sair-da-conta")
     def sair_da_conta():
@@ -306,7 +312,7 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
     @logado
     def sair_servidor(uid: str):
         g.api.sair(uid)
-        return redirect(url_for("servidores"))
+        return redirect(url_for("jogos" if request.form.get("voltar") == "jogos" else "servidores"))
 
     @app.get("/api/chat/<uid>")
     @logado
@@ -389,7 +395,7 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
         def studio_editor(modo):
             if modo not in ("leve", "pc"):
                 abort(404)
-            return render_template("editor/studio.html", modo="leve" if modo == "leve" else "pesado")
+            return render_template("editor/studio.html", modo="leve" if modo == "leve" else "pesado", site=True)
 
         @app.get("/aprender/python-no-celular")
         def aprender_python():
@@ -425,6 +431,122 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
                 abort(400, "Arquivo não é um projeto do Rolox Studio.")
             g.api.projeto_salvar(nome, dados, len(bruto))
             return jsonify({"ok": True, "nome": nome})
+
+    # ------------------------------------------------ jogos (mapas do bucket)
+    def _mapa_ou_404(mapa_id: str) -> dict:
+        try:
+            uuid.UUID(mapa_id)
+        except ValueError:
+            abort(404)
+        m = g.api.mapa(mapa_id)
+        if not m:
+            abort(404)
+        return m
+
+    @app.get("/jogos")
+    @logado
+    def jogos():
+        carregar_perfil()
+        return render_template("jogos.html", publicados=g.api.mapas_publicados(), meus=g.api.meus_mapas(),
+                               aba="jogos")
+
+    @app.post("/jogos/<mapa_id>/jogar")
+    @logado
+    def jogar_entrar(mapa_id: str):
+        """Entra num servidor desse jogo com vaga (ou cria um) e abre o jogo com o chat."""
+        m = _mapa_ou_404(mapa_id)
+        if not m.get("gameid") or not m.get("caminho_aprovado"):
+            flash("Esse jogo ainda não foi aprovado pelo dono.", "erro")
+            return redirect(url_for("jogos"))
+        perfil = g.api.meu_perfil()
+        hack = perfil.get("jogo_mod") == m["gameid"]
+        livres = [x for x in g.api.servidores() if x["gameid"] == m["gameid"] and x["status"] == "aberto"
+                  and x["is_hack_server"] == hack and x["humanos"] < x["capacidade"]]
+        if livres:
+            uid = max(livres, key=lambda x: x["humanos"])["server_uid"]     # junta a galera
+        else:
+            uid = g.api.criar_servidor(m["gameid"], 10, hack)["server_uid"]
+        r = g.api.entrar(uid)
+        if r["resultado"] == "fila":
+            flash(f"Servidor cheio. Você está na fila, posição {r['posicao']}.", "ok")
+            return redirect(url_for("jogos"))
+        return redirect(url_for("jogar", mapa_id=mapa_id, s=uid))
+
+    @app.get("/jogar/<mapa_id>")
+    @logado
+    def jogar(mapa_id: str):
+        m = _mapa_ou_404(mapa_id)
+        perfil = carregar_perfil()
+        teste = request.args.get("teste") == "1"
+        if teste and not (session.get("dono") or m["autor_id"] == g.api.user_id):
+            abort(403)
+        uid = request.args.get("s") or None
+        s = None
+        if uid and not teste:
+            if g.api.onde_estou()["servidor"] != uid:
+                flash("Você não está nesse servidor.", "erro")
+                return redirect(url_for("jogos"))
+            s = g.api.servidor(uid)
+        if not teste and not m.get("caminho_aprovado"):
+            abort(404)
+        return render_template("jogar.html", m=m, s=s, teste=teste, eu=perfil.get("username", "Jogador"),
+                               host=bool(s) and s["host_id"] == g.api.user_id,
+                               url_mapa=url_for("mapa_dados", mapa_id=mapa_id, versao="enviada" if teste else "aprovada"))
+
+    @app.get("/api/mapas/<mapa_id>/dados")
+    @logado
+    def mapa_dados(mapa_id: str):
+        m = _mapa_ou_404(mapa_id)
+        caminho = m.get("caminho_enviado") if request.args.get("versao") == "enviada" else m.get("caminho_aprovado")
+        if not caminho:
+            abort(404)
+        resp = app.response_class(g.api.baixar_mapa(caminho), mimetype="application/json")
+        resp.headers["Cache-Control"] = "private, max-age=60"
+        return resp
+
+    @app.post("/api/mapas/enviar")
+    @logado
+    def mapa_enviar():
+        if len(request.get_data(cache=True)) > TAMANHO_MAX_PROJETO:
+            raise ErroRolox("mapa_grande")
+        d = request.get_json(silent=True) or {}
+        projeto = d.get("projeto")
+        if not isinstance(projeto, dict) or projeto.get("formato") != "rolox-studio":
+            raise ErroRolox("mapa_invalido")
+        mapa_id = str(d.get("mapa_id") or "")
+        try:
+            mapa_id = str(uuid.UUID(mapa_id))
+        except ValueError:
+            mapa_id = str(uuid.uuid4())
+        if (m := g.api.mapa(mapa_id)) and m["autor_id"] != g.api.user_id:
+            mapa_id = str(uuid.uuid4())          # id de mapa alheio: vira um mapa novo meu
+        conteudo = json.dumps(projeto, ensure_ascii=False, separators=(",", ":")).encode()
+        r = g.api.enviar_mapa(mapa_id, str(d.get("nome", "")), str(d.get("descricao", "")), conteudo)
+        return jsonify(r)
+
+    # --------------------------------------------------------------- dono
+    @app.get("/dono")
+    @logado
+    def dono():
+        carregar_perfil()
+        if not session.get("dono"):
+            abort(403)
+        return render_template("dono.html", analise=g.api.mapas_em_analise(),
+                               publicados=g.api.mapas_publicados(), aba="dono")
+
+    @app.post("/dono/<mapa_id>/<acao>")
+    @logado
+    def dono_acao(mapa_id: str, acao: str):
+        m = _mapa_ou_404(mapa_id)
+        if acao == "aprovar":
+            g.api.dono_aprovar_mapa(mapa_id)
+            flash(f"\"{m['nome']}\" aprovado! Já aparece em Jogos.", "ok")
+        elif acao == "recusar":
+            g.api.dono_recusar_mapa(mapa_id, request.form.get("motivo", ""))
+            flash(f"\"{m['nome']}\" recusado.", "ok")
+        else:
+            abort(404)
+        return redirect(url_for("dono"))
 
     # --------------------------------------------------------------- ADM
     @app.get("/adm")

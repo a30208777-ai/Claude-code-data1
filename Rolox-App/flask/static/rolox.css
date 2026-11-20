@@ -109,3 +109,45 @@ dialog::backdrop { background: #0008; }
 @media (prefers-color-scheme: dark) { .status-studio.ok { color: #81c784; } }
 pre.comando { background: var(--cartao); border: 1px solid var(--borda); border-radius: 10px; padding: 12px;
   font-family: ui-monospace, monospace; font-size: .85rem; white-space: pre-wrap; overflow-wrap: anywhere; user-select: all; }
+
+/* Jogos / Dono */
+.etiqueta.neutra { background: #78909c; color: #fff; }
+.etiqueta.ok { background: #2e7d32; color: #fff; }
+
+/* Tela do jogo (/jogar) */
+main.tela-jogo { max-width: none; padding: 0; margin: 0; }
+main.tela-jogo #tela { position: fixed; inset: 0; width: 100vw; height: 100vh; height: 100dvh; display: block; background: #9fd3ff; touch-action: none; }
+#carregando { position: fixed; inset: 0; display: grid; place-items: center; background: #1b1d23; color: #fff; font-size: 1.1rem; z-index: 5; padding: 16px; text-align: center; }
+.barra-jogo { position: fixed; top: 0; left: 0; right: 0; display: flex; align-items: center; gap: 8px; padding: 10px 12px;
+  padding-top: max(10px, env(safe-area-inset-top)); z-index: 3; pointer-events: none; }
+.barra-jogo > * { pointer-events: auto; }
+.barra-jogo form { margin: 0; }
+.nome-jogo { flex: 1; color: #fff; text-shadow: 0 1px 3px #000a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.btn-jogo { position: relative; display: inline-grid; place-items: center; min-width: 44px; height: 44px; padding: 0 10px; border-radius: 12px;
+  border: 0; background: #0008; color: #fff; font-size: 1.15rem; text-decoration: none; cursor: pointer; }
+.btn-jogo.pequeno { min-width: 32px; height: 32px; font-size: 1rem; }
+#naoLidas { position: absolute; top: -4px; right: -4px; background: #e53935; color: #fff; font-size: .7rem; font-weight: 700;
+  border-radius: 9px; padding: 1px 5px; }
+.aviso-teste { position: fixed; top: 62px; left: 50%; transform: translateX(-50%); margin: 0; background: #ffb300; color: #2b1700;
+  font-size: .8rem; font-weight: 600; padding: 4px 10px; border-radius: 8px; z-index: 3; white-space: nowrap; }
+.dica-jogo { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); margin: 0; background: #0009; color: #fff;
+  font-size: .8rem; padding: 6px 12px; border-radius: 10px; z-index: 2; transition: opacity .6s; max-width: calc(100vw - 32px); text-align: center; }
+.dica-jogo.some { opacity: 0; pointer-events: none; }
+#toque { position: fixed; inset: 0; pointer-events: none; z-index: 2; }
+#joystick { position: absolute; left: 24px; bottom: 28px; width: 130px; height: 130px; border-radius: 50%;
+  background: #ffffff22; border: 2px solid #ffffff66; pointer-events: auto; touch-action: none; }
+#manche { position: absolute; left: 40px; top: 40px; width: 50px; height: 50px; border-radius: 50%; background: #ffffffaa; }
+#botaoPulo { position: absolute; right: 28px; bottom: 44px; width: 76px; height: 76px; border-radius: 50%; font-size: 30px;
+  background: #ffffff33; border: 2px solid #ffffff88; color: #fff; pointer-events: auto; touch-action: none; }
+.chat-jogo { position: fixed; z-index: 4; right: 12px; top: 64px; width: min(340px, calc(100vw - 24px)); height: min(46vh, 380px);
+  display: flex; flex-direction: column; gap: 6px; padding: 10px; border-radius: 14px; background: #101218d9; color: #f1f1f1;
+  backdrop-filter: blur(6px); }
+.chat-jogo .topo-chat { display: flex; align-items: center; gap: 8px; }
+.chat-jogo .topo-chat .nota { flex: 1; color: #b0b6c3; margin: 0; }
+.chat-jogo #mensagens { flex: 1; overflow-y: auto; font-size: .9rem; }
+.chat-jogo #mensagens b { color: #b39ddb; }
+.chat-jogo input { background: #ffffff14; color: #fff; border: 1px solid #ffffff33; }
+@media (max-width: 899px) {
+  /* celular: chat em cima, para o joystick e o pulo continuarem livres */
+  .chat-jogo { top: 62px; left: 12px; right: 12px; width: auto; height: 34vh; height: 34dvh; }
+}

@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block titulo %}Jogos · Rolox{% endblock %}
+{% block conteudo %}
+<div class="linha">
+  <h1 class="cresce">🎮 Jogos</h1>
+  <a class="btn texto" href="{{ url_for('servidores') }}">Servidores</a>
+</div>
+<p class="nota">Mapas feitos pela comunidade no ROLOX Studio e aprovados pelo dono. Toque em Jogar: você entra
+  num servidor com a galera e com chat.</p>
+
+{% for m in publicados %}
+  <div class="cartao">
+    <span class="icone">🕹️</span>
+    <div class="info">
+      <div class="titulo">{{ m.nome }}</div>
+      {% if m.descricao %}<div class="detalhe">{{ m.descricao }}</div>{% endif %}
+    </div>
+    <form method="post" action="{{ url_for('jogar_entrar', mapa_id=m.id) }}">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <button class="btn pequeno">▶ Jogar</button>
+    </form>
+  </div>
+{% else %}
+  <p class="muted"><i>Nenhum jogo aprovado ainda. Crie o primeiro no Studio e toque em "🚀 Enviar ao ROLOX"!</i></p>
+{% endfor %}
+
+<h2>Meus mapas</h2>
+<p><a class="btn contorno pequeno" href="{{ url_for('studio_tela') }}">🧱 Abrir o Studio</a></p>
+{% for m in meus %}
+  <div class="cartao">
+    <div class="info">
+      <div class="titulo">{{ m.nome }}
+        {% if m.status == 'em_analise' %}<span class="etiqueta neutra">EM ANÁLISE</span>
+        {% elif m.status == 'aprovado' %}<span class="etiqueta ok">APROVADO</span>
+        {% else %}<span class="etiqueta">RECUSADO</span>{% endif %}
+      </div>
+      <div class="detalhe">
+        {% if m.status == 'recusado' and m.motivo %}Motivo: {{ m.motivo }}{% endif %}
+        {% if m.status == 'em_analise' and m.caminho_aprovado %}A versão aprovada continua no ar enquanto o dono olha a nova.{% endif %}
+      </div>
+    </div>
+    <a class="btn pequeno contorno" href="{{ url_for('jogar', mapa_id=m.id, teste=1) }}">Testar</a>
+  </div>
+{% else %}
+  <p class="muted"><i>Você ainda não enviou nenhum mapa.</i></p>
+{% endfor %}
+{% endblock %}

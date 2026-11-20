@@ -57,11 +57,14 @@ class SupabaseFalso:
         self.cadastros = []
         self.fora_do_ar = False
         self.projetos = {}
+        self.arquivos = {}
+        self.mapas = {}
+        self.dono = False
 
     def onde(self):
         return next((s for s, m in self.membros.items() if "u1" in m), None)
 
-    def request(self, metodo, url, json=None, params=None, headers=None, timeout=None):
+    def request(self, metodo, url, json=None, params=None, headers=None, timeout=None, data=None):
         import requests
         if self.fora_do_ar:
             raise requests.ConnectionError("sem rede")
@@ -104,6 +107,49 @@ class SupabaseFalso:
                 pj = self.projetos.get(q["nome"].removeprefix("eq."))
                 return Resp(200, [{"dados": pj["dados"]}] if pj else [])
             return Resp(200, [{"nome": n, "tamanho": x["tamanho"]} for n, x in self.projetos.items()])
+        if p.startswith("/storage/v1/object/"):
+            resto = p.removeprefix("/storage/v1/object/")
+            if metodo == "POST":
+                assert resto.startswith("mapas/u1/"), "só grava na própria pasta"
+                self.arquivos[resto.removeprefix("mapas/")] = data
+                return Resp(200, {"Key": resto})
+            chave = resto.removeprefix("authenticated/mapas/")
+            if chave not in self.arquivos:
+                return Resp(400, {"statusCode": "404", "error": "not_found"})
+            r = Resp(200)
+            r.content = self.arquivos[chave]
+            return r
+        if p == "/rest/v1/rpc/eh_dono":
+            return Resp(200, self.dono)
+        if p == "/rest/v1/rpc/enviar_mapa":
+            assert json["p_caminho"] in self.arquivos
+            m = self.mapas.setdefault(json["p_id"], {"id": json["p_id"], "autor_id": "u1", "caminho_aprovado": None,
+                                                      "gameid": None, "motivo": None, "aprovado_em": None})
+            m.update(nome=json["p_nome"], descricao=json["p_descricao"], caminho_enviado=json["p_caminho"],
+                     status="em_analise", enviado_em="2026-11-20T05:00:00Z")
+            return Resp(200, {"id": json["p_id"], "status": "em_analise"})
+        if p.startswith("/rest/v1/rpc/dono_"):
+            if not self.dono:
+                return Resp(403, {"code": "42501", "message": "apenas o dono"})
+            m = self.mapas[json["p_id"]]
+            if p.endswith("aprovar_mapa"):
+                m.update(status="aprovado", caminho_aprovado=m["caminho_enviado"], gameid="mapa-" + m["id"][:8],
+                         aprovado_em="2026-11-20T06:00:00Z")
+                self.jogos.append({"gameid": m["gameid"], "nome": m["nome"]})
+            else:
+                m.update(status="recusado", motivo=json["p_motivo"])
+            return Resp(200, {"id": m["id"], "status": m["status"]})
+        if p == "/rest/v1/mapas":
+            lista = list(self.mapas.values())
+            if "id" in q:
+                lista = [m for m in lista if m["id"] == q["id"].removeprefix("eq.")]
+            if q.get("caminho_aprovado") == "not.is.null":
+                lista = [m for m in lista if m["caminho_aprovado"]]
+            if "status" in q:
+                lista = [m for m in lista if m["status"] == q["status"].removeprefix("eq.")]
+            if "autor_id" in q:
+                lista = [m for m in lista if m["autor_id"] == q["autor_id"].removeprefix("eq.")]
+            return Resp(200, [dict(m) for m in lista])
         if p == "/rest/v1/jogos":
             return Resp(200, self.jogos)
         if p == "/rest/v1/servidores_ativos":
@@ -659,3 +705,109 @@ def test_projetos_do_studio_na_conta(cliente, sb):
     assert cliente.put("/api/projetos/a", json={"x": 1}).status_code == 400
     assert cliente.put("/api/projetos/a", data="formato=rolox-studio").status_code == 415
     assert "meu_obby" in html(cliente.get("/studio"))
+
+
+# ------------------------------------------ mapas no bucket / dono / jogos com chat
+PROJETO = {"formato": "rolox-studio", "versao": 1, "nome": "Obby", "servicos": {}}
+
+
+def enviar_mapa(cliente, **extra):
+    tok = csrf(cliente)
+    return cliente.post("/api/mapas/enviar", json={"nome": "Obby da lava", "descricao": "pule!", "projeto": PROJETO, **extra},
+                        headers={"X-CSRF": tok})
+
+
+def test_enviar_mapa_vai_para_o_bucket_e_fica_em_analise(cliente, sb):
+    entrar(cliente)
+    r = enviar_mapa(cliente)
+    assert r.status_code == 200, r.get_data(as_text=True)
+    mid = r.get_json()["id"]
+    (caminho, conteudo), = sb.arquivos.items()
+    assert caminho.startswith(f"u1/{mid}/") and caminho.endswith(".json")
+    assert json.loads(conteudo) == PROJETO
+    assert sb.mapas[mid]["status"] == "em_analise"
+    # reenviar com o mesmo id: mesma entrada, versão nova
+    r2 = enviar_mapa(cliente, mapa_id=mid)
+    assert r2.get_json()["id"] == mid and len(sb.arquivos) == 2 and len(sb.mapas) == 1
+    t = html(cliente.get("/jogos"))
+    assert "Obby da lava" in t and "EM ANÁLISE" in t and "Nenhum jogo aprovado ainda" in t
+
+
+def test_enviar_mapa_recusa_lixo_e_sem_csrf(cliente, sb):
+    entrar(cliente)
+    tok = csrf(cliente)
+    assert cliente.post("/api/mapas/enviar", json={"nome": "x", "projeto": PROJETO}).status_code == 400
+    r = cliente.post("/api/mapas/enviar", json={"nome": "x", "projeto": {"oi": 1}}, headers={"X-CSRF": tok})
+    assert r.status_code == 400 and "não é um mapa" in r.get_json()["mensagem"]
+    assert sb.arquivos == {}
+
+
+def test_so_o_dono_ve_o_painel_e_aprova(cliente, sb):
+    entrar(cliente)
+    mid = enviar_mapa(cliente).get_json()["id"]
+    assert cliente.get("/dono").status_code == 403
+    assert "<span>👑</span>Dono" not in html(cliente.get("/jogos"))
+    tok = csrf(cliente)
+    cliente.post(f"/dono/{mid}/aprovar", data={"csrf": tok})
+    assert sb.mapas[mid]["status"] == "em_analise"                      # o banco recusou (não é dono)
+    sb.dono = True
+    t = html(cliente.get("/dono"))
+    assert "Obby da lava" in t and f"/jogar/{mid}?teste=1" in t and "<span>👑</span>Dono" in t
+    # dono testa a versão em análise no próprio app
+    t = html(cliente.get(f"/jogar/{mid}?teste=1"))
+    assert "Modo teste" in t and f"/api/mapas/{mid}/dados?versao=enviada" in t and "painelChat" not in t
+    assert json.loads(cliente.get(f"/api/mapas/{mid}/dados?versao=enviada").get_data()) == PROJETO
+    assert cliente.get(f"/api/mapas/{mid}/dados").status_code == 404     # ainda não tem versão aprovada
+    cliente.post(f"/dono/{mid}/aprovar", data={"csrf": tok})
+    assert sb.mapas[mid]["status"] == "aprovado"
+
+
+def test_jogo_aprovado_todos_jogam_com_chat(cliente, sb):
+    entrar(cliente)
+    mid = enviar_mapa(cliente).get_json()["id"]
+    sb.dono = True
+    tok = csrf(cliente)
+    cliente.post(f"/dono/{mid}/aprovar", data={"csrf": tok})
+    sb.dono = False
+    t = html(cliente.get("/jogos"))
+    assert "Obby da lava" in t and f"/jogos/{mid}/jogar" in t
+    r = cliente.post(f"/jogos/{mid}/jogar", data={"csrf": tok})
+    assert r.status_code == 302 and f"/jogar/{mid}?s=s9" in r.headers["Location"]
+    novo = next(s for s in sb.servidores if s["server_uid"] == "s9")
+    assert novo["gameid"] == sb.mapas[mid]["gameid"] and novo["capacidade"] == 10
+    t = html(cliente.get(f"/jogar/{mid}?s=s9"))
+    assert "painelChat" in t and "/api/chat/" in t and f"/api/mapas/{mid}/dados?versao=aprovada" in t
+    assert "/static/studio/jogar.js" in t
+    assert json.loads(cliente.get(f"/api/mapas/{mid}/dados?versao=aprovada").get_data()) == PROJETO
+    # chat do servidor do jogo
+    cliente.post("/api/chat/s9", json={"texto": "bora!"}, headers={"X-CSRF": tok})
+    assert any(m["mensagem_filtrada"] == "bora!" for m in sb.chat)
+    # segundo jogador entra no MESMO servidor (tem vaga)
+    sb.membros["s9"] = ["u7"]
+    r = cliente.post(f"/jogos/{mid}/jogar", data={"csrf": tok})
+    assert "s=s9" in r.headers["Location"]
+    # sair volta para Jogos
+    r = cliente.post("/chat/s9/sair", data={"csrf": tok, "voltar": "jogos"})
+    assert r.headers["Location"].endswith("/jogos")
+
+
+def test_jogar_mapa_alheio_nao_aprovado_e_id_invalido(cliente, sb):
+    entrar(cliente)
+    sb.mapas["11111111-1111-1111-1111-111111111111"] = {
+        "id": "11111111-1111-1111-1111-111111111111", "autor_id": "u5", "nome": "x", "descricao": "",
+        "status": "em_analise", "motivo": None, "gameid": None, "caminho_enviado": "u5/a/b.json",
+        "caminho_aprovado": None, "enviado_em": "", "aprovado_em": None}
+    assert cliente.get("/jogar/11111111-1111-1111-1111-111111111111?teste=1").status_code == 403
+    assert cliente.get("/jogar/11111111-1111-1111-1111-111111111111").status_code == 404
+    assert cliente.get("/jogar/nao-e-uuid").status_code == 404
+
+
+def test_cadastro_com_codigo_do_dono(cliente, sb):
+    t = html(cliente.get("/cadastro?dono=1"))
+    assert 'name="codigo_dono"' in t
+    assert 'name="codigo_dono"' not in html(cliente.get("/cadastro"))
+    tok = csrf(cliente)
+    cliente.post("/cadastro", data={"usuario": "arthurdevpromax.off_dono", "senha": "segredo123",
+                                    "codigo_dono": " ROLOX-AAAA-BBBB ", "csrf": tok})
+    _, _, _, corpo, _ = next(x for x in sb.chamadas if x[1] == "/functions/v1/cadastro")
+    assert corpo["username"] == "arthurdevpromax.off_dono" and corpo["codigo_dono"] == "ROLOX-AAAA-BBBB"

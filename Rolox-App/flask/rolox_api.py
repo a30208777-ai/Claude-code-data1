@@ -20,7 +20,7 @@ SUPABASE_URL = os.environ.get("ROLOX_SUPABASE_URL", "https://llgriaqnlcylpaxudrl
 # publishable key: pública por natureza (só dá o acesso que o RLS permite). Nunca a service_role.
 SUPABASE_CHAVE = os.environ.get("ROLOX_SUPABASE_CHAVE", "sb_publishable_GFKzsWxgUtXTff5fHWVVfQ_dUKdF62n")
 
-USERNAME_VALIDO = re.compile(r"^[a-z0-9]([a-z0-9-]{1,30}[a-z0-9])$")
+USERNAME_VALIDO = re.compile(r"^[a-z0-9]([a-z0-9._-]{1,30}[a-z0-9])$")
 EMAIL_VALIDO = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 MENSAGENS = {
@@ -30,8 +30,9 @@ MENSAGENS = {
     "email_nao_confirmado": "Confirme seu e-mail (veja a caixa de entrada) antes de entrar.",
     "confirme_por_email": "Muitas tentativas. Enviamos um e-mail para você redefinir a senha.",
     "dados_invalidos": "Preencha usuário e senha.",
-    "username_invalido": "O usuário deve ter 3 a 32 letras minúsculas, números ou hífen "
-                         "(sem hífen no começo ou no fim).",
+    "username_invalido": "O usuário deve ter 3 a 32 letras minúsculas, números, ponto, _ ou hífen "
+                         "(começando e terminando com letra ou número).",
+    "username_reservado": "Esse nome é reservado. Se você é o dono, use o código do dono.",
     "senha_curta": "A senha precisa ter pelo menos 8 caracteres.",
     "email_invalido": "E-mail inválido.",
     "senha_fraca": "Senha fraca demais. Use letras e números.",
@@ -53,7 +54,20 @@ MENSAGENS = {
     "capacidade_invalida": "A capacidade deve ficar entre 1 e 100.",
     "quantidade_invalida": "Digite um número de tickets válido.",
     "42501": "Você não tem permissão para isso.",
+    "nome_do_mapa": "Dê um nome para o mapa.",
+    "mapa_nao_encontrado": "Mapa não encontrado.",
+    "mapa_invalido": "Esse arquivo não é um mapa do ROLOX Studio.",
+    "mapa_grande": "Mapa grande demais (máx. 5 MB).",
 }
+
+
+def _token_expirado(r) -> bool:
+    try:
+        corpo = r.json()
+    except ValueError:
+        return r.status_code == 401
+    texto = str(corpo).lower()
+    return "jwt" in texto and ("expired" in texto or "exp" in texto)
 
 
 class ErroRolox(Exception):
@@ -172,7 +186,7 @@ class RoloxAPI:
         return self.sessao
 
     def cadastrar(self, username: str, senha: str, aceitou_localizacao: bool,
-                  email: str = "") -> Sessao:
+                  email: str = "", codigo_dono: str = "") -> Sessao:
         """Cria a conta (e-mail opcional) e já entra nela."""
         username = (username or "").strip().lower()
         email = (email or "").strip().lower()
@@ -184,7 +198,8 @@ class RoloxAPI:
             raise ErroRolox("email_invalido")
         d = self._req("POST", "/functions/v1/cadastro", autenticado=False, json={
             "username": username, "senha": senha, "email": email,
-            "aceitou_localizacao": aceitou_localizacao})
+            "aceitou_localizacao": aceitou_localizacao,
+            **({"codigo_dono": codigo_dono.strip()} if codigo_dono and codigo_dono.strip() else {})})
         self.sessao = Sessao(d["access_token"], d["refresh_token"], d["user_id"])
         return self.sessao
 
@@ -219,6 +234,73 @@ class RoloxAPI:
         if not linhas:
             raise ErroRolox("perfil_nao_encontrado")
         return linhas[0]
+
+    # ------------------------------------------------ mapas (bucket "mapas")
+    BUCKET = "mapas"
+
+    def _storage(self, metodo: str, caminho: str, dados: Optional[bytes] = None) -> Any:
+        """Storage do Supabase com o token do jogador (as regras do bucket valem)."""
+        if not self.sessao:
+            raise ErroRolox("sessao_expirada")
+        for tentativa in (1, 2):
+            cab = {"apikey": self.chave, "Authorization": f"Bearer {self.sessao.access_token}"}
+            if dados is not None:
+                cab["Content-Type"] = "application/json"
+            try:
+                r = self.http.request(metodo, f"{self.url}/storage/v1/object/{caminho}", data=dados,
+                                      headers=cab, timeout=self.timeout)
+            except requests.RequestException as e:
+                raise ErroRolox("sem_conexao") from e
+            if r.status_code in (400, 401, 403) and tentativa == 1 and _token_expirado(r):
+                self.renovar()
+                continue
+            if r.status_code >= 400:
+                raise ErroRolox("mapa_nao_encontrado" if r.status_code in (400, 404) else f"storage_{r.status_code}")
+            return r
+        raise ErroRolox("sessao_expirada")
+
+    def eh_dono(self) -> bool:
+        return bool(self._req("POST", "/rest/v1/rpc/eh_dono", json={}))
+
+    def enviar_mapa(self, mapa_id: str, nome: str, descricao: str, conteudo: bytes) -> dict:
+        """Grava o arquivo em mapas/<eu>/<mapa>/<versão>.json e manda para o dono analisar."""
+        nome = (nome or "").strip()[:40]
+        if not nome:
+            raise ErroRolox("nome_do_mapa")
+        versao = f"{int(datetime.now(timezone.utc).timestamp())}-{os.urandom(4).hex()}"
+        caminho = f"{self.user_id}/{mapa_id}/{versao}.json"
+        self._storage("POST", f"{self.BUCKET}/{caminho}", conteudo)
+        return self._req("POST", "/rest/v1/rpc/enviar_mapa", json={
+            "p_id": mapa_id, "p_nome": nome, "p_descricao": (descricao or "").strip()[:300],
+            "p_caminho": caminho})
+
+    def baixar_mapa(self, caminho: str) -> bytes:
+        return self._storage("GET", f"authenticated/{self.BUCKET}/{caminho}").content
+
+    CAMPOS_MAPA = "id,autor_id,nome,descricao,status,motivo,gameid,caminho_enviado,caminho_aprovado,enviado_em,aprovado_em"
+
+    def mapa(self, mapa_id: str) -> Optional[dict]:
+        linhas = self._req("GET", "/rest/v1/mapas", params={"select": self.CAMPOS_MAPA, "id": f"eq.{mapa_id}"})
+        return linhas[0] if linhas else None
+
+    def mapas_publicados(self) -> list[dict]:
+        return self._req("GET", "/rest/v1/mapas", params={
+            "select": self.CAMPOS_MAPA, "caminho_aprovado": "not.is.null", "order": "aprovado_em.desc",
+            "limit": "100"}) or []
+
+    def meus_mapas(self) -> list[dict]:
+        return self._req("GET", "/rest/v1/mapas", params={
+            "select": self.CAMPOS_MAPA, "autor_id": f"eq.{self.user_id}", "order": "enviado_em.desc"}) or []
+
+    def mapas_em_analise(self) -> list[dict]:
+        return self._req("GET", "/rest/v1/mapas", params={
+            "select": self.CAMPOS_MAPA, "status": "eq.em_analise", "order": "enviado_em.asc"}) or []
+
+    def dono_aprovar_mapa(self, mapa_id: str) -> dict:
+        return self._req("POST", "/rest/v1/rpc/dono_aprovar_mapa", json={"p_id": mapa_id})
+
+    def dono_recusar_mapa(self, mapa_id: str, motivo: str) -> dict:
+        return self._req("POST", "/rest/v1/rpc/dono_recusar_mapa", json={"p_id": mapa_id, "p_motivo": motivo})
 
     # ------------------------------------------------ projetos do Studio
     def projetos_listar(self) -> list[dict]:

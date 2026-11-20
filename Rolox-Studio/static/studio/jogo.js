@@ -4,6 +4,7 @@
 import { carregarMundo, salvarMundo, Player, BaseScript } from "./motor.js";
 import { Fisica, criarPersonagem, pontoDeNascimento } from "./fisica.js";
 import { ExecutorLua, ExecutorPython, carregarPython, criarApi } from "./scripts.js";
+import { CameraJogador } from "./camera.js";
 
 export class Jogo {
   constructor({ mundoEditor, render, saida, nomeJogador = "Jogador1", controlesExtras = () => [] }) {
@@ -18,6 +19,8 @@ export class Jogo {
     this.personagensExtras = new Map();   // id do celular -> personagem
     this.nomeJogador = nomeJogador;
     this.rodando = false;
+    this.cam = new CameraJogador(render);
+    this.dt = 1 / 60;
   }
 
   async iniciar() {
@@ -27,6 +30,8 @@ export class Jogo {
     const local = new Player(this.nomeJogador); local.Parent = players;
     players.LocalPlayer = local;
     this.local = this._spawn(local, 0);
+    this.cam.posicionarAtras(this.local.raiz.Position);
+    this.cam.ligar(this.render.renderer.domElement);
     players.PlayerAdded.Fire(local);
 
     const api = criarApi(m, this.saida);
@@ -81,8 +86,7 @@ export class Jogo {
   }
 
   _relativoCamera(lado, frente, pular) {
-    const cam = this.render.camera;
-    const yaw = Math.atan2(cam.position.x - this.alvo().X, cam.position.z - this.alvo().Z);
+    const yaw = this.cam.yaw;           // andar sempre em relação a para onde a câmera olha
     const s = Math.sin(yaw), c = Math.cos(yaw);
     // frente = -Z da câmera
     return { x: lado * c - frente * s, z: -lado * s - frente * c, pular };
@@ -94,6 +98,7 @@ export class Jogo {
     if (!this.rodando) return;
     const agora = performance.now();
     const dt = Math.min(0.05, (agora - this.ultimo) / 1000);
+    this.dt = dt;
     this.ultimo = agora;
     // jogador local: teclado + toque
     const t = this.teclas;
@@ -120,15 +125,19 @@ export class Jogo {
   }
 
   _camera() {
-    const cam = this.render.camera, a = this.alvo();
-    this.giro = this.giro ?? 0;
-    const dist = 18, alt = 9;
-    cam.position.set(a.X + Math.sin(this.giro) * dist, a.Y + alt, a.Z + Math.cos(this.giro) * dist);
-    cam.lookAt(a.X, a.Y + 1.5, a.Z);
+    const partes = this.local ? this.local.modelo.GetChildren?.() ?? [] : [];
+    this.cam.atualizar(this.alvo(), this.dt, new Set(partes));
+    // primeira pessoa: esconde o próprio personagem para não tampar a visão
+    const esconder = this.cam.primeiraPessoa;
+    if (esconder !== this._escondido) {
+      for (const p of partes) { const o = this.render.objetoDe(p); if (o) o.visible = !esconder && !(p.Transparency >= 1); }
+      this._escondido = esconder;
+    }
   }
 
   parar() {
     this.rodando = false;
+    this.cam.desligar();
     this.python?.parar();
     this.lua?.fechar();
   }
