@@ -35,8 +35,8 @@ class Passes:
         self.s = URLSafeTimedSerializer(segredo, salt="rolox-sala")
         self.validade = validade_s
 
-    def criar(self, sala: str, user_id: str, nome: str, avatar: dict) -> str:
-        return self.s.dumps({"s": sala, "u": user_id, "n": nome[:32], "a": avatar})
+    def criar(self, sala: str, user_id: str, nome: str, avatar: dict, parceiro: bool = False) -> str:
+        return self.s.dumps({"s": sala, "u": user_id, "n": nome[:32], "a": avatar, "pc": bool(parceiro)})
 
     def ler(self, passe: str) -> Optional[dict]:
         try:
@@ -107,8 +107,9 @@ class Salas:
             for k in [k for k, v in dados.items() if agora - v.get("t", 0) > SUMIU_APOS]:
                 dados.pop(k)
             if eu in dados or len(dados) < MAX_JOGADORES:
-                dados[eu] = {"n": passe["n"], "a": passe.get("a") or {}, **limpar_estado(estado), "t": agora}
-            return [{"id": k, **{c: v[c] for c in ("n", "a", "p", "r", "m", "v")}}
+                dados[eu] = {"n": passe["n"], "a": passe.get("a") or {}, "pc": bool(passe.get("pc")),
+                             **limpar_estado(estado), "t": agora}
+            return [{"id": k, **{c: v.get(c) for c in ("n", "a", "p", "r", "m", "v", "pc")}}
                     for k, v in dados.items() if k != eu]
         return self._com_trava(passe["s"], mudar)
 

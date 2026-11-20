@@ -21,6 +21,16 @@ SUPABASE_URL = os.environ.get("ROLOX_SUPABASE_URL", "https://llgriaqnlcylpaxudrl
 SUPABASE_CHAVE = os.environ.get("ROLOX_SUPABASE_CHAVE", "sb_publishable_GFKzsWxgUtXTff5fHWVVfQ_dUKdF62n")
 
 USERNAME_VALIDO = re.compile(r"^[a-z0-9]([a-z0-9._-]{1,30}[a-z0-9])$")
+# redes que o parceiro pode mostrar (o banco confere o link: https e o domínio da própria rede)
+REDES_SOCIAIS = {
+    "youtube": ("▶️", "YouTube", "https://youtube.com/@seucanal"),
+    "tiktok": ("🎵", "TikTok", "https://tiktok.com/@voce"),
+    "instagram": ("📷", "Instagram", "https://instagram.com/voce"),
+    "twitch": ("🟣", "Twitch", "https://twitch.tv/voce"),
+    "discord": ("💬", "Discord", "https://discord.gg/convite"),
+    "x": ("✖️", "X (Twitter)", "https://x.com/voce"),
+    "kwai": ("🎬", "Kwai", "https://kwai.com/@voce"),
+}
 EMAIL_VALIDO = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 MENSAGENS = {
@@ -247,7 +257,7 @@ class RoloxAPI:
         linhas = self._req("GET", "/rest/v1/perfis", params={
             "id": f"eq.{self.user_id}",
             "select": "id,username,email,idioma,jogo_mod,aceitou_localizacao,banido,"
-                      "is_adm,tickets,tickets_ultimo_ganho,avatar,is_parceiro,parceiro_desde"})
+                      "is_adm,tickets,tickets_ultimo_ganho,avatar,is_parceiro,parceiro_desde,redes"})
         if not linhas:
             raise ErroRolox("perfil_nao_encontrado")
         return linhas[0]
@@ -353,6 +363,23 @@ class RoloxAPI:
     # ---------------------------------------------------------- parceria
     def usar_chave_parceria(self, chave: str) -> dict:
         return self._req("POST", "/rest/v1/rpc/usar_chave_parceria", json={"p_chave": (chave or "").strip()})
+
+    def definir_redes(self, redes: dict) -> dict:
+        limpo = {k: str(v or "").strip()[:200] for k, v in (redes or {}).items() if k in REDES_SOCIAIS}
+        return self._req("POST", "/rest/v1/rpc/definir_redes", json={"p_redes": limpo})
+
+    def perfil_publico(self, username: str) -> Optional[dict]:
+        if not USERNAME_VALIDO.match((username or "").strip().lower()):
+            return None
+        r = self._req("POST", "/rest/v1/rpc/perfil_publico", json={"p_username": username})
+        return r if isinstance(r, dict) and r.get("username") else None
+
+    def parceiros_entre(self, nomes) -> set:
+        nomes = sorted({str(n) for n in nomes if n})[:200]
+        if not nomes:
+            return set()
+        r = self._req("POST", "/rest/v1/rpc/parceiros_entre", json={"p_nomes": nomes})
+        return set(r) if isinstance(r, list) else set()
 
     def dono_criar_chave_parceria(self, apelido: str) -> dict:
         return self._req("POST", "/rest/v1/rpc/dono_criar_chave_parceria", json={"p_apelido": (apelido or "").strip()})

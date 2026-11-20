@@ -14,7 +14,7 @@
 {% for a in recebidos %}
   <div class="cartao">
     <div class="avatar-mini">{{ desenhar_avatar(a.avatar, 28) }}</div>
-    <div class="info"><div class="titulo">{{ a.username }}</div><div class="detalhe">quer ser seu amigo</div></div>
+    <div class="info"><div class="titulo">{{ a.username }}{{ selo(a.parceiro) }}</div><div class="detalhe">quer ser seu amigo</div></div>
     <form method="post" action="{{ url_for('amigos_acao', outro=a.id, acao='aceitar') }}">
       <input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn pequeno">Aceitar</button></form>
     <form method="post" action="{{ url_for('amigos_acao', outro=a.id, acao='recusar') }}">
@@ -28,7 +28,7 @@
   <div class="cartao">
     <div class="avatar-mini">{{ desenhar_avatar(a.avatar, 28) }}</div>
     <div class="info">
-      <div class="titulo">{{ a.username }}</div>
+      <div class="titulo"><a class="nome-link" href="{{ url_for('jogador', nome=a.username) }}">{{ a.username }}</a>{{ selo(a.parceiro) }}</div>
       <div class="detalhe">{% if a.jogo %}🎮 jogando {{ a.jogo }}{% elif a.online %}🟢 online{% else %}⚪ offline{% endif %}</div>
     </div>
     {% if a.server_uid %}

@@ -3,7 +3,7 @@
 <div class="linha" style="align-items:flex-start">
   <div class="avatar-mini">{{ desenhar_avatar(perfil.avatar, 56) }}</div>
   <div class="cresce">
-    <h1>Olá, {{ perfil.username }}!</h1>
+    <h1>Olá, {{ perfil.username }}!{{ selo(perfil.is_parceiro) }}</h1>
     <p class="muted" id="status">
       {% if onde.fila %}Na fila de espera — posição {{ onde.posicao }}.{% else %}Você está no lobby.{% endif %}
     </p>
@@ -20,7 +20,7 @@
   <div class="cartao">
     <div class="avatar-mini">{{ desenhar_avatar(a.avatar, 28) }}</div>
     <div class="info">
-      <div class="titulo">{{ a.username }}</div>
+      <div class="titulo"><a class="nome-link" href="{{ url_for('jogador', nome=a.username) }}">{{ a.username }}</a>{{ selo(a.parceiro) }}</div>
       <div class="detalhe">{% if a.jogo %}🎮 jogando {{ a.jogo }}{% else %}🟢 online{% endif %}</div>
     </div>
     {% if a.server_uid %}

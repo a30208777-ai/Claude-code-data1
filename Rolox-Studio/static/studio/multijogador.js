@@ -91,7 +91,7 @@ export class Multijogador {
     p.raiz._rotY = j.r;
     const nome = document.createElement("div");
     nome.className = "nome-jogador";
-    nome.textContent = j.n;                // texto puro: nome nunca vira HTML
+    nome.textContent = j.n + (j.pc ? " 🤝" : "");   // texto puro: nome nunca vira HTML; 🤝 = parceiro
     this.camada?.appendChild(nome);
     const o = { modelo: p.modelo, raiz: p.raiz, alvo: p.raiz.Position, giro: j.r, nome, vivo: true };
     this.outros.set(j.id, o);

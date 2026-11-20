@@ -12,7 +12,7 @@ from . import avatar as avatar_mod
 from . import config
 from . import discord_log
 from .studio import COMANDO_LIGAR, MODELOS as MODELOS_STUDIO, StudioLocal
-from .api import ErroRolox, RoloxAPI
+from .api import REDES_SOCIAIS, ErroRolox, RoloxAPI
 
 CHAVE_REFRESH = "rolox.refresh_token"
 
@@ -402,7 +402,7 @@ class RoloxApp:
                 ft.Row([
                     desenhar_avatar(self.perfil.get("avatar"), 0.4),
                     ft.Column([
-                        ft.Text(f"Olá, {self.perfil.get('username', '')}!", size=24,
+                        ft.Text(f"Olá, {self.perfil.get('username', '')}!" + (" 🤝" if self.perfil.get("is_parceiro") else ""), size=24,
                                 weight=ft.FontWeight.BOLD),
                         status,
                         self.linha_tickets(),
@@ -777,13 +777,34 @@ class RoloxApp:
                 chave.value = ""
                 self.aviso("🤝 Parceria ativada" + (f" — {r['apelido']}" if r.get("apelido") else "") + "!")
                 desenhar_status()
+                bloco_redes.visible = True
                 self.page.update()
             await self.executar(acao)
+
+        redes_atuais = self.perfil.get("redes") or {}
+        campos_redes = {k: ft.TextField(label=nome, value=redes_atuais.get(k, ""), hint_text=f"https://...",
+                                        keyboard_type=ft.KeyboardType.URL, autocorrect=False, max_length=200, dense=True)
+                        for k, nome in REDES_SOCIAIS.items()}
+
+        async def salvar_redes(_):
+            async def acao():
+                await self.api.definir_redes({k: c.value for k, c in campos_redes.items()})
+                self.perfil = await self.api.meu_perfil()
+                self.aviso("Redes sociais salvas!")
+            await self.executar(acao)
+
+        bloco_redes = ft.Column([
+            ft.Text("📣 Minhas redes sociais", size=18, weight=ft.FontWeight.BOLD),
+            ft.Text("Só links https da própria rede. Elas aparecem na sua página de jogador.", size=12, italic=True),
+            *campos_redes.values(),
+            ft.FilledButton("Salvar redes", icon=ft.Icons.SAVE, on_click=salvar_redes),
+        ], spacing=8, visible=bool(self.perfil.get("is_parceiro")))
 
         desenhar_status()
         self.mostrar(ft.Container(padding=16, content=ft.Column([
             ft.Row([ft.Icon(ft.Icons.HANDSHAKE, color=COR_PRIMARIA), ft.Text("Parceria", size=24, weight=ft.FontWeight.BOLD)]),
             status,
+            bloco_redes,
             chave,
             ft.FilledButton("Ativar parceria", icon=ft.Icons.VERIFIED, on_click=ativar),
             ft.Text("A chave é pessoal: vale para uma conta só. Nunca passe para ninguém.", size=12, italic=True),

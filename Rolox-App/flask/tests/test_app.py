@@ -158,6 +158,22 @@ class SupabaseFalso:
             self.devolucoes = getattr(self, "devolucoes", []) + [json]
             self.perfil["tickets"] += 10
             return Resp(200, {"devolvido": True, "tickets": self.perfil["tickets"]})
+        if p == "/rest/v1/rpc/definir_redes":
+            if not self.perfil.get("is_parceiro"):
+                return Resp(403, {"code": "42501", "message": "só parceiros podem colocar redes sociais"})
+            for k, v in json["p_redes"].items():
+                if v and not v.startswith("https://youtube.com/"):
+                    return Resp(400, {"code": "P0001", "message": f"link inválido para {k}: use o link https da própria rede"})
+            self.perfil["redes"] = {k: v for k, v in json["p_redes"].items() if v}
+            return Resp(200, {"redes": self.perfil["redes"]})
+        if p == "/rest/v1/rpc/perfil_publico":
+            if json["p_username"] == "alice":
+                return Resp(200, {"username": "alice", "avatar": {}, "is_parceiro": self.perfil.get("is_parceiro", False),
+                                  "parceiro_desde": None, "criado_em": "2026-11-16T00:00:00Z",
+                                  "redes": self.perfil.get("redes", {}) if self.perfil.get("is_parceiro") else {}})
+            return Resp(200, None)
+        if p == "/rest/v1/rpc/parceiros_entre":
+            return Resp(200, [n for n in json["p_nomes"] if n in getattr(self, "lista_parceiros", set())])
         if p == "/rest/v1/rpc/meus_amigos":
             return Resp(200, self.amigos)
         if p in ("/rest/v1/rpc/pedir_amizade", "/rest/v1/rpc/responder_amizade", "/rest/v1/rpc/desfazer_amizade"):
@@ -955,7 +971,7 @@ def test_placar_recorde_e_ranking(cliente, sb):
     for v in (3, 8, 2):
         cliente.post(f"/api/placar/{mid}", json={"estatistica": "Moedas", "valor": v}, headers={"X-CSRF": tok})
     r = cliente.get(f"/api/placar/{mid}").get_json()
-    assert r[0] == {"pos": 1, "nome": "alice", "estatistica": "Moedas", "valor": 8.0, "eu": True}
+    assert r[0] == {"pos": 1, "nome": "alice", "estatistica": "Moedas", "valor": 8.0, "eu": True, "parceiro": False}
     assert r[1]["nome"] == "bob" and r[1]["eu"] is False
     for ruim in ({"valor": -1}, {"valor": "abc"}, {"valor": 1e13}, {}):
         assert cliente.post(f"/api/placar/{mid}", json=ruim, headers={"X-CSRF": tok}).status_code == 400
@@ -1107,3 +1123,28 @@ def test_parceria_dono_cria_chave_e_pessoa_ativa(cliente, sb):
     cliente.post("/dono/parcerias/1/revogar", data={"csrf": tok})
     assert "REVOGADA" in html(cliente.get("/dono"))
     assert "Você é Parceiro" not in html(cliente.get("/parceria"))
+
+
+def test_parceiro_redes_pagina_e_selo(cliente, sb):
+    entrar(cliente)
+    tok = csrf(cliente)
+    # quem não é parceiro não salva redes
+    cliente.post("/parceria/redes", data={"csrf": tok, "youtube": "https://youtube.com/@alice"})
+    assert "só parceiros" in html(cliente.get("/parceria")).lower()
+    sb.perfil["is_parceiro"] = True
+    t = html(cliente.get("/parceria"))
+    assert "Minhas redes sociais" in t and 'name="tiktok"' in t
+    cliente.post("/parceria/redes", data={"csrf": tok, "youtube": "https://youtube.com.golpe.ru/x"})
+    assert "link inválido" in html(cliente.get("/parceria")).lower()
+    cliente.post("/parceria/redes", data={"csrf": tok, "youtube": " https://youtube.com/@alice ", "x": ""})
+    assert sb.perfil["redes"] == {"youtube": "https://youtube.com/@alice"}
+    # página pública: selo + link seguro
+    t = html(cliente.get("/jogador/alice"))
+    assert 'class="selo"' in t and 'href="https://youtube.com/@alice"' in t and 'rel="noopener noreferrer nofollow ugc"' in t
+    assert cliente.get("/jogador/ninguem").status_code == 404
+    assert cliente.get("/jogador/<script>").status_code == 404
+    # selo no chat
+    sb.lista_parceiros = {"bob"}
+    msgs = cliente.get("/api/chat/s1?depois=0").get_json()
+    assert msgs["mensagens"][0]["username"] == "bob" and msgs["mensagens"][0]["parceiro"] is True
+    assert 'class="selo"' in html(cliente.get("/perfil"))

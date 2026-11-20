@@ -32,6 +32,7 @@
         const p = document.createElement('p');
         const b = document.createElement('b'); b.textContent = m.username;
         p.append(b);
+        if (m.parceiro) { const s = document.createElement('span'); s.className = 'selo'; s.title = 'Parceiro do ROLOX'; s.textContent = '🤝'; p.append(s); }
         if (m.bot_id) { const t = document.createElement('span'); t.className = 'etiqueta'; t.textContent = 'IA'; p.append(t); }
         const dois = document.createElement('b'); dois.textContent = ': ';
         p.append(dois, document.createTextNode(m.mensagem_filtrada));

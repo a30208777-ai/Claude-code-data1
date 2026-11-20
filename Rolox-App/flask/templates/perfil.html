@@ -11,7 +11,7 @@
 </script>
 {% endblock %}
 {% block conteudo %}
-<h1>{{ perfil.username }}</h1>
+<h1>{{ perfil.username }}{{ selo(perfil.is_parceiro) }}</h1>
 <p><b>🎟️ Tickets: {% if perfil.is_adm %}∞ (ADM){% else %}{{ perfil.tickets }}{% endif %}</b></p>
 <form method="post" class="pilha" id="form-perfil">
   <input type="hidden" name="csrf" value="{{ csrf }}">

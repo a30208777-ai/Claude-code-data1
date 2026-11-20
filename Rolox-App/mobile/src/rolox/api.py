@@ -19,6 +19,9 @@ import httpx
 from . import avatar as avatar_mod
 from . import config
 
+# redes do parceiro (o banco confere: https e o domínio da própria rede)
+REDES_SOCIAIS = {"youtube": "YouTube", "tiktok": "TikTok", "instagram": "Instagram", "twitch": "Twitch",
+                 "discord": "Discord", "x": "X (Twitter)", "kwai": "Kwai"}
 USERNAME_VALIDO = re.compile(r"^[a-z0-9]([a-z0-9._-]{1,30}[a-z0-9])$")
 EMAIL_VALIDO = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
@@ -234,7 +237,7 @@ class RoloxAPI:
             "GET", "/rest/v1/perfis",
             params={"id": f"eq.{self.user_id}",
                     "select": "id,username,email,idioma,jogo_mod,aceitou_localizacao,banido,"
-                              "is_adm,tickets,tickets_ultimo_ganho,avatar,is_parceiro,parceiro_desde"},
+                              "is_adm,tickets,tickets_ultimo_ganho,avatar,is_parceiro,parceiro_desde,redes"},
         )
         if not linhas:
             raise ErroRolox("perfil_nao_encontrado")
@@ -309,6 +312,10 @@ class RoloxAPI:
         elif ir in ("jogos", "amigos"):
             dados["ir"] = ir
         return f"{config.SITE_URL}/app/entrar#{urlencode(dados)}"
+
+    async def definir_redes(self, redes: dict) -> dict:
+        limpo = {k: str(v or "").strip()[:200] for k, v in (redes or {}).items() if k in REDES_SOCIAIS}
+        return await self._req("POST", "/rest/v1/rpc/definir_redes", json={"p_redes": limpo})
 
     async def usar_chave_parceria(self, chave: str) -> dict:
         chave = (chave or "").strip()

@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block titulo %}{{ p.username }} · Rolox{% endblock %}
+{% block conteudo %}
+<div class="linha" style="align-items:flex-start">
+  <div class="avatar-mini">{{ desenhar_avatar(p.avatar, 64) }}</div>
+  <div class="cresce">
+    <h1>{{ p.username }}{{ selo(p.is_parceiro) }}</h1>
+    {% if p.is_parceiro %}<p class="parceiro-tag">🤝 Parceiro do ROLOX{% if p.parceiro_desde %} desde {{ p.parceiro_desde|data }}{% endif %}</p>{% endif %}
+    <p class="muted">No ROLOX desde {{ p.criado_em|data }}</p>
+  </div>
+</div>
+{% if redes %}
+  <h2>📣 Redes sociais</h2>
+  {% for chave, emoji, nome, exemplo, url in redes %}
+    <a class="cartao rede" href="{{ url }}" target="_blank" rel="noopener noreferrer nofollow ugc">
+      <span class="icone">{{ emoji }}</span>
+      <div class="info"><div class="titulo">{{ nome }}</div><div class="detalhe">{{ url }}</div></div>
+      <span>↗</span>
+    </a>
+  {% endfor %}
+  <p class="nota">Links colocados pelo próprio parceiro. Abrem fora do ROLOX.</p>
+{% endif %}
+<p><a class="btn texto" href="javascript:history.back()">← Voltar</a></p>
+{% endblock %}

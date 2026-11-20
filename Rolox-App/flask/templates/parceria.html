@@ -5,8 +5,24 @@
 {% if perfil.is_parceiro %}
   <div class="cartao coluna parceiro-ok">
     <div class="titulo">Você é Parceiro do ROLOX 🤝</div>
-    <div class="detalhe">Desde {{ perfil.parceiro_desde|data }}. Obrigado por ajudar a comunidade!</div>
+    <div class="detalhe">{% if perfil.parceiro_desde %}Desde {{ perfil.parceiro_desde|data }}. {% endif %}Obrigado por ajudar a comunidade!
+      O selo {{ selo(true) }} aparece ao lado do seu nome no chat, no jogo, no ranking e para os amigos.</div>
+    <a class="btn texto" href="{{ url_for('jogador', nome=perfil.username) }}">Ver minha página de jogador</a>
   </div>
+
+  <h2>📣 Minhas redes sociais</h2>
+  <form method="post" action="{{ url_for('parceria_redes') }}" class="pilha">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    {% for chave, (emoji, nome, exemplo) in redes_info.items() %}
+    <label>{{ emoji }} {{ nome }}
+      <input type="url" name="{{ chave }}" value="{{ (perfil.redes or {}).get(chave, '') }}" placeholder="{{ exemplo }}"
+             maxlength="200" inputmode="url" autocapitalize="none" autocorrect="off" spellcheck="false">
+    </label>
+    {% endfor %}
+    <p class="nota">Só links https da própria rede (ex.: {{ redes_info.youtube[2] }}). Deixe vazio o que não quiser mostrar.</p>
+    <button class="btn">Salvar redes</button>
+  </form>
+  <h2>Chave</h2>
 {% else %}
   <p>Recebeu uma <b>chave de parceria</b> na DM do dono? Cole aqui para ativar a parceria na sua conta
     (<b>{{ perfil.username }}</b>).</p>

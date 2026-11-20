@@ -408,3 +408,12 @@ def test_usar_chave_parceria():
     import pytest
     with pytest.raises(ValueError):
         rodar(api.usar_chave_parceria("   "))
+
+
+def test_definir_redes_so_manda_redes_conhecidas():
+    chamadas = []
+    def h(req):
+        chamadas.append(json.loads(req.content))
+        return resposta(200, {"redes": {}})
+    rodar(logada(h).definir_redes({"youtube": " https://youtube.com/@a ", "orkut": "x"}))
+    assert chamadas[-1] == {"p_redes": {"youtube": "https://youtube.com/@a"}}

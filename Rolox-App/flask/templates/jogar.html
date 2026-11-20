@@ -142,7 +142,7 @@
         if (!r.length) { const li = document.createElement('li'); li.className = 'vazio'; li.textContent = 'Ninguém marcou pontos ainda. Seja o primeiro!'; lista.append(li); }
         for (const x of r) {
           const li = document.createElement('li'); if (x.eu) li.className = 'eu';
-          const n = document.createElement('span'); n.textContent = (x.pos <= 3 ? ['🥇','🥈','🥉'][x.pos - 1] + ' ' : '') + x.nome;
+          const n = document.createElement('span'); n.textContent = (x.pos <= 3 ? ['🥇','🥈','🥉'][x.pos - 1] + ' ' : '') + x.nome + (x.parceiro ? ' 🤝' : '');
           const v = document.createElement('b'); v.textContent = x.valor.toLocaleString('pt-BR') + ' ' + x.estatistica;
           li.append(n, v); lista.append(li);
         }
@@ -202,6 +202,7 @@
         const p = document.createElement('p');
         const b = document.createElement('b'); b.textContent = m.username;
         p.append(b);
+        if (m.parceiro) { const s = document.createElement('span'); s.className = 'selo'; s.title = 'Parceiro do ROLOX'; s.textContent = '🤝'; p.append(s); }
         if (m.bot_id) { const t = document.createElement('span'); t.className = 'etiqueta'; t.textContent = 'IA'; p.append(t); }
         p.append(document.createTextNode(': ' + m.mensagem_filtrada));
         caixa.appendChild(p);

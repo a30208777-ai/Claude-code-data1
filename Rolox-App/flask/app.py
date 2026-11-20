@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import functools
 import ipaddress
+import time
 import uuid
 import os
 import secrets
@@ -30,7 +31,7 @@ import multijogador
 import discord_log
 from jinja2 import ChoiceLoader, FileSystemLoader, PrefixLoader
 from markupsafe import Markup
-from rolox_api import ErroRolox, RoloxAPI, Sessao
+from rolox_api import REDES_SOCIAIS, ErroRolox, RoloxAPI, Sessao
 from studio_local import STUDIO_URL as STUDIO_URL_PADRAO, COMANDO_INSTALAR, COMANDO_LIGAR, MODELOS as MODELOS_STUDIO, StudioLocal
 
 IDIOMAS = {"pt-BR": "Português", "en": "English", "es": "Español"}
@@ -100,6 +101,23 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
     )
     app.jinja_env.filters["data"] = formatar_data
     passes = multijogador.Passes(app.config["SECRET_KEY"])
+    cache_parceiros: dict = {}             # username -> (é parceiro?, quando) — evita 1 consulta por mensagem
+
+    def parceiros(nomes) -> set:
+        """Quais desses nomes são parceiros (selo 🤝). Guarda por 2 min."""
+        agora_ = time.monotonic()
+        nomes = {n for n in nomes if n}
+        faltam = [n for n in nomes if n not in cache_parceiros or agora_ - cache_parceiros[n][1] > 120]
+        if faltam:
+            try:
+                sim = g.api.parceiros_entre(faltam)
+            except ErroRolox:
+                sim = set()
+            for n in faltam:
+                cache_parceiros[n] = (n in sim, agora_)
+            if len(cache_parceiros) > 5000:
+                cache_parceiros.clear()
+        return {n for n in nomes if cache_parceiros.get(n, (False, 0))[0]}
     salas = multijogador.Salas()
     app.jinja_loader = ChoiceLoader([app.jinja_loader,
                                      PrefixLoader({"editor": FileSystemLoader(PASTA_STUDIO / "templates")})])
@@ -134,7 +152,8 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
         return {"csrf": session.get("csrf", ""), "logado": "sb" in session,
                 "eh_adm": bool(session.get("adm")) and "sb" in session,
                 "eh_dono": bool(session.get("dono")) and "sb" in session,
-                "desenhar_avatar": lambda a, largura=120: Markup(avatar_mod.svg(a, largura))}
+                "desenhar_avatar": lambda a, largura=120: Markup(avatar_mod.svg(a, largura)),
+                "selo": lambda parceiro: Markup('<span class="selo" title="Parceiro do ROLOX">🤝</span>') if parceiro else ""}
 
     def carregar_perfil() -> dict:
         """Lê o perfil e lembra na sessão se é ADM (só para mostrar a aba;
@@ -270,6 +289,9 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
                   f"Amanhã você ganha {presente['amanha']}.", "ok")
         try:
             amigos = [a for a in g.api.meus_amigos() if a["tipo"] == "amigo" and a.get("online")]
+            selo = parceiros(a["username"] for a in amigos)
+            for a in amigos:
+                a["parceiro"] = a["username"] in selo
         except ErroRolox:
             amigos = []
         return render_template("inicio.html", perfil=carregar_perfil(), onde=onde,
@@ -352,6 +374,9 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
         depois = request.args.get("depois", "0")
         novas = g.api.mensagens(uid, int(depois) if depois.isdigit() else 0)
         ainda = g.api.onde_estou()["servidor"] == uid
+        selo = parceiros(m.get("username") for m in novas if not m.get("bot_id"))
+        for m in novas:
+            m["parceiro"] = m.get("username") in selo and not m.get("bot_id")
         return jsonify({"mensagens": novas, "ainda_no_servidor": ainda})
 
     @app.post("/api/chat/<uid>")
@@ -518,9 +543,11 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
     def placar_ver(mapa_id: str):
         _mapa_ou_404(mapa_id)
         eu = g.api.user_id
+        lista = g.api.placar(mapa_id)
+        selo = parceiros(x["username"] for x in lista)
         return jsonify([{"pos": i + 1, "nome": x["username"], "estatistica": x["estatistica"],
-                         "valor": float(x["valor"]), "eu": x["user_id"] == eu}
-                        for i, x in enumerate(g.api.placar(mapa_id))])
+                         "valor": float(x["valor"]), "eu": x["user_id"] == eu, "parceiro": x["username"] in selo}
+                        for i, x in enumerate(lista)])
 
     @app.post("/api/placar/<mapa_id>")
     @logado
@@ -588,7 +615,8 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
         if not teste and not m.get("caminho_aprovado"):
             abort(404)
         avatar = avatar_mod.normalizar(perfil.get("avatar"))
-        passe = passes.criar(s["server_uid"], g.api.user_id, perfil.get("username", "Jogador"), avatar) if s else None
+        passe = passes.criar(s["server_uid"], g.api.user_id, perfil.get("username", "Jogador"), avatar,
+                             parceiro=bool(perfil.get("is_parceiro"))) if s else None
         try:
             curti = mapa_id in g.api.minhas_curtidas()
         except ErroRolox:
@@ -656,6 +684,9 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
     def amigos():
         carregar_perfil()
         lista = g.api.meus_amigos()
+        selo = parceiros(a["username"] for a in lista)
+        for a in lista:
+            a["parceiro"] = a["username"] in selo
         return render_template("amigos.html", amigos=[a for a in lista if a["tipo"] == "amigo"],
                                recebidos=[a for a in lista if a["tipo"] == "recebido"],
                                enviados=[a for a in lista if a["tipo"] == "enviado"], aba="inicio")
@@ -707,7 +738,24 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
             r = g.api.usar_chave_parceria(request.form.get("chave", ""))
             flash(f"🤝 Parceria ativada{(' — ' + r['apelido']) if r.get('apelido') else ''}! Bem-vindo, parceiro.", "ok")
             return redirect(url_for("parceria"))
-        return render_template("parceria.html", perfil=carregar_perfil(), aba="parceria")
+        return render_template("parceria.html", perfil=carregar_perfil(), redes_info=REDES_SOCIAIS, aba="parceria")
+
+    @app.post("/parceria/redes")
+    @logado
+    def parceria_redes():
+        g.api.definir_redes({k: request.form.get(k, "") for k in REDES_SOCIAIS})
+        flash("Redes sociais salvas! Elas aparecem na sua página de jogador.", "ok")
+        return redirect(url_for("parceria"))
+
+    @app.get("/jogador/<nome>")
+    @logado
+    def jogador(nome: str):
+        p = g.api.perfil_publico(nome)
+        if not p:
+            abort(404)
+        redes = [(k, *REDES_SOCIAIS[k], url) for k, url in (p.get("redes") or {}).items()
+                 if k in REDES_SOCIAIS and isinstance(url, str) and url.startswith("https://")]
+        return render_template("jogador.html", p=p, redes=redes, aba="inicio")
 
     @app.post("/dono/parcerias/criar")
     @logado
