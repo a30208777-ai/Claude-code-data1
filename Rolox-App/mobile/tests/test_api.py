@@ -395,3 +395,16 @@ def test_link_entrar_no_site_ja_logado():
     assert "?" not in base                      # token nunca vai na parte que chega ao servidor
     assert "ir=amigos" in rodar(api.link_entrar_no_site(None, "amigos"))
     assert "mapa=" not in rodar(api.link_entrar_no_site("../../x"))
+
+
+def test_usar_chave_parceria():
+    chamadas = []
+    def h(req):
+        chamadas.append(json.loads(req.content))
+        return resposta(200, {"parceiro": True, "apelido": "Canal"})
+    api = logada(h)
+    assert rodar(api.usar_chave_parceria("  abc!(+arthurdevpromax.io ")) == {"parceiro": True, "apelido": "Canal"}
+    assert chamadas[-1] == {"p_chave": "abc!(+arthurdevpromax.io"}
+    import pytest
+    with pytest.raises(ValueError):
+        rodar(api.usar_chave_parceria("   "))

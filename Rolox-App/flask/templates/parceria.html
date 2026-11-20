@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block titulo %}Parceria · Rolox{% endblock %}
+{% block conteudo %}
+<h1>🤝 Parceria</h1>
+{% if perfil.is_parceiro %}
+  <div class="cartao coluna parceiro-ok">
+    <div class="titulo">Você é Parceiro do ROLOX 🤝</div>
+    <div class="detalhe">Desde {{ perfil.parceiro_desde|data }}. Obrigado por ajudar a comunidade!</div>
+  </div>
+{% else %}
+  <p>Recebeu uma <b>chave de parceria</b> na DM do dono? Cole aqui para ativar a parceria na sua conta
+    (<b>{{ perfil.username }}</b>).</p>
+{% endif %}
+<form method="post" class="pilha">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <label>Chave de parceria
+    <input type="text" name="chave" required maxlength="80" autocomplete="off" autocapitalize="none" autocorrect="off"
+           spellcheck="false" placeholder="…arthurdevpromax.io">
+  </label>
+  <button class="btn">{{ 'Usar outra chave' if perfil.is_parceiro else 'Ativar parceria' }}</button>
+</form>
+<p class="nota">A chave é pessoal: vale para uma conta só. Nunca passe para ninguém — e o ROLOX nunca pede sua senha
+  junto com a chave.</p>
+{% endblock %}

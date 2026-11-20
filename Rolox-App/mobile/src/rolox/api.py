@@ -234,7 +234,7 @@ class RoloxAPI:
             "GET", "/rest/v1/perfis",
             params={"id": f"eq.{self.user_id}",
                     "select": "id,username,email,idioma,jogo_mod,aceitou_localizacao,banido,"
-                              "is_adm,tickets,tickets_ultimo_ganho,avatar"},
+                              "is_adm,tickets,tickets_ultimo_ganho,avatar,is_parceiro,parceiro_desde"},
         )
         if not linhas:
             raise ErroRolox("perfil_nao_encontrado")
@@ -309,6 +309,12 @@ class RoloxAPI:
         elif ir in ("jogos", "amigos"):
             dados["ir"] = ir
         return f"{config.SITE_URL}/app/entrar#{urlencode(dados)}"
+
+    async def usar_chave_parceria(self, chave: str) -> dict:
+        chave = (chave or "").strip()
+        if not chave:
+            raise ValueError("Cole a chave de parceria.")
+        return await self._req("POST", "/rest/v1/rpc/usar_chave_parceria", json={"p_chave": chave})
 
     @staticmethod
     def link_amigos() -> str:

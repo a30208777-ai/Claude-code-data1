@@ -24,6 +24,7 @@
     <a href="{{ url_for('jogos') }}" class="{{ 'ativo' if aba in ('jogos', 'servidores') }}"><span>🎮</span>Jogos</a>
     <a href="{{ url_for('perfil') }}" class="{{ 'ativo' if aba == 'perfil' }}"><span>👤</span>Perfil</a>
     <a href="{{ url_for('studio_tela') }}" class="{{ 'ativo' if aba == 'studio' }}"><span>🧱</span>Studio</a>
+    <a href="{{ url_for('parceria') }}" class="{{ 'ativo' if aba == 'parceria' }}"><span>🤝</span>Parceria</a>
     {% if eh_dono %}<a href="{{ url_for('dono') }}" class="{{ 'ativo' if aba == 'dono' }}"><span>👑</span>Dono</a>{% endif %}
     {% if eh_adm %}<a href="{{ url_for('adm') }}" class="{{ 'ativo' if aba == 'adm' }}"><span>🛠️</span>ADM</a>{% endif %}
   </nav>

@@ -187,3 +187,5 @@ main.tela-jogo #tela { position: fixed; inset: 0; width: 100vw; height: 100vh; h
   #botaoPulo { width: 66px; height: 66px; right: max(24px, env(safe-area-inset-right)); bottom: 24px; }
   .dica-jogo { display: none; }
 }
+.chave-nova { border: 2px solid var(--primaria); }
+.parceiro-ok { border-left: 4px solid #2e7d32; }

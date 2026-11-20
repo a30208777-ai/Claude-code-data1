@@ -28,6 +28,40 @@
   <p class="muted"><i>Nada esperando análise. 🎉</i></p>
 {% endfor %}
 
+<h2 id="parcerias">🤝 Parcerias</h2>
+{% if chave_nova %}
+  <div class="cartao coluna chave-nova">
+    <div class="titulo">Chave criada para {{ chave_nova.apelido }}</div>
+    <p class="senha" id="chaveNova">{{ chave_nova.chave }}</p>
+    <div class="linha botoes">
+      <button class="btn pequeno" type="button" onclick="navigator.clipboard.writeText(document.getElementById('chaveNova').textContent).then(() => aviso('Chave copiada!', 'ok'))">📋 Copiar</button>
+    </div>
+    <p class="nota">Copie e mande na DM do parceiro. <b>Ela não aparece de novo</b> (guardamos só uma impressão digital dela).
+      Vale para 1 conta: ele entra na conta dele, abre 🤝 Parceria e cola a chave.</p>
+  </div>
+{% endif %}
+<form method="post" action="{{ url_for('dono_parceria_criar') }}" class="linha">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <input type="text" name="apelido" class="cresce" maxlength="40" placeholder="Nome do parceiro (ex.: canal do João)" required>
+  <button class="btn pequeno">Criar chave</button>
+</form>
+{% for c in parcerias %}
+  <div class="cartao">
+    <div class="info">
+      <div class="titulo">{{ c.apelido }} <span class="muted">…{{ c.final }}arthurdevpromax.io</span>
+        {% if c.revogada %}<span class="etiqueta">REVOGADA</span>{% elif c.usado_por %}<span class="etiqueta ok">EM USO</span>{% else %}<span class="etiqueta neutra">NÃO USADA</span>{% endif %}</div>
+      <div class="detalhe">{% if c.usado_por %}usada por {{ c.usado_por }} em {{ c.usado_em|data }}{% else %}criada em {{ c.criado_em|data }}{% endif %}</div>
+    </div>
+    {% if not c.revogada %}
+    <form method="post" action="{{ url_for('dono_parceria_revogar', chave_id=c.id) }}">
+      <input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn pequeno contorno">Revogar</button>
+    </form>
+    {% endif %}
+  </div>
+{% else %}
+  <p class="muted"><i>Nenhuma chave de parceria ainda.</i></p>
+{% endfor %}
+
 <h2>No ar ({{ publicados|length }})</h2>
 {% for m in publicados %}
   <div class="cartao">

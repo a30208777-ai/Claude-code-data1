@@ -699,6 +699,31 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
             return redirect(url_for("inicio"))
         return redirect(destino_do_servidor(uid))
 
+    # ---------------------------------------------------------- parceria
+    @app.route("/parceria", methods=["GET", "POST"])
+    @logado
+    def parceria():
+        if request.method == "POST":
+            r = g.api.usar_chave_parceria(request.form.get("chave", ""))
+            flash(f"🤝 Parceria ativada{(' — ' + r['apelido']) if r.get('apelido') else ''}! Bem-vindo, parceiro.", "ok")
+            return redirect(url_for("parceria"))
+        return render_template("parceria.html", perfil=carregar_perfil(), aba="parceria")
+
+    @app.post("/dono/parcerias/criar")
+    @logado
+    def dono_parceria_criar():
+        r = g.api.dono_criar_chave_parceria(request.form.get("apelido", ""))
+        # a chave aparece UMA vez (no banco fica só o hash); não vai para flash/cookie
+        return render_template("dono.html", analise=g.api.mapas_em_analise(), publicados=g.api.mapas_publicados(),
+                               parcerias=g.api.dono_parcerias(), chave_nova=r, aba="dono")
+
+    @app.post("/dono/parcerias/<int:chave_id>/revogar")
+    @logado
+    def dono_parceria_revogar(chave_id: int):
+        g.api.dono_revogar_parceria(chave_id)
+        flash("Chave revogada.", "ok")
+        return redirect(url_for("dono") + "#parcerias")
+
     # --------------------------------------------------------------- dono
     @app.get("/dono")
     @logado
@@ -707,7 +732,7 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
         if not session.get("dono"):
             abort(403)
         return render_template("dono.html", analise=g.api.mapas_em_analise(),
-                               publicados=g.api.mapas_publicados(), aba="dono")
+                               publicados=g.api.mapas_publicados(), parcerias=g.api.dono_parcerias(), aba="dono")
 
     @app.post("/dono/<mapa_id>/<acao>")
     @logado

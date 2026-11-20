@@ -181,6 +181,31 @@ class SupabaseFalso:
             m.update(nome=json["p_nome"], descricao=json["p_descricao"], caminho_enviado=json["p_caminho"],
                      status="em_analise", enviado_em="2026-11-20T05:00:00Z")
             return Resp(200, {"id": json["p_id"], "status": "em_analise"})
+        if p in ("/rest/v1/rpc/dono_criar_chave_parceria", "/rest/v1/rpc/dono_parcerias",
+                 "/rest/v1/rpc/dono_revogar_parceria", "/rest/v1/rpc/usar_chave_parceria"):
+            nome = p.rsplit("/", 1)[1]
+            self.chaves = getattr(self, "chaves", [])
+            if nome.startswith("dono_") and not self.dono:
+                return Resp(403, {"code": "42501", "message": "apenas o dono"})
+            if nome == "dono_criar_chave_parceria":
+                chave = f"abc{len(self.chaves)}xyz!(+arthurdevpromax.io"
+                self.chaves.append({"id": len(self.chaves) + 1, "chave": chave, "apelido": json["p_apelido"],
+                                    "final": "xyz!", "usado_por": None, "revogada": False, "criado_em": "", "usado_em": None})
+                return Resp(200, {"chave": chave, "apelido": json["p_apelido"]})
+            if nome == "dono_parcerias":
+                return Resp(200, [{k: v for k, v in c.items() if k != "chave"} for c in self.chaves])
+            if nome == "dono_revogar_parceria":
+                for c in self.chaves:
+                    if c["id"] == json["p_id"]:
+                        c["revogada"] = True
+                        self.perfil["is_parceiro"] = False
+                return Resp(204)
+            c = next((c for c in self.chaves if c["chave"] == json["p_chave"] and not c["revogada"]), None)
+            if not c:
+                return Resp(400, {"code": "P0001", "message": "chave inválida"})
+            c["usado_por"] = "alice"
+            self.perfil.update(is_parceiro=True, parceiro_desde="2026-11-20T16:00:00Z")
+            return Resp(200, {"parceiro": True, "apelido": c["apelido"]})
         if p.startswith("/rest/v1/rpc/dono_"):
             if not self.dono:
                 return Resp(403, {"code": "42501", "message": "apenas o dono"})
@@ -1053,3 +1078,32 @@ def test_ia_studio_modelos_e_fallback(monkeypatch):
     assert chamadas[0] == ("gemini-3.8-flash", "Bearer g-123")
     assert ia_studio.limpar_historico([{"role": "assistant", "content": "x"}, {"role": "user", "content": "a" * 5000}]) == \
         [{"role": "user", "content": "a" * 2000}]
+
+
+def test_parceria_dono_cria_chave_e_pessoa_ativa(cliente, sb):
+    entrar(cliente)
+    tok = csrf(cliente)
+    t = html(cliente.get("/parceria"))
+    assert "<span>🤝</span>Parceria" in t and "Ativar parceria" in t
+    # só o dono cria chave
+    assert cliente.post("/dono/parcerias/criar", data={"csrf": tok, "apelido": "Canal do João"}).status_code in (302, 400)
+    sb.dono = True
+    t = html(cliente.post("/dono/parcerias/criar", data={"csrf": tok, "apelido": "Canal do João"}))
+    chave = "abc0xyz!(+arthurdevpromax.io"
+    assert chave in t and "não aparece de novo" in t
+    # a chave não fica guardada em lugar nenhum do site (nem na lista, nem no cookie)
+    t = html(cliente.get("/dono"))
+    assert chave not in t and "Canal do João" in t and "NÃO USADA" in t
+    with cliente.session_transaction() as sess:
+        assert chave not in str(dict(sess))
+    # chave errada
+    cliente.post("/parceria", data={"csrf": tok, "chave": "errada"})
+    assert "chave inválida" in html(cliente.get("/parceria")).lower()
+    # chave certa (com espaços)
+    cliente.post("/parceria", data={"csrf": tok, "chave": f"  {chave} "})
+    t = html(cliente.get("/parceria"))
+    assert "Você é Parceiro do ROLOX" in t and "Parceria ativada" in t
+    assert "EM USO" in html(cliente.get("/dono"))
+    cliente.post("/dono/parcerias/1/revogar", data={"csrf": tok})
+    assert "REVOGADA" in html(cliente.get("/dono"))
+    assert "Você é Parceiro" not in html(cliente.get("/parceria"))

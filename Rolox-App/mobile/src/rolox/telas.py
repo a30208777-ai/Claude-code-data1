@@ -259,12 +259,13 @@ class RoloxApp:
                 ft.NavigationBarDestination(icon=ft.Icons.DNS, label="Servidores"),
                 ft.NavigationBarDestination(icon=ft.Icons.PERSON, label="Perfil"),
                 ft.NavigationBarDestination(icon=ft.Icons.BUILD, label="Studio"),
+                ft.NavigationBarDestination(icon=ft.Icons.HANDSHAKE, label="Parceria"),
             ] + ([ft.NavigationBarDestination(icon=ft.Icons.ADMIN_PANEL_SETTINGS, label="ADM")]
                  if self.perfil.get("is_adm") else []),
         )
 
     def abrir_aba(self, indice: int) -> None:
-        abas = [self.aba_inicio, self.aba_servidores, self.aba_perfil, self.aba_studio]
+        abas = [self.aba_inicio, self.aba_servidores, self.aba_perfil, self.aba_studio, self.aba_parceria]
         if self.perfil.get("is_adm"):
             abas.append(self.aba_adm)
         abas[min(indice, len(abas) - 1)]()
@@ -753,6 +754,41 @@ class RoloxApp:
         ), self.barra(3))
         self.page.run_task(verificar)
 
+    # ------------------------------------------------------------ parceria
+    def aba_parceria(self) -> None:
+        """Quem recebeu a chave na DM do dono cola aqui e a conta vira Parceiro 🤝."""
+        chave = ft.TextField(label="Chave de parceria", hint_text="…arthurdevpromax.io", password=True,
+                             can_reveal_password=True, autocorrect=False, enable_suggestions=False, max_length=80)
+        status = ft.Column(spacing=4)
+
+        def desenhar_status():
+            if self.perfil.get("is_parceiro"):
+                status.controls = [ft.Container(padding=12, border_radius=10, bgcolor=ft.Colors.with_opacity(0.12, ft.Colors.GREEN),
+                    content=ft.Column([ft.Text("Você é Parceiro do ROLOX 🤝", weight=ft.FontWeight.BOLD, size=16),
+                                       ft.Text("Obrigado por ajudar a comunidade!", size=13)], spacing=2))]
+            else:
+                status.controls = [ft.Text(f"Recebeu uma chave na DM do dono? Cole aqui para ativar a parceria na sua "
+                                           f"conta ({self.perfil.get('username', '')}).", size=14)]
+
+        async def ativar(_):
+            async def acao():
+                r = await self.api.usar_chave_parceria(chave.value or "")
+                self.perfil = await self.api.meu_perfil()
+                chave.value = ""
+                self.aviso("🤝 Parceria ativada" + (f" — {r['apelido']}" if r.get("apelido") else "") + "!")
+                desenhar_status()
+                self.page.update()
+            await self.executar(acao)
+
+        desenhar_status()
+        self.mostrar(ft.Container(padding=16, content=ft.Column([
+            ft.Row([ft.Icon(ft.Icons.HANDSHAKE, color=COR_PRIMARIA), ft.Text("Parceria", size=24, weight=ft.FontWeight.BOLD)]),
+            status,
+            chave,
+            ft.FilledButton("Ativar parceria", icon=ft.Icons.VERIFIED, on_click=ativar),
+            ft.Text("A chave é pessoal: vale para uma conta só. Nunca passe para ninguém.", size=12, italic=True),
+        ], spacing=12, scroll=ft.ScrollMode.AUTO, expand=True)), self.barra(4))
+
     # ------------------------------------------------------------------ ADM
     def aba_adm(self) -> None:
         resumo = ft.Text("")
@@ -938,5 +974,5 @@ class RoloxApp:
                 secao("IPs bloqueados", ft.Icons.SHIELD, ips),
                 secao("Servidores", ft.Icons.DNS, servidores),
             ], spacing=14, scroll=ft.ScrollMode.AUTO, expand=True),
-        ), self.barra(4))
+        ), self.barra(5))
         self.page.run_task(carregar)

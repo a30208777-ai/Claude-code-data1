@@ -247,7 +247,7 @@ class RoloxAPI:
         linhas = self._req("GET", "/rest/v1/perfis", params={
             "id": f"eq.{self.user_id}",
             "select": "id,username,email,idioma,jogo_mod,aceitou_localizacao,banido,"
-                      "is_adm,tickets,tickets_ultimo_ganho,avatar"})
+                      "is_adm,tickets,tickets_ultimo_ganho,avatar,is_parceiro,parceiro_desde"})
         if not linhas:
             raise ErroRolox("perfil_nao_encontrado")
         return linhas[0]
@@ -349,6 +349,20 @@ class RoloxAPI:
     def devolver_tickets_studio_ia(self, cobranca: int) -> dict:
         return self._req("POST", "/rest/v1/rpc/devolver_tickets_studio_ia",
                          json={"p_cobranca": cobranca, "p_chave": self.chave_proxy or None})
+
+    # ---------------------------------------------------------- parceria
+    def usar_chave_parceria(self, chave: str) -> dict:
+        return self._req("POST", "/rest/v1/rpc/usar_chave_parceria", json={"p_chave": (chave or "").strip()})
+
+    def dono_criar_chave_parceria(self, apelido: str) -> dict:
+        return self._req("POST", "/rest/v1/rpc/dono_criar_chave_parceria", json={"p_apelido": (apelido or "").strip()})
+
+    def dono_parcerias(self) -> list[dict]:
+        r = self._req("POST", "/rest/v1/rpc/dono_parcerias", json={})
+        return r if isinstance(r, list) else []
+
+    def dono_revogar_parceria(self, chave_id: int) -> None:
+        self._req("POST", "/rest/v1/rpc/dono_revogar_parceria", json={"p_id": chave_id})
 
     def visitar_mapa(self, mapa_id: str) -> None:
         self._req("POST", "/rest/v1/rpc/visitar_mapa", json={"p_id": mapa_id})
