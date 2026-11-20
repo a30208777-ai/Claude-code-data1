@@ -466,3 +466,28 @@ def test_avatar_ignora_valores_inventados(cliente, sb):
     cliente.post("/perfil", data={"idioma": "pt-BR", "pele": "javascript:alert(1)", "cabelo": "<b>",
                                   "csrf": csrf(cliente)})
     assert sb.perfil["avatar"]["pele"] == "#c68642" and sb.perfil["avatar"]["cabelo"] == "curto"
+
+
+def test_adm_sem_chat_e_banimento_vao_para_o_discord(cliente, sb, monkeypatch):
+    import discord_log
+    monkeypatch.setenv("ROLOX_WEBHOOK_BANIMENTOS", "https://discord.com/api/webhooks/1/b")
+    monkeypatch.setenv("ROLOX_WEBHOOK_PUNICOES", "https://discord.com/api/webhooks/2/p")
+    enviados = []
+    monkeypatch.setattr(discord_log, "registrar_sync", lambda *a, **k: enviados.append(a) or True)
+    sb.perfil["is_adm"] = True
+    entrar(cliente)
+    token = csrf(cliente)
+    cliente.post("/adm/banir", data={"user_id": "u9", "nome": "bob", "motivo": "xingou", "csrf": token})
+    cliente.post("/adm/sem-chat", data={"user_id": "u9", "nome": "bob", "minutos": "60", "motivo": "spam", "csrf": token})
+    cliente.post("/adm/com-chat", data={"user_id": "u9", "nome": "bob", "csrf": token})
+    assert [c[0] for c in sb.adm_chamadas] == ["adm_banir", "adm_sem_chat", "adm_com_chat"]
+    assert sb.adm_chamadas[1][1] == {"p_user": "u9", "p_minutos": 60, "p_motivo": "spam"}
+    assert enviados == [("ban", "bob", "xingou", "alice (ADM)", "Jogo ROLOX", None),
+                        ("sem_chat", "bob", "spam", "alice (ADM)", "Jogo ROLOX", 60),
+                        ("com_chat", "bob", "chat liberado pelo ADM", "alice (ADM)", "Jogo ROLOX", None)]
+    # ao abrir o painel, o IP bloqueado que ainda não foi pro Discord é registrado e marcado
+    enviados.clear()
+    cliente.get("/adm")
+    assert enviados and enviados[0][0] == "ip_bloqueado"
+    assert ("adm_marcar_ip_registrado", {"p_ip": "1.2.3.4"}) in sb.adm_chamadas
+

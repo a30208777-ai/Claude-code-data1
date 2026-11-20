@@ -5,13 +5,17 @@
 <p class="muted">{{ d.totais.usuarios }} usuários · {{ d.totais.servidores }} servidores ·
   {{ d.totais.ips_bloqueados }} IPs bloqueados · {{ d.totais.alertas_hoje }} alertas hoje</p>
 
+<p class="nota">Registros no Discord: banimentos {{ '✓' if discord.banimentos else '✗' }} · punições {{ '✓' if discord.punicoes else '✗' }}
+  {% if not (discord.banimentos and discord.punicoes) %}(configure em ~/.rolox.env){% endif %}</p>
+
 <h2>👥 Usuários</h2>
 {% for u in d.usuarios %}
   <div class="cartao">
     <div class="info">
       <div class="titulo">{{ u.username }}{% if u.id == eu %} (você){% endif %}
         {% if u.is_adm %}<span class="etiqueta">ADM</span>{% endif %}
-        {% if u.banido %}<span class="etiqueta" style="background:var(--perigo)">BANIDO</span>{% endif %}</div>
+        {% if u.banido %}<span class="etiqueta" style="background:var(--perigo)">BANIDO</span>{% endif %}
+        {% if u.sem_chat_ate %}<span class="etiqueta">SEM CHAT até {{ u.sem_chat_ate | data }}</span>{% endif %}</div>
       <div class="detalhe">🎟️ {% if u.is_adm %}∞{% else %}{{ u.tickets }}{% endif %}</div>
       {% if not u.is_adm %}
       <form method="post" action="{{ url_for('adm_acao', acao='tickets') }}" class="linha" style="margin-top:6px">
@@ -23,10 +27,30 @@
     </div>
     {% if u.id != eu %}
     <div class="linha" style="flex-direction:column;gap:4px">
-      <form method="post" action="{{ url_for('adm_acao', acao='desbanir' if u.banido else 'banir') }}">
+      <form method="post" action="{{ url_for('adm_acao', acao='desbanir' if u.banido else 'banir') }}" class="linha">
         <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="user_id" value="{{ u.id }}">
+        <input type="hidden" name="nome" value="{{ u.username }}">
+        <input type="text" name="motivo" maxlength="200" placeholder="motivo" aria-label="Motivo" style="max-width:120px" {{ '' if u.banido else 'required' }}>
         <button class="btn pequeno {{ '' if u.banido else 'contorno' }}">{{ 'Desbanir' if u.banido else 'Banir' }}</button>
       </form>
+      {% if u.sem_chat_ate %}
+      <form method="post" action="{{ url_for('adm_acao', acao='com-chat') }}">
+        <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="user_id" value="{{ u.id }}">
+        <input type="hidden" name="nome" value="{{ u.username }}">
+        <button class="btn pequeno">💬 Devolver chat</button>
+      </form>
+      {% else %}
+      <form method="post" action="{{ url_for('adm_acao', acao='sem-chat') }}" class="linha">
+        <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="user_id" value="{{ u.id }}">
+        <input type="hidden" name="nome" value="{{ u.username }}">
+        <select name="minutos" aria-label="Tempo sem chat">
+          <option value="10">10 min</option><option value="60" selected>1 hora</option><option value="360">6 horas</option>
+          <option value="1440">1 dia</option><option value="10080">7 dias</option>
+        </select>
+        <input type="text" name="motivo" maxlength="200" placeholder="motivo" aria-label="Motivo" style="max-width:110px">
+        <button class="btn pequeno contorno">🔇 Sem chat</button>
+      </form>
+      {% endif %}
       <form method="post" action="{{ url_for('adm_acao', acao='definir-adm') }}">
         <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="user_id" value="{{ u.id }}">
         <input type="hidden" name="adm" value="{{ '0' if u.is_adm else '1' }}">

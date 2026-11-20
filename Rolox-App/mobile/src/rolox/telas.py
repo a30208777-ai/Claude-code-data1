@@ -10,6 +10,7 @@ import flet as ft
 
 from . import avatar as avatar_mod
 from . import config
+from . import discord_log
 from .studio import COMANDO_LIGAR, MODELOS as MODELOS_STUDIO, StudioLocal
 from .api import ErroRolox, RoloxAPI
 
@@ -669,6 +670,18 @@ class RoloxApp:
     # ------------------------------------------------------------------ ADM
     def aba_adm(self) -> None:
         resumo = ft.Text("")
+        cfg = discord_log.configurado()
+        saida_discord = ft.Text(
+            "Registros no Discord: banimentos " + ("ligado" if cfg["banimentos"] else "desligado") +
+            " · punições " + ("ligado" if cfg["punicoes"] else "desligado"), size=12, italic=True)
+        quem = self.perfil.get("username", "ADM")
+
+        async def discord_registrar(tipo: str, alvo: str, motivo: str = "", duracao: Optional[int] = None):
+            """Banimentos -> webhook de banimentos; punições -> webhook de punições."""
+            ok = await discord_log.registrar(tipo, alvo, motivo or "", f"{quem} (ADM)", "Jogo ROLOX", duracao)
+            if not ok and not all(discord_log.configurado().values()):
+                saida_discord.value = "⚠️ Webhooks do Discord não configurados (~/.rolox.env): ação feita só no jogo."
+
         usuarios = ft.Column(spacing=6)
         ips = ft.Column(spacing=6)
         servidores = ft.Column(spacing=6)
@@ -679,6 +692,7 @@ class RoloxApp:
         async def carregar(_=None):
             async def acao():
                 d = await self.api.adm_painel()
+                await registrar_ips_novos(d["ips_bloqueados"])
                 t = d["totais"]
                 resumo.value = (f"{t['usuarios']} usuários · {t['servidores']} servidores · "
                                 f"{t['ips_bloqueados']} IPs bloqueados · {t['alertas_hoje']} alertas hoje")
@@ -687,6 +701,20 @@ class RoloxApp:
                 servidores.controls = [cartao_servidor(s) for s in d["servidores"]] or [ft.Text("Nenhum servidor.")]
                 self.page.update()
             await self.executar(acao)
+
+        async def registrar_ips_novos(ips: list):
+            """IPs bloqueados que ainda não foram para o Discord (ex.: 3 senhas erradas)."""
+            if not discord_log.configurado()["banimentos"]:
+                return
+            for i in ips:
+                if i.get("registrado_discord"):
+                    continue
+                por = "sistema (3 senhas erradas)" if i.get("automatico") else f"{quem} (ADM)"
+                ok = await discord_log.registrar("ip_bloqueado", f"IP {i['ip']} (tentou entrar em {i.get('conta_alvo') or '?'})",
+                                                 i.get("motivo") or "", por, "Jogo ROLOX")
+                if ok:
+                    await self.api.adm_marcar_ip_registrado(i["ip"])
+                    i["registrado_discord"] = True
 
         def acao_e_recarrega(fn, texto_ok: str):
             async def clique(_):
@@ -723,33 +751,88 @@ class RoloxApp:
                     actions=[ft.TextButton("Cancelar", on_click=lambda _: self.page.pop_dialog()),
                              ft.FilledButton("Confirmar", on_click=confirmar)]))
 
+            def pedir(titulo: str, campos: list, ao_confirmar):
+                async def confirmar(_):
+                    async def acao():
+                        valores = [c.value for c in campos]
+                        self.page.pop_dialog()
+                        await ao_confirmar(*valores)
+                        await carregar()
+                    await self.executar(acao)
+                self.page.show_dialog(ft.AlertDialog(
+                    title=ft.Text(titulo), content=ft.Column(campos, tight=True, spacing=10),
+                    actions=[ft.TextButton("Cancelar", on_click=lambda _: self.page.pop_dialog()),
+                             ft.FilledButton("Confirmar", on_click=confirmar)]))
+
+            def banir(_):
+                motivo = ft.TextField(label="Motivo", max_length=200, autofocus=True)
+                async def feito(m):
+                    await self.api.adm_banir(u["id"], m or "")
+                    await discord_registrar("ban", u["username"], m)
+                    self.aviso(f"{u['username']} banido.")
+                pedir(f"Banir {u['username']}", [motivo], feito)
+
+            def desbanir(_):
+                motivo = ft.TextField(label="Motivo (opcional)", max_length=200)
+                async def feito(m):
+                    await self.api.adm_desbanir(u["id"])
+                    await discord_registrar("desban", u["username"], m)
+                    self.aviso(f"{u['username']} desbanido.")
+                pedir(f"Desbanir {u['username']}", [motivo], feito)
+
+            def sem_chat(_):
+                tempo = ft.Dropdown(label="Tempo", value="60", options=[
+                    ft.DropdownOption(key=k, text=t) for k, t in
+                    [("10", "10 minutos"), ("60", "1 hora"), ("360", "6 horas"), ("1440", "1 dia"), ("10080", "7 dias")]])
+                motivo = ft.TextField(label="Motivo", max_length=200)
+                async def feito(t, m):
+                    minutos = int(t or 60)
+                    await self.api.adm_sem_chat(u["id"], minutos, m or "")
+                    await discord_registrar("sem_chat", u["username"], m, minutos)
+                    self.aviso(f"{u['username']} está sem chat.")
+                pedir(f"Tirar o chat de {u['username']}", [tempo, motivo], feito)
+
+            async def com_chat(_):
+                async def acao():
+                    await self.api.adm_com_chat(u["id"])
+                    await discord_registrar("com_chat", u["username"], "chat liberado pelo ADM")
+                    self.aviso(f"{u['username']} pode falar de novo.")
+                    await carregar()
+                await self.executar(acao)
+
             botoes = []
             if not u["is_adm"]:
                 botoes.append(ft.IconButton(ft.Icons.CONFIRMATION_NUMBER, tooltip="Dar/tirar tickets",
                                             on_click=dar_tickets))
             if not eu:
-                if u["banido"]:
-                    botoes.append(ft.IconButton(ft.Icons.LOCK_OPEN, tooltip="Desbanir", on_click=acao_e_recarrega(
-                        lambda: self.api.adm_desbanir(u["id"]), f"{u['username']} desbanido.")))
+                if u.get("sem_chat_ate"):
+                    botoes.append(ft.IconButton(ft.Icons.CHAT, tooltip="Devolver o chat", on_click=com_chat))
                 else:
-                    botoes.append(ft.IconButton(ft.Icons.BLOCK, tooltip="Banir", on_click=acao_e_recarrega(
-                        lambda: self.api.adm_banir(u["id"], "banido por ADM"), f"{u['username']} banido.")))
+                    botoes.append(ft.IconButton(ft.Icons.COMMENTS_DISABLED, tooltip="Sem chat", on_click=sem_chat))
+                if u["banido"]:
+                    botoes.append(ft.IconButton(ft.Icons.LOCK_OPEN, tooltip="Desbanir", on_click=desbanir))
+                else:
+                    botoes.append(ft.IconButton(ft.Icons.BLOCK, tooltip="Banir", on_click=banir))
                 botoes.append(ft.IconButton(
                     ft.Icons.REMOVE_MODERATOR if u["is_adm"] else ft.Icons.ADD_MODERATOR,
                     tooltip="Tirar ADM" if u["is_adm"] else "Tornar ADM",
                     on_click=acao_e_recarrega(lambda: self.api.adm_definir_adm(u["id"], not u["is_adm"]),
                                               "Permissão de ADM alterada.")))
+            if u.get("sem_chat_ate"):
+                marcas += f" · SEM CHAT até {formatar_data(u['sem_chat_ate'])}"
             return ft.Card(content=ft.ListTile(
                 title=ft.Text(u["username"] + (" (você)" if eu else "")),
                 subtitle=ft.Text(f"Tickets: {tickets}{marcas}"),
                 trailing=ft.Row(botoes, tight=True, spacing=0)))
 
         def cartao_ip(i: dict) -> ft.Control:
+            async def desbloquear():
+                await self.api.adm_desbloquear_ip(i["ip"])
+                await discord_registrar("ip_desbloqueado", f"IP {i['ip']} (conta {i.get('conta_alvo') or '?'})", "")
             return ft.Card(content=ft.ListTile(
                 title=ft.Text(i["ip"]),
                 subtitle=ft.Text(f"tentou entrar em {i.get('conta_alvo') or '?'} · {formatar_data(i['bloqueado_em'])}"),
-                trailing=ft.TextButton("Desbloquear", on_click=acao_e_recarrega(
-                    lambda: self.api.adm_desbloquear_ip(i["ip"]), f"IP {i['ip']} desbloqueado."))))
+                trailing=ft.TextButton("Desbloquear", on_click=acao_e_recarrega(desbloquear, f"IP {i['ip']} desbloqueado."))))
 
         def cartao_servidor(s: dict) -> ft.Control:
             return ft.Card(content=ft.ListTile(
@@ -764,6 +847,7 @@ class RoloxApp:
                 ft.Row([ft.Text("Painel ADM", size=24, weight=ft.FontWeight.BOLD, expand=True),
                         ft.IconButton(ft.Icons.REFRESH, tooltip="Atualizar", on_click=carregar)]),
                 resumo,
+                saida_discord,
                 secao("Usuários", ft.Icons.PEOPLE, usuarios),
                 secao("IPs bloqueados", ft.Icons.SHIELD, ips),
                 secao("Servidores", ft.Icons.DNS, servidores),

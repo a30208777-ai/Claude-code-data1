@@ -61,6 +61,11 @@ class ErroRolox(Exception):
 
     @property
     def mensagem(self) -> str:
+        if self.codigo == "sem_chat":
+            ate = str(self.detalhes.get("ate") or "")
+            hora = ate[11:16] if len(ate) >= 16 else ""
+            return (f"🔇 Você está sem chat{' até ' + hora + ' (UTC)' if hora else ''}. "
+                    f"Motivo: {self.detalhes.get('motivo') or 'sem motivo'}.")
         if self.codigo in ("P0001", "42501") and self.detalhes.get("message"):
             return str(self.detalhes["message"]).capitalize() + "."
         texto = MENSAGENS.get(self.codigo, f"Erro: {self.codigo}")
@@ -393,3 +398,13 @@ class RoloxAPI:
 
     async def adm_encerrar_servidor(self, server_uid: str) -> None:
         await self._req("POST", "/rest/v1/rpc/adm_encerrar_servidor", json={"p_server": server_uid})
+
+    async def adm_sem_chat(self, user_id: str, minutos: int, motivo: str = "") -> dict:
+        return await self._req("POST", "/rest/v1/rpc/adm_sem_chat",
+                               json={"p_user": user_id, "p_minutos": int(minutos), "p_motivo": motivo or None})
+
+    async def adm_com_chat(self, user_id: str) -> dict:
+        return await self._req("POST", "/rest/v1/rpc/adm_com_chat", json={"p_user": user_id})
+
+    async def adm_marcar_ip_registrado(self, ip: str) -> None:
+        await self._req("POST", "/rest/v1/rpc/adm_marcar_ip_registrado", json={"p_ip": ip})

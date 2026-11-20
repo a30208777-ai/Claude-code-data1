@@ -20,6 +20,7 @@ from flask import (Flask, abort, flash, g, jsonify, redirect, render_template, r
                    session, url_for)
 
 import avatar as avatar_mod
+import discord_log
 from markupsafe import Markup
 from rolox_api import ErroRolox, RoloxAPI, Sessao
 
@@ -306,8 +307,28 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
     @app.get("/adm")
     @logado
     def adm():
-        return render_template("adm.html", d=g.api.adm_painel(), eu=g.api.user_id,
-                               jogos=nomes_jogos(), aba="adm")
+        d = g.api.adm_painel()
+        # IPs bloqueados (ex.: 3 senhas erradas) que ainda não foram para o Discord
+        if discord_log.configurado()["banimentos"]:
+            for i in d["ips_bloqueados"]:
+                if i.get("registrado_discord"):
+                    continue
+                por = "sistema (3 senhas erradas)" if i.get("automatico") else f"{quem_sou()} (ADM)"
+                if discord_log.registrar_sync("ip_bloqueado", f"IP {i['ip']} (tentou entrar em {i.get('conta_alvo') or '?'})",
+                                              i.get("motivo") or "", por, "Jogo ROLOX"):
+                    g.api.adm_marcar_ip_registrado(i["ip"])
+        return render_template("adm.html", d=d, eu=g.api.user_id, jogos=nomes_jogos(),
+                               discord=discord_log.configurado(), aba="adm")
+
+    def quem_sou() -> str:
+        if "nome" not in g:
+            g.nome = g.api.meu_perfil().get("username", "ADM")
+        return g.nome
+
+    def avisar_discord(tipo: str, alvo: str, motivo: str = "", duracao: Optional[int] = None) -> None:
+        if not discord_log.registrar_sync(tipo, alvo, motivo, f"{quem_sou()} (ADM)", "Jogo ROLOX", duracao) \
+                and not all(discord_log.configurado().values()):
+            flash("Webhooks do Discord não configurados (~/.rolox.env): feito só no jogo.", "erro")
 
     @app.post("/adm/<acao>")
     @logado
@@ -322,15 +343,30 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
             flash("Tickets ajustados.", "ok")
         elif acao == "banir":
             g.api.adm_banir(f["user_id"], f.get("motivo", ""))
+            avisar_discord("ban", f.get("nome", "?"), f.get("motivo", ""))
             flash("Usuário banido.", "ok")
         elif acao == "desbanir":
             g.api.adm_desbanir(f["user_id"])
+            avisar_discord("desban", f.get("nome", "?"), f.get("motivo", ""))
             flash("Usuário desbanido.", "ok")
+        elif acao == "sem-chat":
+            try:
+                minutos = int(f.get("minutos", "60"))
+            except ValueError:
+                raise ErroRolox("quantidade_invalida")
+            g.api.adm_sem_chat(f["user_id"], minutos, f.get("motivo", ""))
+            avisar_discord("sem_chat", f.get("nome", "?"), f.get("motivo", ""), minutos)
+            flash("Usuário sem chat.", "ok")
+        elif acao == "com-chat":
+            g.api.adm_com_chat(f["user_id"])
+            avisar_discord("com_chat", f.get("nome", "?"), "chat liberado pelo ADM")
+            flash("Chat liberado.", "ok")
         elif acao == "definir-adm":
             g.api.adm_definir_adm(f["user_id"], f.get("adm") == "1")
             flash("Permissão de ADM alterada.", "ok")
         elif acao == "desbloquear-ip":
             g.api.adm_desbloquear_ip(f["ip"])
+            avisar_discord("ip_desbloqueado", f"IP {f['ip']}", "")
             flash(f"IP {f['ip']} desbloqueado.", "ok")
         elif acao == "encerrar-servidor":
             g.api.adm_encerrar_servidor(f["server_uid"])
@@ -343,6 +379,7 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
 
 
 if __name__ == "__main__":
+    discord_log.carregar_env()      # webhooks do Discord em ~/.rolox.env (opcional)
     host = os.environ.get("ROLOX_HOST", "127.0.0.1")
     porta = int(os.environ.get("ROLOX_PORTA", "8550"))
     print(f"Rolox rodando: abra http://localhost:{porta} no navegador do celular")

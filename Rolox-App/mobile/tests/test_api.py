@@ -322,3 +322,24 @@ def test_salvar_avatar_manda_so_valores_validos():
 
     rodar(logada(h).atualizar_perfil(avatar={"pele": "<script>", "cabelo": "longo"}))
     assert enviados[0]["avatar"] == dict(av.PADRAO, cabelo="longo")
+
+
+def test_sem_chat_do_adm_e_mensagem_para_o_jogador():
+    vistos = []
+
+    def h(req):
+        vistos.append((req.url.path.rsplit("/", 1)[1], json.loads(req.content)))
+        return resposta(200, {"username": "bob"})
+
+    api = logada(h)
+    rodar(api.adm_sem_chat("u9", 60, "spam"))
+    rodar(api.adm_com_chat("u9"))
+    rodar(api.adm_marcar_ip_registrado("1.2.3.4"))
+    assert vistos == [("adm_sem_chat", {"p_user": "u9", "p_minutos": 60, "p_motivo": "spam"}),
+                      ("adm_com_chat", {"p_user": "u9"}),
+                      ("adm_marcar_ip_registrado", {"p_ip": "1.2.3.4"})]
+    api = logada(lambda r: resposta(200, {"resultado": "sem_chat", "ate": "2026-11-20T15:30:00+00:00", "motivo": "spam"}))
+    with pytest.raises(ErroRolox) as e:
+        rodar(api.enviar("s1", "oi"))
+    assert "sem chat até 15:30" in e.value.mensagem and "spam" in e.value.mensagem
+
