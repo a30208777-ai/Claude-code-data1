@@ -25,9 +25,10 @@ on:
 permissions:
   contents: write # só é usado para criar o Release nas tags apk-v*
 
+# Um APK por versão: uma versão nova espera a anterior terminar (não cancela).
 concurrency:
   group: apk-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 env:
   FLET_VERSION: "1.1.2"
