@@ -161,3 +161,12 @@ main.tela-jogo #tela { position: fixed; inset: 0; width: 100vw; height: 100vh; h
 .abas-ordem a { padding: 6px 12px; border-radius: 999px; border: 1px solid var(--borda); color: var(--suave); text-decoration: none; font-size: .9rem; }
 .abas-ordem a.ativo { background: var(--primaria); border-color: var(--primaria); color: #fff; font-weight: 600; }
 .btn.curtir { font-size: 1.3rem; padding: 4px 6px; }
+.placar-jogo { position: fixed; right: 12px; top: 64px; z-index: 2; min-width: 130px; padding: 8px 10px; border-radius: 12px;
+  background: #000a; color: #fff; font-size: .85rem; display: grid; gap: 2px; pointer-events: none; }
+.placar-jogo div { display: flex; justify-content: space-between; gap: 12px; }
+.ranking-jogo { z-index: 5; }
+.ranking-jogo ol { margin: 0; padding: 0 4px; list-style: none; overflow-y: auto; flex: 1; }
+.ranking-jogo li { display: flex; justify-content: space-between; gap: 8px; padding: 6px 4px; border-bottom: 1px solid #ffffff1a; }
+.ranking-jogo li.eu { color: #ffd54f; font-weight: 700; }
+.ranking-jogo li.vazio { color: #b0b6c3; font-style: italic; }
+@media (min-width: 900px) { .placar-jogo { right: 364px; } }

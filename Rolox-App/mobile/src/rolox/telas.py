@@ -300,12 +300,15 @@ class RoloxApp:
 
         jogos = ft.Row(scroll=ft.ScrollMode.AUTO, spacing=8)
 
-        def cartao_jogo(m: dict) -> ft.Control:
+        def cartao_jogo(m: dict, recorde: Optional[dict] = None) -> ft.Control:
+            rec = (f"🏆 {recorde['username']}: {float(recorde['valor']):g} {recorde.get('estatistica', '')}"
+                   if recorde else "🏆 Sem recorde ainda")
             return ft.Card(content=ft.Container(width=170, padding=10, content=ft.Column([
                 ft.Text(m["nome"], weight=ft.FontWeight.BOLD, max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
                 ft.Text(m.get("descricao") or "Mapa da comunidade", size=12, max_lines=2,
                         overflow=ft.TextOverflow.ELLIPSIS),
                 ft.Text(f"👁 {m.get('visitas') or 0}  ❤ {m.get('curtidas') or 0}", size=12),
+                ft.Text(rec, size=12, max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
                 ft.FilledButton("Jogar", icon=ft.Icons.PLAY_ARROW, url=RoloxAPI.link_jogos(m["id"])),
             ], spacing=4)))
 
@@ -314,7 +317,11 @@ class RoloxApp:
                 lista_jogos = await self.api.jogos_publicados()
             except ErroRolox:
                 lista_jogos = []
-            jogos.controls = [cartao_jogo(m) for m in lista_jogos[:12]] or [
+            try:
+                recs = await self.api.recordes([m["id"] for m in lista_jogos[:12]])
+            except ErroRolox:
+                recs = {}
+            jogos.controls = [cartao_jogo(m, recs.get(m["id"])) for m in lista_jogos[:12]] or [
                 ft.Text("Nenhum jogo aprovado ainda. Crie um no Studio!", italic=True, size=13)]
 
         async def atualizar():

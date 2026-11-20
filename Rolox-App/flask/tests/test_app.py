@@ -61,6 +61,7 @@ class SupabaseFalso:
         self.mapas = {}
         self.dono = False
         self.curtidas = set()
+        self.placares = {}
         self.visitas = set()
 
     def onde(self):
@@ -128,6 +129,19 @@ class SupabaseFalso:
             elif not json["p_curtir"] and m["id"] in self.curtidas:
                 self.curtidas.discard(m["id"]); m["curtidas"] -= 1
             return Resp(200, {"curtidas": m["curtidas"], "curti": json["p_curtir"]})
+        if p == "/rest/v1/rpc/registrar_placar":
+            if json["p_id"] not in self.mapas or not self.mapas[json["p_id"]]["caminho_aprovado"]:
+                return Resp(400, {"code": "P0001", "message": "jogo não encontrado"})
+            k = (json["p_id"], "u1")
+            antes = self.placares.get(k, {}).get("valor", -1)
+            self.placares[k] = {"user_id": "u1", "username": "alice", "estatistica": json["p_estatistica"],
+                                "valor": max(antes, json["p_valor"]), "atualizado_em": "x"}
+            return Resp(200, {"recorde": self.placares[k]["valor"]})
+        if p == "/rest/v1/placares":
+            mid = q["mapa_id"].removeprefix("eq.")
+            linhas = [v for (m, _), v in self.placares.items() if m == mid] + \
+                     [{"user_id": "u7", "username": "bob", "estatistica": "Moedas", "valor": 5, "atualizado_em": "y"}]
+            return Resp(200, sorted(linhas, key=lambda x: -x["valor"]))
         if p == "/rest/v1/rpc/visitar_mapa":
             if json["p_id"] not in self.visitas:
                 self.visitas.add(json["p_id"])
@@ -878,3 +892,25 @@ def test_curtir_e_visitas_mais_jogados(cliente, sb):
     assert cliente.post(f"/jogos/{ids[1]}/curtir", json={"curtir": False}, headers={"X-CSRF": tok}).get_json()["curtidas"] == 0
     t = html(cliente.get(f"/jogar/{ids[1]}?s=s9"))
     assert 'id="curtir" data-curti="0"' in t
+
+
+def test_placar_recorde_e_ranking(cliente, sb):
+    entrar(cliente)
+    tok = csrf(cliente)
+    mid = cliente.post("/api/mapas/enviar", json={"nome": "Moedas", "projeto": PROJETO}, headers={"X-CSRF": tok}).get_json()["id"]
+    # ainda não aprovado: o banco recusa
+    assert cliente.post(f"/api/placar/{mid}", json={"estatistica": "Moedas", "valor": 3}, headers={"X-CSRF": tok}).status_code == 400
+    sb.dono = True
+    cliente.post(f"/dono/{mid}/aprovar", data={"csrf": tok})
+    for v in (3, 8, 2):
+        cliente.post(f"/api/placar/{mid}", json={"estatistica": "Moedas", "valor": v}, headers={"X-CSRF": tok})
+    r = cliente.get(f"/api/placar/{mid}").get_json()
+    assert r[0] == {"pos": 1, "nome": "alice", "estatistica": "Moedas", "valor": 8.0, "eu": True}
+    assert r[1]["nome"] == "bob" and r[1]["eu"] is False
+    for ruim in ({"valor": -1}, {"valor": "abc"}, {"valor": 1e13}, {}):
+        assert cliente.post(f"/api/placar/{mid}", json=ruim, headers={"X-CSRF": tok}).status_code == 400
+    t = html(cliente.get(f"/jogar/{mid}?teste=1"))
+    assert "enviar: null" in t and "abrirRanking" in t          # modo teste não conta recorde
+    cliente.post(f"/jogos/{mid}/jogar", data={"csrf": tok})
+    t = html(cliente.get(f"/jogar/{mid}?s=s9"))
+    assert f"/api/placar/{mid}" in t and "enviar: (estatistica, valor) =>" in t

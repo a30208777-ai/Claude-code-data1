@@ -12,6 +12,7 @@
 
 <canvas id="tela" aria-label="Jogo {{ m.nome }}"></canvas>
 <div id="nomes" aria-hidden="true"></div>
+<div id="placar" class="placar-jogo" hidden aria-label="Placar"></div>
 
 <div id="carregando">⏳ Carregando {{ m.nome }}...</div>
 
@@ -28,6 +29,7 @@
   <strong class="nome-jogo">{{ m.nome }}{% if teste %}<span class="etiqueta neutra">TESTE</span>{% endif %}</strong>
   {% if not teste %}<button class="btn-jogo" id="curtir" data-curti="{{ '1' if curti else '0' }}"
     aria-label="Curtir este jogo">{{ '❤️' if curti else '🤍' }}</button>{% endif %}
+  <button class="btn-jogo" id="abrirRanking" aria-label="Ranking do jogo">🏆</button>
   {% if s %}<span class="online-jogo" id="online" title="Jogadores no mapa">👥 1</span>{% endif %}
   {% if s %}<button class="btn-jogo" id="abrirChat" aria-label="Chat">💬<span id="naoLidas" hidden></span></button>{% endif %}
 </header>
@@ -41,6 +43,12 @@
   <button id="botaoPulo" aria-label="Pular">⤒</button>
 </div>
 <p id="dica" class="dica-jogo"></p>
+
+<section id="painelRanking" class="chat-jogo ranking-jogo" hidden aria-label="Ranking">
+  <div class="topo-chat"><b>🏆 Recordes</b><span class="nota">o maior de cada jogador</span>
+    <button class="btn-jogo pequeno" id="fecharRanking" aria-label="Fechar ranking">▾</button></div>
+  <ol id="listaRanking"></ol>
+</section>
 
 {% if s %}
 <section id="painelChat" class="chat-jogo" hidden aria-label="Chat do servidor">
@@ -59,6 +67,7 @@
 <script type="module">
   import { jogarMapa, ligarToque } from "/static/studio/jogar.js";
   import { Multijogador } from "/static/studio/multijogador.js";
+  import { Placar } from "/static/studio/placar.js";
 
   const toque = matchMedia("(pointer: coarse)").matches || "ontouchstart" in window;
   const carregando = document.getElementById("carregando");
@@ -73,6 +82,10 @@
       nomeJogador: {{ eu|tojson }}, avatar: {{ avatar|tojson }}, saida,
     });
     carregando.remove();
+    jogo.extras.push(new Placar({
+      jogo, caixa: document.getElementById("placar"),
+      enviar: {% if teste %}null{% else %}(estatistica, valor) => api({{ url_for('placar_enviar', mapa_id=m.id)|tojson }}, {estatistica, valor}){% endif %},
+    }));
     {% if passe %}
     const mj = new Multijogador({
       jogo, render: jogo.render, passe: {{ passe|tojson }}, csrf: CSRF, camada: document.getElementById("nomes"),
@@ -91,6 +104,28 @@
   }
 </script>
 
+<script>
+  {
+    const painel = document.getElementById('painelRanking'), lista = document.getElementById('listaRanking');
+    async function carregar() {
+      lista.replaceChildren();
+      try {
+        const r = await api({{ url_for('placar_ver', mapa_id=m.id)|tojson }});
+        if (!r.length) { const li = document.createElement('li'); li.className = 'vazio'; li.textContent = 'Ninguém marcou pontos ainda. Seja o primeiro!'; lista.append(li); }
+        for (const x of r) {
+          const li = document.createElement('li'); if (x.eu) li.className = 'eu';
+          const n = document.createElement('span'); n.textContent = (x.pos <= 3 ? ['🥇','🥈','🥉'][x.pos - 1] + ' ' : '') + x.nome;
+          const v = document.createElement('b'); v.textContent = x.valor.toLocaleString('pt-BR') + ' ' + x.estatistica;
+          li.append(n, v); lista.append(li);
+        }
+      } catch (e) { aviso(e.message); }
+    }
+    document.getElementById('abrirRanking').addEventListener('click', (e) => {
+      painel.hidden = !painel.hidden; if (!painel.hidden) carregar(); e.currentTarget.blur();
+    });
+    document.getElementById('fecharRanking').addEventListener('click', () => { painel.hidden = true; });
+  }
+</script>
 {% if not teste %}
 <script>
   document.getElementById('curtir').addEventListener('click', async (ev) => {

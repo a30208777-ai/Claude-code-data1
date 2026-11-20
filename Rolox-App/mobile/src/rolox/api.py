@@ -270,6 +270,20 @@ class RoloxAPI:
             "order": "visitas.desc,curtidas.desc,aprovado_em.desc", "limit": "50"}) or []
         return [m for m in linhas if isinstance(m, dict) and m.get("id") and m.get("nome")]
 
+    async def recordes(self, mapa_ids: list) -> dict:
+        """Melhor placar de cada jogo: {mapa_id: {"username", "valor", "estatistica"}}."""
+        ids = [str(i) for i in mapa_ids if i][:50]
+        if not ids:
+            return {}
+        linhas = await self._req("GET", "/rest/v1/placares", params={
+            "select": "mapa_id,username,estatistica,valor", "mapa_id": f"in.({','.join(ids)})",
+            "order": "valor.desc", "limit": "500"}) or []
+        melhores: dict = {}
+        for x in linhas:
+            if isinstance(x, dict) and x.get("mapa_id") not in melhores:
+                melhores[x["mapa_id"]] = x
+        return melhores
+
     @staticmethod
     def link_jogos(mapa_id: Optional[str] = None) -> str:
         """Página do site para jogar (o login é o mesmo do app)."""

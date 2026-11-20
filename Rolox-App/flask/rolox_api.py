@@ -299,6 +299,15 @@ class RoloxAPI:
     def curtir_mapa(self, mapa_id: str, curtir: bool) -> dict:
         return self._req("POST", "/rest/v1/rpc/curtir_mapa", json={"p_id": mapa_id, "p_curtir": curtir})
 
+    def registrar_placar(self, mapa_id: str, estatistica: str, valor: float) -> dict:
+        return self._req("POST", "/rest/v1/rpc/registrar_placar",
+                         json={"p_id": mapa_id, "p_estatistica": estatistica, "p_valor": valor})
+
+    def placar(self, mapa_id: str, limite: int = 10) -> list[dict]:
+        return self._req("GET", "/rest/v1/placares", params={
+            "select": "user_id,username,estatistica,valor,atualizado_em", "mapa_id": f"eq.{mapa_id}",
+            "order": "valor.desc,atualizado_em.asc", "limit": str(limite)}) or []
+
     def visitar_mapa(self, mapa_id: str) -> None:
         self._req("POST", "/rest/v1/rpc/visitar_mapa", json={"p_id": mapa_id})
 

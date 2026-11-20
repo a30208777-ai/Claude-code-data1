@@ -87,3 +87,18 @@ test("ponto de nascimento: o primeiro no centro do Spawn", () => {
   assert.equal(pontoDeNascimento(w, 1).X, 3);
   assert.equal(pontoDeNascimento(w, 2).X, -3);
 });
+
+test("IntValue/NumberValue (leaderstats) e salvar/carregar", () => {
+  const m = mundoInicial();
+  const pasta = criar("Folder", m.workspace); pasta.Name = "leaderstats";
+  const i = criar("IntValue", pasta); i.Name = "Moedas";
+  let mudou = 0; i.Changed.Connect(() => mudou++);
+  i.Value = 3.9; assert.equal(i.Value, 3);
+  i.Value = "x"; assert.equal(i.Value, 0);
+  i.Value = 7; i.Value = 7; assert.equal(mudou, 3);   // repetir o mesmo valor não avisa
+  const n = criar("NumberValue", pasta); n.Value = 1.5; assert.equal(n.Value, 1.5);
+  const copia = carregarMundo(salvarMundo(m));
+  const l = copia.workspace.FindFirstChild("leaderstats");
+  assert.equal(l.FindFirstChild("Moedas").Value, 7);
+  assert.equal(l.FindFirstChild("NumberValue").Value, 1.5);
+});

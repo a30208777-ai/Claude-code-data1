@@ -357,3 +357,14 @@ def test_jogos_publicados_e_link_do_site():
     from rolox.api import RoloxAPI
     assert RoloxAPI.link_jogos().endswith("/jogos")
     assert RoloxAPI.link_jogos("m1").endswith("/jogos#mapa-m1")
+
+
+def test_recordes_pega_o_melhor_de_cada_jogo():
+    def h(req):
+        assert req.url.path == "/rest/v1/placares" and req.url.params["mapa_id"] == "in.(m1,m2)"
+        return resposta(200, [{"mapa_id": "m1", "username": "bia", "valor": 9, "estatistica": "Moedas"},
+                              {"mapa_id": "m1", "username": "ana", "valor": 3, "estatistica": "Moedas"},
+                              {"mapa_id": "m2", "username": "leo", "valor": 1, "estatistica": "Vitórias"}])
+    r = rodar(logada(h).recordes(["m1", "m2", None]))
+    assert r["m1"]["username"] == "bia" and r["m2"]["username"] == "leo"
+    assert rodar(logada(h).recordes([])) == {}

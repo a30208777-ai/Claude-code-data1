@@ -185,6 +185,23 @@ export const classesCriaveis = () => Object.keys(CLASSES).filter((k) => !CLASSES
 registrar(class Folder extends Instance {}, "Folder");
 registrar(class Model extends Instance {}, "Model");
 
+// Valores (ex.: pasta "leaderstats" dentro do jogador = placar do jogo)
+class ValorBase extends Instance {
+  constructor(nome) { super(nome); this._valor = 0; }
+  get Value() { return this._valor; }
+  set Value(v) {
+    const n = this._converter(v);
+    if (n === this._valor) return;
+    this._valor = n; this._mudou("Value");
+  }
+  _converter(v) { const n = Number(v); return Number.isFinite(n) ? n : 0; }
+  static props = ["Name", "Value"];
+}
+registrar(class IntValue extends ValorBase {
+  _converter(v) { const n = Math.trunc(Number(v)); return Number.isFinite(n) ? Math.max(-(2 ** 53), Math.min(2 ** 53, n)) : 0; }
+}, "IntValue");
+registrar(class NumberValue extends ValorBase {}, "NumberValue");
+
 export class BasePart extends Instance {
   constructor(nome) {
     super(nome);

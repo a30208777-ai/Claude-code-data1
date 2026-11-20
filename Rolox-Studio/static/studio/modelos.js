@@ -44,6 +44,12 @@ local tempo: number = 0
 local terminou = false
 local checkpoint: Vector3? = nil
 
+-- placar (leaderstats): aparece na tela e vira o recorde no site
+local stats = Instance.new("Folder", jogador)
+stats.Name = "leaderstats"
+local vitorias = Instance.new("IntValue", stats)
+vitorias.Name = "Vitórias"
+
 local function eDoJogador(peca): boolean
   return peca.Parent == jogador.Character
 end
@@ -75,6 +81,7 @@ end)
 workspace.Chegada.Touched:Connect(function(outro)
   if eDoJogador(outro) and not terminou then
     terminou = true
+    vitorias.Value += 1
     print(\`🏁 Você chegou em {math.floor(tempo * 10) / 10} segundos!\`)
   end
 end)
@@ -105,15 +112,31 @@ function moedas() {
   peca(w, "Torre", [0, 4.5, -26], [6, 1, 6], "#8d6e63");
   script("Script", m.game.ServerScriptService, "Moedas", "python", `
 # Coleta de moedas (Python): cada moeda vale 1 ponto e volta depois de 5 segundos.
-pontos = {}
+# O placar fica em leaderstats (aparece na tela e vira recorde no site).
+Players = game.GetService("Players")
+
+def criar_placar(jogador):
+    if jogador.FindFirstChild("leaderstats"):
+        return
+    stats = Instance.new("Folder", jogador)
+    stats.Name = "leaderstats"
+    moedas = Instance.new("IntValue", stats)
+    moedas.Name = "Moedas"
+
+for j in Players.GetChildren():
+    criar_placar(j)
+Players.PlayerAdded.Connect(criar_placar)
 
 def conectar(moeda):
     async def pegou(outro):
-        jogador = outro.Parent
-        if moeda.Transparency > 0 or not jogador.FindFirstChildOfClass("Humanoid"):
+        personagem = outro.Parent
+        if moeda.Transparency > 0 or not personagem.FindFirstChildOfClass("Humanoid"):
             return
-        pontos[jogador.Name] = pontos.get(jogador.Name, 0) + 1
-        print(f"🪙 {jogador.Name}: {pontos[jogador.Name]} moedas")
+        jogador = Players.FindFirstChild(personagem.Name)   # outros jogadores da rede não contam aqui
+        if not jogador or not jogador.FindFirstChild("leaderstats"):
+            return
+        jogador.leaderstats.Moedas.Value += 1
+        print(f"🪙 {jogador.Name}: {jogador.leaderstats.Moedas.Value} moedas")
         moeda.Transparency = 1
         await wait(5)
         moeda.Transparency = 0

@@ -458,6 +458,27 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
         return render_template("jogos.html", publicados=g.api.mapas_publicados(ordem), meus=g.api.meus_mapas(),
                                curti=curti, ordem=ordem, aba="jogos")
 
+    @app.get("/api/placar/<mapa_id>")
+    @logado
+    def placar_ver(mapa_id: str):
+        _mapa_ou_404(mapa_id)
+        eu = g.api.user_id
+        return jsonify([{"pos": i + 1, "nome": x["username"], "estatistica": x["estatistica"],
+                         "valor": float(x["valor"]), "eu": x["user_id"] == eu}
+                        for i, x in enumerate(g.api.placar(mapa_id))])
+
+    @app.post("/api/placar/<mapa_id>")
+    @logado
+    def placar_enviar(mapa_id: str):
+        d = request.get_json(silent=True) or {}
+        try:
+            valor = float(d.get("valor"))
+        except (TypeError, ValueError):
+            abort(400)
+        if not (0 <= valor <= 1e12):
+            abort(400)
+        return jsonify(g.api.registrar_placar(mapa_id, str(d.get("estatistica", "Pontos"))[:32], valor))
+
     @app.post("/jogos/<mapa_id>/curtir")
     @logado
     def jogo_curtir(mapa_id: str):
