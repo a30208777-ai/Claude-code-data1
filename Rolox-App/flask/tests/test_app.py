@@ -576,3 +576,49 @@ def test_aba_studio_aparece_para_todos(cliente):
     entrar(cliente)
     t = html(cliente.get("/inicio"))
     assert "<span>🧱</span>Studio" in t
+
+
+# ------------------------------------------------------------ Render
+def test_saude(cliente):
+    assert cliente.get("/saude").get_data(as_text=True) == "ok"
+
+
+def test_render_manda_ip_do_jogador_com_a_chave(sb, monkeypatch):
+    monkeypatch.setenv("ROLOX_IP_CABECALHO", "CF-Connecting-IP")
+    app = criar_app(lambda s: RoloxAPI(s, url="https://falso", chave="k", http=sb, chave_proxy="K1"),
+                    segredo="teste")
+    app.testing = True
+    c = app.test_client()
+    tok = csrf(c)
+    c.post("/login", data={"usuario": "Alice", "senha": "certa", "csrf": tok},
+           headers={"CF-Connecting-IP": "200.10.20.30"})
+    _, caminho, _, _, cab = next(x for x in sb.chamadas if x[1] == "/functions/v1/login-protegido")
+    assert cab["x-rolox-proxy-chave"] == "K1" and cab["x-rolox-ip-cliente"] == "200.10.20.30"
+    # IP inválido no cabeçalho: vai vazio (a Edge Function recusa em vez de usar o IP do servidor)
+    sb.chamadas.clear()
+    c.post("/login", data={"usuario": "Alice", "senha": "certa", "csrf": tok},
+           headers={"CF-Connecting-IP": "1.2.3.4; drop"})
+    _, _, _, _, cab = next(x for x in sb.chamadas if x[1] == "/functions/v1/login-protegido")
+    assert cab["x-rolox-ip-cliente"] == ""
+
+
+def test_sem_chave_nao_manda_cabecalhos_do_proxy(cliente, sb):
+    entrar(cliente)
+    _, _, _, _, cab = next(x for x in sb.chamadas if x[1] == "/functions/v1/login-protegido")
+    assert "x-rolox-proxy-chave" not in cab and "x-rolox-ip-cliente" not in cab
+    # e a chave nunca vai para o REST do banco
+    assert all("x-rolox-proxy-chave" not in (x[4] or {}) for x in sb.chamadas if x[1].startswith("/rest/"))
+
+
+def test_studio_no_site_e_o_navegador_que_procura(sb):
+    from studio_local import StudioLocal
+    studio = StudioFalso()
+    app = criar_app(lambda s: RoloxAPI(s, url="https://falso", chave="k", http=sb), segredo="teste",
+                    studio=StudioLocal("http://localhost:8600", http=studio), studio_no_navegador=True)
+    app.testing = True
+    c = app.test_client()
+    entrar(c)
+    t = html(c.get("/studio"))
+    assert studio.pedidos == []                         # o servidor não procura nada
+    assert "Procurando o Studio neste aparelho" in t and "fetch(BASE + '/api/projetos'" in t
+    assert "/studio/leve?modelo=obby" in t and "python servidor.py" in t

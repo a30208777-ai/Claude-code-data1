@@ -128,3 +128,18 @@ def test_pc_fechou_avisa_celulares():
     c.host_saiu(host)
     assert cel.recebidas[-1]["tipo"] == "erro"
     assert c.entrar(WsFalso(), codigo, "cabo", "Bia")[1].startswith("O Studio do PC não está aberto")
+
+
+def test_site_do_rolox_pode_ler_projetos(cliente):
+    r = cliente.get("/api/projetos", headers={"Origin": "https://rolox.onrender.com"})
+    assert r.headers["Access-Control-Allow-Origin"] == "https://rolox.onrender.com"
+    pre = cliente.options("/api/projetos", headers={"Origin": "https://rolox.onrender.com",
+                                                    "Access-Control-Request-Private-Network": "true"})
+    assert pre.headers["Access-Control-Allow-Private-Network"] == "true"
+
+
+def test_outros_sites_nao_leem_projetos(cliente):
+    r = cliente.get("/api/projetos", headers={"Origin": "https://site-malvado.com"})
+    assert "Access-Control-Allow-Origin" not in r.headers
+    r = cliente.get("/", headers={"Origin": "https://rolox.onrender.com"})
+    assert "Access-Control-Allow-Origin" not in r.headers

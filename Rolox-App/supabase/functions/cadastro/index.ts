@@ -39,12 +39,11 @@ Deno.serve(async (req) => {
   if (senha.length < 8 || senha.length > 72) return json({ erro: "senha_curta" }, 400);
   if (email && (email.length > 254 || !EMAIL.test(email))) return json({ erro: "email_invalido" }, 400);
 
-  const ip = ipDoCliente(req);
-  if (ip) {
-    const { data: bloqueado } = await admin
-      .from("ips_bloqueados").select("ip").eq("ip", ip).maybeSingle();
-    if (bloqueado) return json({ erro: "ip_bloqueado" }, 403);
-  }
+  const ip = await ipDoCliente(req, admin);
+  if (!ip) return json({ erro: "ip_desconhecido" }, 400);
+  const { data: bloqueado } = await admin
+    .from("ips_bloqueados").select("ip").eq("ip", ip).maybeSingle();
+  if (bloqueado) return json({ erro: "ip_bloqueado" }, 403);
 
   const { data: existe } = await admin
     .from("perfis").select("id").eq("username", username).maybeSingle();
@@ -67,9 +66,7 @@ Deno.serve(async (req) => {
   const { data: sessao, error } = await publico.auth.signInWithPassword({ email: emailInterno, password: senha });
   if (error || !sessao.session) return json({ erro: "erro_cadastro", detalhe: error?.message }, 500);
 
-  if (ip) {
-    await admin.from("ips_confiaveis").upsert({ user_id: sessao.user.id, ip });
-  }
+  await admin.from("ips_confiaveis").upsert({ user_id: sessao.user.id, ip });
   return json({
     access_token: sessao.session.access_token,
     refresh_token: sessao.session.refresh_token,

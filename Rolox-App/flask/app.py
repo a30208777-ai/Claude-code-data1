@@ -10,6 +10,7 @@ use ROLOX_HOST=0.0.0.0 (cuidado: qualquer um na rede poderia abrir sua sessão).
 from __future__ import annotations
 
 import functools
+import ipaddress
 import os
 import secrets
 from datetime import datetime, timedelta
@@ -50,15 +51,40 @@ def formatar_data(iso: str) -> str:
         return iso or ""
 
 
+NO_RENDER = bool(os.environ.get("RENDER"))      # o Render define RENDER=true
+
+
+def ip_do_visitante() -> Optional[str]:
+    """IP de quem abriu o site. No Render, vem do cabeçalho do proxy
+    (ROLOX_IP_CABECALHO, padrão CF-Connecting-IP); localmente, do próprio socket."""
+    nome = os.environ.get("ROLOX_IP_CABECALHO", "CF-Connecting-IP" if NO_RENDER else "")
+    if not nome:
+        bruto = request.remote_addr or ""
+    else:
+        partes = [x.strip() for x in request.headers.get(nome, "").split(",") if x.strip()]
+        try:
+            bruto = partes[int(os.environ.get("ROLOX_IP_POSICAO", "0"))]
+        except (IndexError, ValueError):
+            return None
+    try:
+        return str(ipaddress.ip_address(bruto))
+    except ValueError:
+        return None
+
+
 def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
-              segredo: Optional[str] = None, studio: Optional[StudioLocal] = None) -> Flask:
+              segredo: Optional[str] = None, studio: Optional[StudioLocal] = None,
+              studio_no_navegador: Optional[bool] = None) -> Flask:
     app = Flask(__name__)
     studio = studio or StudioLocal()
+    if studio_no_navegador is None:     # no Render o Studio está no aparelho do jogador, não no servidor
+        studio_no_navegador = NO_RENDER
     app.config.update(
         SECRET_KEY=segredo or _segredo(),
         SESSION_COOKIE_HTTPONLY=True,
         SESSION_COOKIE_SAMESITE="Lax",
         PERMANENT_SESSION_LIFETIME=timedelta(days=30),
+        SESSION_COOKIE_SECURE=NO_RENDER or bool(os.environ.get("ROLOX_HTTPS")),
     )
     app.jinja_env.filters["data"] = formatar_data
 
@@ -66,6 +92,7 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
     @app.before_request
     def preparar():
         g.api = fabrica_api(Sessao.de_dict(session.get("sb")))
+        g.api.ip_cliente = ip_do_visitante()
         session.permanent = True
         if "csrf" not in session:
             session["csrf"] = secrets.token_urlsafe(24)
@@ -129,6 +156,17 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
         return {j["gameid"]: j["nome"] for j in g.api.jogos()}
 
     # ------------------------------------------------------------ conta
+    @app.get("/saude")
+    def saude():
+        return "ok"
+
+    if os.environ.get("ROLOX_DEBUG_IP") == "1":     # só para configurar o Render; desligado por padrão
+        @app.get("/_ip")
+        def ver_ip():
+            nomes = ("X-Forwarded-For", "CF-Connecting-IP", "True-Client-IP", "X-Real-IP")
+            return jsonify({n: request.headers.get(n) for n in nomes} |
+                           {"remote_addr": request.remote_addr, "escolhido": ip_do_visitante()})
+
     @app.get("/")
     def raiz():
         return redirect(url_for("inicio" if g.api.sessao else "login"))
@@ -310,8 +348,12 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
     @logado
     def studio_tela():
         """ROLOX Studio: o editor roda neste aparelho (Rolox-Studio/servidor.py, porta 8600)."""
+        if studio_no_navegador:
+            return render_template("studio.html", studio=studio, ligado=False, no_navegador=True,
+                                   projetos=[], modelos=MODELOS_STUDIO, comando=COMANDO_LIGAR,
+                                   instalar=COMANDO_INSTALAR, aba="studio")
         ligado = studio.ligado()
-        return render_template("studio.html", studio=studio, ligado=ligado,
+        return render_template("studio.html", studio=studio, ligado=ligado, no_navegador=False,
                                projetos=studio.projetos() if ligado else [],
                                modelos=MODELOS_STUDIO, comando=COMANDO_LIGAR,
                                instalar=COMANDO_INSTALAR, aba="studio")

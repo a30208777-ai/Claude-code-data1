@@ -38,7 +38,7 @@ Deno.serve(async (req) => {
   }
   if (!username || !senha || senha.length > 200) return json({ erro: "dados_invalidos" }, 400);
 
-  const ip = ipDoCliente(req);
+  const ip = await ipDoCliente(req, admin);
   if (!ip) return json({ erro: "ip_desconhecido" }, 400);
 
   // 1. IP bloqueado?

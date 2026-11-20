@@ -100,8 +100,11 @@ class RoloxAPI:
 
     def __init__(self, sessao: Optional[Sessao] = None, *, url: str = SUPABASE_URL,
                  chave: str = SUPABASE_CHAVE, http: Optional[requests.Session] = None,
-                 timeout: float = 15):
+                 timeout: float = 15, chave_proxy: Optional[str] = None):
         self.sessao = sessao
+        # Site no Render: o IP real do jogador vai para as Edge Functions com esta chave
+        self.chave_proxy = chave_proxy if chave_proxy is not None else os.environ.get("ROLOX_PROXY_CHAVE", "")
+        self.ip_cliente: Optional[str] = None
         self.url = url.rstrip("/")
         self.chave = chave
         self.http = http or requests.Session()
@@ -124,6 +127,9 @@ class RoloxAPI:
             cab["Authorization"] = f"Bearer {self.sessao.access_token}"
         if prefer:
             cab["Prefer"] = prefer
+        if self.chave_proxy and caminho.startswith("/functions/v1/"):
+            cab["x-rolox-proxy-chave"] = self.chave_proxy
+            cab["x-rolox-ip-cliente"] = self.ip_cliente or ""
         try:
             r = self.http.request(metodo, self.url + caminho, json=json, params=params,
                                   headers=cab, timeout=self.timeout)

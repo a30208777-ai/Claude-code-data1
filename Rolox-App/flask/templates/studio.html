@@ -1,14 +1,7 @@
 {% extends "base.html" %}
 {% block titulo %}Studio · Rolox{% endblock %}
-{% block conteudo %}
-<div class="linha">
-  <h1 class="cresce">🧱 ROLOX Studio</h1>
-  <a class="btn texto" href="{{ url_for('studio_tela') }}" title="Atualizar">↻ Atualizar</a>
-</div>
 
-{% if ligado %}
-  <p class="status-studio ok">● Studio ligado em {{ studio.base }}</p>
-
+{% macro abrir_studio() %}
   <div class="cartao coluna">
     <div class="titulo">Abrir o Studio</div>
     <div class="detalhe">Crie e teste jogos. No celular use o Studio leve; no computador, o Studio PC.</div>
@@ -28,7 +21,39 @@
       <a class="btn pequeno" href="{{ studio.url('leve', modelo=ident) }}" target="_blank" rel="noopener">＋ Criar</a>
     </div>
   {% endfor %}
+{% endmacro %}
 
+{% macro como_ligar() %}
+  <div class="cartao coluna">
+    <div class="titulo">O Studio não está ligado</div>
+    <div class="detalhe">O Studio é o editor de jogos do ROLOX (3D, peças, scripts em Lua e Python). Ele roda
+      neste aparelho. No Termux, abra uma nova sessão (deslize da esquerda e toque em NEW SESSION) e rode:</div>
+  </div>
+  <pre class="comando">{{ comando }}</pre>
+  <p class="nota">Primeira vez? Antes, dentro da pasta Rolox-Studio, rode: {{ instalar }}</p>
+{% endmacro %}
+
+{% block conteudo %}
+<div class="linha">
+  <h1 class="cresce">🧱 ROLOX Studio</h1>
+  <a class="btn texto" href="{{ url_for('studio_tela') }}" title="Atualizar">↻ Atualizar</a>
+</div>
+
+{% if no_navegador %}
+  {# Site na internet: o Studio roda no aparelho de quem abriu a página, então é o navegador que procura. #}
+  <p class="status-studio" id="st-status">● Procurando o Studio neste aparelho...</p>
+  <div id="st-desligado" hidden>
+    {{ como_ligar() }}
+    <p class="nota">Se o Studio já está ligado e mesmo assim aparece desligado, o navegador pode ter bloqueado
+      o acesso (ele pode pedir permissão para "acessar apps neste aparelho": toque em Permitir). Os botões
+      abaixo abrem o Studio do mesmo jeito.</p>
+  </div>
+  {{ abrir_studio() }}
+  <h2>Meus projetos</h2>
+  <div id="st-projetos"><p class="muted"><i>Ligue o Studio para ver seus projetos.</i></p></div>
+{% elif ligado %}
+  <p class="status-studio ok">● Studio ligado em {{ studio.base }}</p>
+  {{ abrir_studio() }}
   <h2>Meus projetos</h2>
   {% for p in projetos %}
     <div class="cartao">
@@ -44,14 +69,47 @@
   {% endfor %}
 {% else %}
   <p class="status-studio desligado">● Studio desligado</p>
-
-  <div class="cartao coluna">
-    <div class="titulo">O Studio não está ligado</div>
-    <div class="detalhe">O Studio é o editor de jogos do ROLOX (3D, peças, scripts em Lua e Python). Ele roda
-      neste aparelho. No Termux, abra uma nova sessão (deslize da esquerda e toque em NEW SESSION) e rode:</div>
-  </div>
-  <pre class="comando">{{ comando }}</pre>
-  <p class="nota">Primeira vez? Antes, dentro da pasta Rolox-Studio, rode: {{ instalar }}</p>
+  {{ como_ligar() }}
   <p><a class="btn" href="{{ url_for('studio_tela') }}">↻ Tentar de novo</a></p>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if no_navegador %}
+<script>
+  (async () => {
+    const BASE = {{ studio.base|tojson }};
+    const NOME = /^[A-Za-z0-9_-]{1,40}$/;
+    const status = document.getElementById('st-status');
+    const caixa = document.getElementById('st-projetos');
+    try {
+      const r = await fetch(BASE + '/api/projetos', {cache: 'no-store'});
+      if (!r.ok) throw new Error('studio');
+      const lista = (await r.json()).filter(p => p && NOME.test(String(p.nome)));
+      status.textContent = '● Studio ligado em ' + BASE;
+      status.className = 'status-studio ok';
+      caixa.replaceChildren();
+      if (!lista.length) {
+        caixa.innerHTML = '<p class="muted"><i>Nenhum projeto salvo ainda. No Studio, use Salvar.</i></p>';
+      }
+      for (const p of lista) {
+        const c = document.createElement('div'); c.className = 'cartao';
+        const i = document.createElement('span'); i.className = 'icone'; i.textContent = '🎮';
+        const info = document.createElement('div'); info.className = 'info';
+        const t = document.createElement('div'); t.className = 'titulo'; t.textContent = p.nome;
+        const d = document.createElement('div'); d.className = 'detalhe';
+        d.textContent = Math.max(1, Math.round((Number(p.tamanho) || 0) / 1024)) + ' KB';
+        info.append(t, d);
+        const a = document.createElement('a'); a.className = 'btn pequeno contorno'; a.textContent = 'Abrir';
+        a.href = BASE + '/studio/leve?projeto=' + encodeURIComponent(p.nome); a.target = '_blank'; a.rel = 'noopener';
+        c.append(i, info, a); caixa.append(c);
+      }
+    } catch (e) {
+      status.textContent = '● Studio desligado (ou o navegador não deixou procurar)';
+      status.className = 'status-studio desligado';
+      document.getElementById('st-desligado').hidden = false;
+    }
+  })();
+</script>
 {% endif %}
 {% endblock %}

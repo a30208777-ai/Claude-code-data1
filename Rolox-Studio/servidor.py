@@ -34,6 +34,15 @@ NOME_VALIDO = re.compile(r"^[A-Za-z0-9_-]{1,40}$")
 TAMANHO_MAX_PROJETO = 40 * 1024 * 1024
 LIMITES = {"bluetooth": 5, "cabo": 2}
 
+# Sites do ROLOX que podem LER a lista de projetos deste Studio (só GET /api/projetos),
+# para a aba Studio do site mostrar "ligado" e os projetos. Mais sites: ROLOX_STUDIO_ORIGENS=a,b
+ORIGENS_PADRAO = ("https://rolox.onrender.com",)
+
+
+def origens_permitidas() -> set[str]:
+    extras = os.environ.get("ROLOX_STUDIO_ORIGENS", "")
+    return set(ORIGENS_PADRAO) | {o.strip().rstrip("/") for o in extras.split(",") if o.strip()}
+
 
 def eh_local(endereco: str | None) -> bool:
     try:
@@ -178,6 +187,14 @@ def criar_app(pasta_projetos: Path | None = None) -> Flask:
 
     @app.after_request
     def cabecalhos(resp):
+        origem = request.headers.get("Origin", "")
+        if request.path == "/api/projetos" and request.method in ("GET", "OPTIONS") \
+                and origem in origens_permitidas():
+            resp.headers["Access-Control-Allow-Origin"] = origem
+            resp.headers["Access-Control-Allow-Methods"] = "GET"
+            if request.headers.get("Access-Control-Request-Private-Network") == "true":
+                resp.headers["Access-Control-Allow-Private-Network"] = "true"
+        resp.headers.add("Vary", "Origin")
         resp.headers.setdefault("X-Content-Type-Options", "nosniff")
         resp.headers.setdefault("Referrer-Policy", "no-referrer")
         return resp
