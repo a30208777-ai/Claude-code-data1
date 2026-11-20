@@ -45,7 +45,7 @@ export class Placar {
     }
     const principal = stats[0];
     const agora = performance.now();
-    if (this.enviar && principal && principal.valor > this.enviado && principal.valor >= 0
+    if (this.enviar && principal && principal.valor > this.enviado && principal.valor > 0
         && agora - this.ultimoEnvio > this.intervaloEnvio) {
       this.ultimoEnvio = agora;
       const valor = principal.valor;

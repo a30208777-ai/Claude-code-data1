@@ -29,6 +29,7 @@
   <strong class="nome-jogo">{{ m.nome }}{% if teste %}<span class="etiqueta neutra">TESTE</span>{% endif %}</strong>
   {% if not teste %}<button class="btn-jogo" id="curtir" data-curti="{{ '1' if curti else '0' }}"
     aria-label="Curtir este jogo">{{ '❤️' if curti else '🤍' }}</button>{% endif %}
+  <button class="btn-jogo" id="girarTela" hidden aria-label="Deitar a tela">🔄</button>
   <button class="btn-jogo" id="abrirRanking" aria-label="Ranking do jogo">🏆</button>
   {% if s %}<span class="online-jogo" id="online" title="Jogadores no mapa">👥 1</span>{% endif %}
   {% if s %}<button class="btn-jogo" id="abrirChat" aria-label="Chat">💬<span id="naoLidas" hidden></span></button>{% endif %}
@@ -105,12 +106,39 @@
 </script>
 
 <script>
+  // tela deitada: tela cheia + trava em paisagem (onde o navegador deixa)
+  {
+    const botao = document.getElementById('girarTela');
+    const toque = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
+    botao.hidden = !toque;
+    const deitada = () => (screen.orientation?.type || '').startsWith('landscape') || innerWidth > innerHeight;
+    botao.addEventListener('click', async () => {
+      botao.blur();
+      try {
+        if (!deitada()) {
+          if (!document.fullscreenElement) await document.documentElement.requestFullscreen?.({ navigationUI: 'hide' });
+          await screen.orientation.lock('landscape');
+        } else {
+          await screen.orientation.lock('portrait');
+          setTimeout(() => { try { screen.orientation.unlock(); } catch {} }, 600);
+          if (document.fullscreenElement) await document.exitFullscreen();
+        }
+      } catch {
+        aviso('Gire o celular para deitar a tela (ligue a rotação automática).', 'ok');
+      }
+    });
+  }
+</script>
+<script>
   {
     const painel = document.getElementById('painelRanking'), lista = document.getElementById('listaRanking');
+    let pedido = 0;
     async function carregar() {
+      const meu = ++pedido;                 // tocar 2x rápido não duplica a lista
       lista.replaceChildren();
       try {
         const r = await api({{ url_for('placar_ver', mapa_id=m.id)|tojson }});
+        if (meu !== pedido) return;
         if (!r.length) { const li = document.createElement('li'); li.className = 'vazio'; li.textContent = 'Ninguém marcou pontos ainda. Seja o primeiro!'; lista.append(li); }
         for (const x of r) {
           const li = document.createElement('li'); if (x.eu) li.className = 'eu';
@@ -121,7 +149,9 @@
       } catch (e) { aviso(e.message); }
     }
     document.getElementById('abrirRanking').addEventListener('click', (e) => {
-      painel.hidden = !painel.hidden; if (!painel.hidden) carregar(); e.currentTarget.blur();
+      painel.hidden = !painel.hidden;
+      if (!painel.hidden) { const chat = document.getElementById('painelChat'); if (chat) chat.hidden = true; carregar(); }
+      e.currentTarget.blur();
     });
     document.getElementById('fecharRanking').addEventListener('click', () => { painel.hidden = true; });
   }
@@ -149,6 +179,7 @@
 
   function abrir(v) {
     painel.hidden = !v;
+    if (v) document.getElementById('painelRanking').hidden = true;   // um painel por vez
     if (v) { naoLidas = 0; badge.hidden = true; caixa.scrollTop = caixa.scrollHeight; }
   }
   document.getElementById('abrirChat').addEventListener('click', () => abrir(painel.hidden));

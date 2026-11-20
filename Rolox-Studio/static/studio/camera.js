@@ -6,6 +6,8 @@
 //  * não atravessa paredes: se algo fica entre o jogador e a câmera, ela chega perto;
 //  * bem perto (zoom máximo) vira primeira pessoa.
 //
+// Dois toques rápidos na tela recentralizam a câmera.
+//
 // Os toques no joystick e no botão de pular não giram a câmera (eles ficam em
 // elementos por cima do canvas, então os eventos nem chegam aqui).
 
@@ -36,6 +38,10 @@ export class CameraJogador {
     const el = elemento;
     const baixo = (e) => {
       if (e.pointerType === "mouse" && e.button !== 0 && e.button !== 2) return;
+      // dois toques rápidos no mesmo lugar: câmera volta ao normal
+      const agora = performance.now(), ult = this._ultimoToque;
+      if (ult && agora - ult.t < 320 && Math.hypot(e.clientX - ult.x, e.clientY - ult.y) < 30) this.recentralizar();
+      this._ultimoToque = { t: agora, x: e.clientX, y: e.clientY };
       this.ponteiros.set(e.pointerId, { x: e.clientX, y: e.clientY });
       el.setPointerCapture?.(e.pointerId);
       if (this.ponteiros.size === 2) this.pincaInicial = { d: this._distPonteiros(), zoom: this.distancia };
@@ -52,7 +58,7 @@ export class CameraJogador {
       }
       const sens = e.pointerType === "touch" ? 0.008 : 0.006;
       this.yaw = (this.yaw - dx * sens) % PI2;
-      this.pitch = limitar(this.pitch + dy * sens, -0.35, 1.35);
+      this.pitch = limitar(this.pitch + dy * sens, -0.3, 1.1);   // não deixa virar "vista de cima"
     };
     const cima = (e) => {
       this.ponteiros.delete(e.pointerId);
@@ -99,6 +105,12 @@ export class CameraJogador {
   _distPonteiros() {
     const [a, b] = [...this.ponteiros.values()];
     return Math.hypot(a.x - b.x, a.y - b.y);
+  }
+
+  /** Volta para a inclinação e o zoom padrão (sem mexer no giro). */
+  recentralizar() {
+    this.pitch = 0.42;
+    if (this.distancia < 4 || this.distancia > 30) this.distancia = 14;
   }
 
   /** Começa atrás do jogador, olhando para a frente do mapa. */

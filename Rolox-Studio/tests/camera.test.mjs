@@ -49,3 +49,13 @@ test("zoom no máximo vira primeira pessoa e a inclinação tem limite", () => {
   for (let i = 0; i < 300; i++) c.atualizar({ X: 0, Y: 0, Z: 0 }, 1 / 30);
   assert.ok(c.distancia <= c.maximo && !c.primeiraPessoa);
 });
+
+test("recentralizar volta inclinação e zoom estranhos ao padrão", () => {
+  const c = new CameraJogador(renderFalso(), { distancia: 14 });
+  c.pitch = 1.1; c.distancia = 44;
+  c.recentralizar();
+  assert.equal(c.pitch, 0.42);
+  assert.equal(c.distancia, 14);
+  c.distancia = 8; c.recentralizar();
+  assert.equal(c.distancia, 8);          // zoom normal fica como está
+});
