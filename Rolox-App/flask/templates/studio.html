@@ -6,8 +6,8 @@
     <div class="titulo">Abrir o Studio</div>
     <div class="detalhe">Crie e teste jogos. No celular use o Studio leve; no computador, o Studio PC.</div>
     <div class="linha botoes">
-      <a class="btn pequeno" href="{{ studio.url('leve') }}" target="_blank" rel="noopener">📱 Studio leve</a>
-      <a class="btn pequeno contorno" href="{{ studio.url('pc') }}" target="_blank" rel="noopener">💻 Studio PC</a>
+      <a class="btn pequeno" href="{{ studio.url('leve') }}" {% if not no_site %}target="_blank" rel="noopener"{% endif %}>📱 Studio leve</a>
+      <a class="btn pequeno contorno" href="{{ studio.url('pc') }}" {% if not no_site %}target="_blank" rel="noopener"{% endif %}>💻 Studio PC</a>
     </div>
   </div>
 
@@ -18,7 +18,7 @@
         <div class="titulo">{{ nome }}</div>
         <div class="detalhe">{{ descricao }}</div>
       </div>
-      <a class="btn pequeno" href="{{ studio.url('leve', modelo=ident) }}" target="_blank" rel="noopener">＋ Criar</a>
+      <a class="btn pequeno" href="{{ studio.url('leve', modelo=ident) }}" {% if not no_site %}target="_blank" rel="noopener"{% endif %}>＋ Criar</a>
     </div>
   {% endfor %}
 {% endmacro %}
@@ -52,7 +52,7 @@
   <h2>Meus projetos</h2>
   <div id="st-projetos"><p class="muted"><i>Ligue o Studio para ver seus projetos.</i></p></div>
 {% elif ligado %}
-  <p class="status-studio ok">● Studio ligado em {{ studio.base }}</p>
+  <p class="status-studio ok">● {% if no_site %}Studio pronto — roda aqui no site, sem instalar nada{% else %}Studio ligado em {{ studio.base }}{% endif %}</p>
   {{ abrir_studio() }}
   <h2>Meus projetos</h2>
   {% for p in projetos %}
@@ -62,7 +62,7 @@
         <div class="titulo">{{ p.nome }}</div>
         <div class="detalhe">{{ studio.tamanho_kb(p) }} KB</div>
       </div>
-      <a class="btn pequeno contorno" href="{{ studio.url('leve', projeto=p.nome) }}" target="_blank" rel="noopener">Abrir</a>
+      <a class="btn pequeno contorno" href="{{ studio.url('leve', projeto=p.nome) }}" {% if not no_site %}target="_blank" rel="noopener"{% endif %}>Abrir</a>
     </div>
   {% else %}
     <p class="muted"><i>Nenhum projeto salvo ainda. No Studio, use Salvar.</i></p>

@@ -220,6 +220,22 @@ class RoloxAPI:
             raise ErroRolox("perfil_nao_encontrado")
         return linhas[0]
 
+    # ------------------------------------------------ projetos do Studio
+    def projetos_listar(self) -> list[dict]:
+        return self._req("GET", "/rest/v1/projetos_studio", params={
+            "select": "nome,tamanho,atualizado_em", "order": "atualizado_em.desc"}) or []
+
+    def projeto_abrir(self, nome: str) -> Optional[dict]:
+        linhas = self._req("GET", "/rest/v1/projetos_studio", params={
+            "select": "dados", "nome": f"eq.{nome}", "limit": "1"}) or []
+        return linhas[0]["dados"] if linhas else None
+
+    def projeto_salvar(self, nome: str, dados: dict, tamanho: int) -> None:
+        self._req("POST", "/rest/v1/projetos_studio", params={"on_conflict": "user_id,nome"},
+                  prefer="resolution=merge-duplicates,return=minimal",
+                  json={"user_id": self.user_id, "nome": nome, "dados": dados, "tamanho": tamanho,
+                        "atualizado_em": datetime.now(timezone.utc).isoformat()})
+
     def atualizar_perfil(self, **campos: Any) -> dict:
         invalidos = set(campos) - {"idioma", "jogo_mod", "aceitou_localizacao", "email", "avatar"}
         if invalidos:

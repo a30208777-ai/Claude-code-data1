@@ -17,16 +17,24 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Callable, Optional
 
+import json
+
 from flask import (Flask, abort, flash, g, jsonify, redirect, render_template, request,
+                   send_from_directory,
                    session, url_for)
 
 import avatar as avatar_mod
 import discord_log
+from jinja2 import ChoiceLoader, FileSystemLoader, PrefixLoader
 from markupsafe import Markup
 from rolox_api import ErroRolox, RoloxAPI, Sessao
-from studio_local import COMANDO_INSTALAR, COMANDO_LIGAR, MODELOS as MODELOS_STUDIO, StudioLocal
+from studio_local import STUDIO_URL as STUDIO_URL_PADRAO, COMANDO_INSTALAR, COMANDO_LIGAR, MODELOS as MODELOS_STUDIO, StudioLocal
 
 IDIOMAS = {"pt-BR": "Português", "en": "English", "es": "Español"}
+# O ROLOX Studio (editor) roda dentro do site: páginas e arquivos vêm de Rolox-Studio/
+PASTA_STUDIO = Path(os.environ.get("ROLOX_PASTA_STUDIO", Path(__file__).resolve().parents[2] / "Rolox-Studio"))
+NOME_PROJETO = __import__("re").compile(r"^[A-Za-z0-9_-]{1,40}$")
+TAMANHO_MAX_PROJETO = 5 * 1024 * 1024
 ARQUIVO_SEGREDO = Path(os.path.expanduser("~/.rolox_flask_segredo"))
 
 
@@ -76,9 +84,10 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
               segredo: Optional[str] = None, studio: Optional[StudioLocal] = None,
               studio_no_navegador: Optional[bool] = None) -> Flask:
     app = Flask(__name__)
-    studio = studio or StudioLocal()
-    if studio_no_navegador is None:     # no Render o Studio está no aparelho do jogador, não no servidor
-        studio_no_navegador = NO_RENDER
+    studio_no_site = studio is None and (PASTA_STUDIO / "static" / "studio").is_dir()
+    studio = studio or StudioLocal("" if studio_no_site else STUDIO_URL_PADRAO)
+    if studio_no_navegador is None:
+        studio_no_navegador = False
     app.config.update(
         SECRET_KEY=segredo or _segredo(),
         SESSION_COOKIE_HTTPONLY=True,
@@ -87,6 +96,8 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
         SESSION_COOKIE_SECURE=NO_RENDER or bool(os.environ.get("ROLOX_HTTPS")),
     )
     app.jinja_env.filters["data"] = formatar_data
+    app.jinja_loader = ChoiceLoader([app.jinja_loader,
+                                     PrefixLoader({"editor": FileSystemLoader(PASTA_STUDIO / "templates")})])
 
     # ------------------------------------------------------ sessão / API
     @app.before_request
@@ -348,6 +359,11 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
     @logado
     def studio_tela():
         """ROLOX Studio: o editor roda neste aparelho (Rolox-Studio/servidor.py, porta 8600)."""
+        if studio_no_site:
+            projetos = [p | {"tamanho": p.get("tamanho") or 0} for p in g.api.projetos_listar()]
+            return render_template("studio.html", studio=studio, ligado=True, no_navegador=False, no_site=True,
+                                   projetos=projetos, modelos=MODELOS_STUDIO, comando=COMANDO_LIGAR,
+                                   instalar=COMANDO_INSTALAR, aba="studio")
         if studio_no_navegador:
             return render_template("studio.html", studio=studio, ligado=False, no_navegador=True,
                                    projetos=[], modelos=MODELOS_STUDIO, comando=COMANDO_LIGAR,
@@ -357,6 +373,58 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
                                projetos=studio.projetos() if ligado else [],
                                modelos=MODELOS_STUDIO, comando=COMANDO_LIGAR,
                                instalar=COMANDO_INSTALAR, aba="studio")
+
+    # ---------------------------------------- Studio dentro do site
+    if studio_no_site:
+        @app.get("/static/studio/<path:arquivo>")
+        def studio_arquivos(arquivo):
+            return send_from_directory(PASTA_STUDIO / "static" / "studio", arquivo)
+
+        @app.get("/static/vendor/<path:arquivo>")
+        def studio_vendor(arquivo):
+            return send_from_directory(PASTA_STUDIO / "static" / "vendor", arquivo)
+
+        @app.get("/studio/<modo>")
+        @logado
+        def studio_editor(modo):
+            if modo not in ("leve", "pc"):
+                abort(404)
+            return render_template("editor/studio.html", modo="leve" if modo == "leve" else "pesado")
+
+        @app.get("/aprender/python-no-celular")
+        def aprender_python():
+            return render_template("editor/em_breve.html", titulo="Python no celular (Termux)")
+
+        @app.get("/api/projetos")
+        @logado
+        def projetos_listar():
+            return jsonify([{"nome": p["nome"], "tamanho": p.get("tamanho") or 0} for p in g.api.projetos_listar()])
+
+        @app.get("/api/projetos/<nome>")
+        @logado
+        def projeto_abrir(nome):
+            if not NOME_PROJETO.match(nome):
+                abort(400, "Nome inválido.")
+            dados = g.api.projeto_abrir(nome)
+            if dados is None:
+                abort(404, "Projeto não encontrado.")
+            return jsonify(dados)
+
+        @app.put("/api/projetos/<nome>")
+        @logado
+        def projeto_salvar(nome):
+            if not NOME_PROJETO.match(nome):
+                abort(400, "Nome inválido: use letras, números, - ou _ (até 40).")
+            if not request.is_json:           # JSON obrigatório: outro site não consegue mandar sem permissão (CORS)
+                abort(415, "Envie o projeto em JSON.")
+            bruto = request.get_data(cache=True)
+            if len(bruto) > TAMANHO_MAX_PROJETO:
+                abort(413, "Projeto grande demais (máx. 5 MB).")
+            dados = request.get_json(silent=True)
+            if not isinstance(dados, dict) or dados.get("formato") != "rolox-studio":
+                abort(400, "Arquivo não é um projeto do Rolox Studio.")
+            g.api.projeto_salvar(nome, dados, len(bruto))
+            return jsonify({"ok": True, "nome": nome})
 
     # --------------------------------------------------------------- ADM
     @app.get("/adm")

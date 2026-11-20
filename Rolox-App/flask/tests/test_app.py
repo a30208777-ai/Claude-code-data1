@@ -56,6 +56,7 @@ class SupabaseFalso:
         self.falhas_login = 0
         self.cadastros = []
         self.fora_do_ar = False
+        self.projetos = {}
 
     def onde(self):
         return next((s for s, m in self.membros.items() if "u1" in m), None)
@@ -95,6 +96,14 @@ class SupabaseFalso:
             if metodo == "PATCH":
                 self.perfil.update(json)
             return Resp(200, [self.perfil])
+        if p == "/rest/v1/projetos_studio":
+            if metodo == "POST":
+                self.projetos[json["nome"]] = json
+                return Resp(201)
+            if "nome" in q:
+                pj = self.projetos.get(q["nome"].removeprefix("eq."))
+                return Resp(200, [{"dados": pj["dados"]}] if pj else [])
+            return Resp(200, [{"nome": n, "tamanho": x["tamanho"]} for n, x in self.projetos.items()])
         if p == "/rest/v1/jogos":
             return Resp(200, self.jogos)
         if p == "/rest/v1/servidores_ativos":
@@ -622,3 +631,31 @@ def test_studio_no_site_e_o_navegador_que_procura(sb):
     assert studio.pedidos == []                         # o servidor não procura nada
     assert "Procurando o Studio neste aparelho" in t and "fetch(BASE + '/api/projetos'" in t
     assert "/studio/leve?modelo=obby" in t and "python servidor.py" in t
+
+
+# ------------------------------------------------ Studio dentro do site
+def test_studio_dentro_do_site(cliente, sb):
+    assert cliente.get("/studio/leve").status_code == 302          # precisa entrar
+    entrar(cliente)
+    t = html(cliente.get("/studio"))
+    assert "roda aqui no site" in t and 'href="/studio/leve?modelo=obby"' in t
+    ed = cliente.get("/studio/leve")
+    assert ed.status_code == 200 and "ROLOX Studio" in html(ed)
+    assert cliente.get("/static/studio/editor.js").status_code == 200
+    assert cliente.get("/static/vendor/fengari/fengari-web.js").status_code == 200
+    assert cliente.get("/static/rolox.css").status_code == 200       # o CSS do app continua
+    assert cliente.get("/studio/xyz").status_code == 404
+
+
+def test_projetos_do_studio_na_conta(cliente, sb):
+    entrar(cliente)
+    proj = {"formato": "rolox-studio", "versao": 1, "pecas": []}
+    r = cliente.put("/api/projetos/meu_obby", json=proj)
+    assert r.status_code == 200 and sb.projetos["meu_obby"]["dados"] == proj
+    assert cliente.get("/api/projetos").get_json() == [{"nome": "meu_obby", "tamanho": sb.projetos["meu_obby"]["tamanho"]}]
+    assert cliente.get("/api/projetos/meu_obby").get_json() == proj
+    assert cliente.get("/api/projetos/outro").status_code == 404
+    assert cliente.put("/api/projetos/..%2Fx", json=proj).status_code in (400, 404)
+    assert cliente.put("/api/projetos/a", json={"x": 1}).status_code == 400
+    assert cliente.put("/api/projetos/a", data="formato=rolox-studio").status_code == 415
+    assert "meu_obby" in html(cliente.get("/studio"))
