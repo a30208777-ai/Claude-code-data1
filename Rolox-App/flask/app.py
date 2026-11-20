@@ -27,6 +27,7 @@ from flask import (Flask, abort, flash, g, jsonify, redirect, render_template, r
 
 import avatar as avatar_mod
 import buscar as busca
+import curiosidades
 import ia_studio
 import midias
 import internet
@@ -149,6 +150,8 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
                 else:
                     session.pop("sb", None)
         return resp
+
+    app.jinja_env.globals["curiosidades"] = curiosidades.CURIOSIDADES
 
     @app.context_processor
     def globais():

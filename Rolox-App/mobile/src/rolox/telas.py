@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import time
 from datetime import datetime
 from typing import Awaitable, Callable, Optional
 
@@ -10,6 +11,7 @@ import flet as ft
 
 from . import avatar as avatar_mod
 from . import config
+from . import curiosidades
 from . import discord_log
 from .studio import COMANDO_LIGAR, MODELOS as MODELOS_STUDIO, StudioLocal
 from .api import REDES_SOCIAIS, ErroRolox, RoloxAPI
@@ -18,6 +20,8 @@ CHAVE_REFRESH = "rolox.refresh_token"
 
 COR_PRIMARIA = ft.Colors.DEEP_PURPLE
 COR_HACK = ft.Colors.ORANGE_700
+TEMPO_MIN_CARREGANDO = 3.0      # segundos que a tela Carregando fica ao abrir o app
+TROCA_CURIOSIDADE = 5.0         # segundos entre uma curiosidade e outra
 
 
 def logo(altura: int) -> ft.Control:
@@ -62,16 +66,30 @@ class RoloxApp:
         p.theme_mode = ft.ThemeMode.SYSTEM
         p.padding = 0
 
+        inicio = time.monotonic()
+        tela = self.tela_carregando("Abrindo o ROLOX...")
+
+        async def esperar_um_pouco():
+            # a tela Carregando fica pelo menos alguns segundos (dá tempo de ler uma curiosidade)
+            resta = TEMPO_MIN_CARREGANDO - (time.monotonic() - inicio)
+            if resta > 0:
+                await asyncio.sleep(resta)
+
         token = await self._pref_get(CHAVE_REFRESH)
         if token:
             try:
+                self.status_carregando("Entrando na sua conta...")
                 await self.api.renovar(token)
                 await self._salvar_sessao()
-                await self.abrir_principal()
+                await self.abrir_principal(antes_de_mostrar=esperar_um_pouco)
                 return
             except ErroRolox:
                 await self._pref_remove(CHAVE_REFRESH)
-        self.tela_login()
+            except Exception:
+                pass
+        await esperar_um_pouco()
+        if self.geracao == tela:
+            self.tela_login()
 
     async def _pref_get(self, chave: str):
         try:
@@ -89,6 +107,73 @@ class RoloxApp:
         if self.api.sessao:
             try:
                 await self.prefs.set(CHAVE_REFRESH, self.api.sessao.refresh_token)
+            except Exception:
+                pass
+
+    # =========================================================== carregando
+    def tela_carregando(self, texto: str = "Carregando...") -> int:
+        """Tela "Carregando": logo, o que está acontecendo e curiosidades do ROLOX trocando sozinhas."""
+        lista = curiosidades.embaralhadas()
+        pos = 0
+        self._status_carregando = ft.Text(texto, size=14, color=ft.Colors.ON_SURFACE_VARIANT,
+                                          text_align=ft.TextAlign.CENTER)
+        contador = ft.Text("", size=11, color=ft.Colors.ON_SURFACE_VARIANT)
+        troca = ft.AnimatedSwitcher(content=ft.Container(), duration=450,
+                                    transition=ft.AnimatedSwitcherTransition.FADE)
+
+        def mostrar_curiosidade() -> None:
+            troca.content = ft.Text(lista[pos % len(lista)], key=str(pos), size=17,
+                                    text_align=ft.TextAlign.CENTER, weight=ft.FontWeight.W_500)
+            contador.value = f"{pos % len(lista) + 1} de {len(lista)}"
+
+        def proxima(_=None) -> None:
+            nonlocal pos
+            pos += 1
+            mostrar_curiosidade()
+            self.page.update()
+
+        mostrar_curiosidade()
+        cartao = ft.Container(
+            padding=20, border_radius=18, width=420,
+            bgcolor=ft.Colors.with_opacity(0.10, COR_PRIMARIA),
+            border=ft.Border.all(1, ft.Colors.with_opacity(0.25, COR_PRIMARIA)),
+            content=ft.Column([
+                ft.Text("💡 Você sabia?", size=15, weight=ft.FontWeight.BOLD, color=COR_PRIMARIA),
+                ft.Container(troca, height=96, alignment=ft.Alignment.CENTER),
+                ft.Row([contador, ft.TextButton("Próxima ›", on_click=proxima)],
+                       alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+            ], spacing=8, horizontal_alignment=ft.CrossAxisAlignment.CENTER),
+        )
+        geracao = self.mostrar(ft.Container(
+            padding=24, expand=True, alignment=ft.Alignment.CENTER,
+            content=ft.Column([
+                logo(76),
+                ft.Container(height=8),
+                ft.ProgressBar(width=220, color=COR_HACK, border_radius=4),
+                self._status_carregando,
+                ft.Container(height=16),
+                cartao,
+            ], spacing=10, horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+               alignment=ft.MainAxisAlignment.CENTER, tight=True),
+        ))
+
+        async def trocar_sozinha():
+            while True:
+                await asyncio.sleep(TROCA_CURIOSIDADE)
+                if self.geracao != geracao:
+                    return
+                proxima()
+        self._geracao_carregando = geracao
+        self.page.run_task(trocar_sozinha)
+        return geracao
+
+    def status_carregando(self, texto: str) -> None:
+        """Muda o texto da tela Carregando (se ela ainda estiver aberta)."""
+        st = getattr(self, "_status_carregando", None)
+        if st is not None and self.geracao == getattr(self, "_geracao_carregando", -1):
+            st.value = texto
+            try:
+                st.update()
             except Exception:
                 pass
 
@@ -156,11 +241,18 @@ class RoloxApp:
             botao.disabled = True
             self.page.update()
             try:
+                tela = None
+
                 async def acao():
+                    nonlocal tela
                     await self.api.login(usuario.value or "", senha.value or "")
                     await self._salvar_sessao()
+                    tela = self.tela_carregando("Carregando sua conta...")
                     await self.abrir_principal()
                 await self.executar(acao)
+                if tela is not None and self.geracao == tela:      # deu erro no meio: volta ao login
+                    self.tela_login()
+                    return
             finally:
                 carregando.visible = False
                 botao.disabled = False
@@ -232,8 +324,11 @@ class RoloxApp:
             self.aviso(aviso_texto)
 
     # ======================================================== área logada
-    async def abrir_principal(self, aba: int = 0) -> None:
+    async def abrir_principal(self, aba: int = 0,
+                              antes_de_mostrar: Optional[Callable[[], Awaitable[None]]] = None) -> None:
+        self.status_carregando("Carregando seu perfil...")
         self.perfil = await self.api.meu_perfil()
+        self.status_carregando("Abrindo o presente do dia...")
         try:
             presente = await self.api.receber_tickets()
             if presente.get("ganhou"):
@@ -242,8 +337,11 @@ class RoloxApp:
                            f"Amanhã você ganha {presente['amanha']}.")
         except ErroRolox:
             pass
+        self.status_carregando("Carregando os jogos...")
         self.jogos = await self.api.jogos()
         onde = await self.api.onde_estou()
+        if antes_de_mostrar:
+            await antes_de_mostrar()
         if onde["servidor"]:
             servidores = await self.api.servidores()
             self.servidor_atual = next(

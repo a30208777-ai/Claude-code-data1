@@ -932,6 +932,7 @@ def test_so_o_dono_ve_o_painel_e_aprova(cliente, sb):
     assert "Obby da lava" in t and f"/jogar/{mid}?teste=1" in t and "<span>👑</span>Dono" in t
     # dono testa a versão em análise no próprio app
     t = html(cliente.get(f"/jogar/{mid}?teste=1"))
+    assert "💡 Você sabia?" in t and "inspirado no ROBLOX" in t and "carregandoStatus" in t
     assert "Modo teste" in t and f"/api/mapas/{mid}/dados?versao=enviada" in t and 'id="painelChat"' not in t
     assert json.loads(cliente.get(f"/api/mapas/{mid}/dados?versao=enviada").get_data()) == PROJETO
     assert cliente.get(f"/api/mapas/{mid}/dados").status_code == 404     # ainda não tem versão aprovada

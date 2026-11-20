@@ -15,7 +15,34 @@
 <div id="nomes" aria-hidden="true"></div>
 <div id="placar" class="placar-jogo" hidden aria-label="Placar"></div>
 
-<div id="carregando">⏳ Carregando {{ m.nome }}...</div>
+<div id="carregando" role="status" aria-live="polite">
+  <div class="carregando-caixa">
+    <img src="{{ url_for('static', filename='logo_nome.png') }}" alt="ROLOX" width="173" height="60">
+    <div class="carregando-barra"><span></span></div>
+    <p id="carregandoStatus">Carregando {{ m.nome }}...</p>
+    <div class="curiosidade">
+      <b>💡 Você sabia?</b>
+      <p id="curiosidadeTexto"></p>
+      <div class="linha"><small id="curiosidadeNum"></small><button type="button" id="curiosidadeProx">Próxima ›</button></div>
+    </div>
+  </div>
+</div>
+<script>
+  // Curiosidades do ROLOX enquanto o jogo carrega (lista em curiosidades.py)
+  (() => {
+    const lista = {{ curiosidades|tojson }}.map((t) => [Math.random(), t]).sort((a, b) => a[0] - b[0]).map((x) => x[1]);
+    const texto = document.getElementById("curiosidadeTexto"), num = document.getElementById("curiosidadeNum");
+    let i = 0;
+    const mostrar = () => {
+      texto.classList.remove("entra"); void texto.offsetWidth; texto.classList.add("entra");
+      texto.textContent = lista[i % lista.length]; num.textContent = `${i % lista.length + 1} de ${lista.length}`;
+    };
+    const proxima = () => { i++; mostrar(); };
+    mostrar();
+    const timer = setInterval(() => { if (!document.getElementById("carregando")) clearInterval(timer); else proxima(); }, 5000);
+    document.getElementById("curiosidadeProx").addEventListener("click", proxima);
+  })();
+</script>
 
 <header class="barra-jogo">
   {% if s %}
@@ -153,7 +180,9 @@
                          pulo: document.getElementById("botaoPulo") });
     }
   } catch (e) {
-    carregando.textContent = "Não deu para abrir o jogo: " + e.message;
+    const st = document.getElementById("carregandoStatus");
+    st.textContent = "Não deu para abrir o jogo: " + e.message; st.classList.add("erro");
+    carregando.querySelector(".carregando-barra")?.remove();
   }
 </script>
 
