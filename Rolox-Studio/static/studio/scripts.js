@@ -36,6 +36,11 @@ wrap = function(v)
     for i = 0, v.length - 1 do t[i + 1] = wrap(v[i]) end
     return t
   end
+  if api:ehObjeto(v) then
+    local t, ks = {}, api:chaves(v)
+    for i = 0, ks.length - 1 do local k = ks[i]; t[k] = wrap(v[k]) end
+    return t
+  end
   return v
 end
 
@@ -282,7 +287,7 @@ try:
 except ImportError:
     _jsnull = None
 from rolox import (_game, _V3, _C3, _criar, _imprimir, _avisar, _agora, _fonte_modulo,
-                   _eh_v3, _eh_c3, _eh_inst, _eh_sinal, _eh_array)
+                   _eh_v3, _eh_c3, _eh_inst, _eh_sinal, _eh_array, _eh_obj, _chaves)
 
 # ---------------------------------------------------------------- Vector3 / Color3 em Python
 def _n(v):
@@ -359,6 +364,7 @@ def _py(v):
         return w
     if _eh_sinal(v): return Sinal(v)
     if _eh_array(v): return [_py(x) for x in v]
+    if _eh_obj(v): return types.SimpleNamespace(**{str(k): _py(getattr(v, k)) for k in _chaves(v)})
     return v
 
 def _js(v):
@@ -480,6 +486,7 @@ export class ExecutorPython {
       _game: api.game, _V3: Vector3, _C3: Color3,
       _criar: (classe, pai) => criar(String(classe), pai || undefined),
       _eh_v3: api.ehV3, _eh_c3: api.ehC3, _eh_inst: api.ehInstancia, _eh_sinal: api.ehSinal, _eh_array: api.ehArray,
+      _eh_obj: api.ehObjeto, _chaves: api.chaves,
       _imprimir: (n, t) => api.imprimir(n, t), _avisar: (n, t) => api.avisar(n, t),
       _agora: () => api.agora(), _fonte_modulo: (m) => api.fonteModulo(m, "python"),
     });
@@ -514,6 +521,8 @@ export function criarApi(mundo, saida) {
     ehInstancia: (v) => v instanceof Instance,
     ehSinal: (v) => v instanceof Sinal,
     ehArray: (v) => Array.isArray(v),
+    ehObjeto: (v) => v !== null && typeof v === "object" && Object.getPrototypeOf(v) === Object.prototype,
+    chaves: (v) => Object.keys(v),
     ehFuncao: (v) => typeof v === "function",
     novaInstancia: (classe, pai) => criar(String(classe), pai || undefined),
     imprimir: (nome, texto) => saida(String(texto), "info", nome),

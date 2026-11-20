@@ -98,3 +98,23 @@ test("receita da casa: peças no lugar e com vão de porta", async () => {
   assert.equal(vao, 3);
   lua.fechar();
 });
+
+test("receita de animar/efeitos: elevador sobe e botão solta confete", async () => {
+  const { mundo, p, lua, erros, passar } = await montar("animar_efeitos");
+  const vistos = []; mundo.game.Efeitos.Mostrar.Connect((t) => vistos.push(t));
+  mundo.game.Animar._passo(4);
+  assert.ok(Math.abs(acharCaminho(mundo, "Workspace.Elevador").Position.Y - 15.5) < 1e-6);
+  acharCaminho(mundo, "Workspace.Botao").Touched.Fire(p.raiz);
+  await passar(0.1);
+  assert.deepEqual(vistos, ["confete"]);
+  lua.fechar();
+  assert.deepEqual(erros, []);
+});
+
+test("receita de materiais/céu: gelo, borracha, neon e pôr do sol", async () => {
+  const { mundo, lua } = await montar("materiais_ceu");
+  assert.equal(acharCaminho(mundo, "Workspace.PistaGelo").Material, "Gelo");
+  assert.equal(acharCaminho(mundo, "Workspace.Trampolim").Material, "Borracha");
+  assert.equal(mundo.game.Ceu.Hora, 19);
+  lua.fechar();
+});

@@ -202,6 +202,16 @@ registrar(class IntValue extends ValorBase {
 }, "IntValue");
 registrar(class NumberValue extends ValorBase {}, "NumberValue");
 
+// Materiais das peças (nomes do ROLOX). Alguns mudam a física do personagem:
+//   Gelo escorrega, Areia deixa mais devagar, Borracha faz quicar.
+export const MATERIAIS = ["Plastico", "Madeira", "Metal", "Grama", "Pedra", "Tijolo", "Concreto", "Areia",
+  "Gelo", "Neon", "Vidro", "Tecido", "Borracha", "Lava", "Agua"];
+const SEM_ACENTO = (t) => String(t ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+export function materialValido(v) {
+  const k = SEM_ACENTO(v);
+  return MATERIAIS.find((m) => m.toLowerCase() === k) || null;
+}
+
 export class BasePart extends Instance {
   constructor(nome) {
     super(nome);
@@ -213,6 +223,7 @@ export class BasePart extends Instance {
     this._colide = true;
     this._transp = 0;
     this._forma = "Block";
+    this._material = "Plastico";
     this.Velocity = new Vector3();
     this.Touched = new Sinal("Touched");
     this.TouchEnded = new Sinal("TouchEnded");
@@ -238,8 +249,15 @@ export class BasePart extends Instance {
   set CanCollide(v) { v = !!v; if (v === this._colide) return; this._colide = v; this._mudou("CanCollide"); }
   get Shape() { return this._forma; }
   set Shape(v) { v = ["Block", "Ball", "Cylinder"].includes(v) ? v : "Block"; if (v === this._forma) return; this._forma = v; this._mudou("Shape"); }
+  get Material() { return this._material; }
+  set Material(v) {
+    const m = materialValido(v);
+    if (!m) throw new Error(`Material desconhecido: ${v} (use ${MATERIAIS.join(", ")})`);
+    if (m === this._material) return;
+    this._material = m; this._mudou("Material");
+  }
   Destroy() { this.Touched.limpar(); this.TouchEnded.limpar(); super.Destroy(); }
-  static props = ["Name", "Position", "Size", "Rotation", "Color", "Anchored", "CanCollide", "Transparency", "Shape"];
+  static props = ["Name", "Position", "Size", "Rotation", "Color", "Material", "Anchored", "CanCollide", "Transparency", "Shape"];
 }
 registrar(class Part extends BasePart { constructor() { super("Part"); } }, "Part");
 
@@ -378,7 +396,43 @@ registrar(Player, "Player");
 
 // ---------------------------------------------------------------- serviços
 class Servico extends Instance { static naoCriavel = true; }
-registrar(class Workspace extends Servico { constructor() { super("Workspace"); this.Gravity = 196.2; } static props = ["Name", "Gravity"]; }, "Workspace");
+registrar(class Workspace extends Servico {
+  constructor() { super("Workspace"); this.Gravity = 196.2; }
+  static props = ["Name", "Gravity"];
+  /**
+   * Raio: a primeira peça na linha que sai de `origem` na `direcao` (até `distancia`, padrão 500).
+   * Devolve { Peca, Posicao, Distancia } ou nada. `ignorar`: uma peça ou Model para não contar (ex.: o próprio personagem).
+   */
+  Raio(origem, direcao, distancia = 500, ignorar = null) {
+    const o = Vector3.de(origem), d0 = Vector3.de(direcao);
+    if (!d0.Magnitude) return null;
+    const d = d0.Unit, max = Math.min(2000, Math.max(0, +distancia || 500));
+    let melhor = null;
+    for (const p of this.GetDescendants()) {
+      if (!(p instanceof BasePart) || p._visual || p.Transparency >= 1) continue;
+      if (ignorar && (p === ignorar || p.EhDescendenteDe(ignorar))) continue;
+      const t = raioCaixa(o, d, p);
+      if (t !== null && t <= max && (!melhor || t < melhor.Distancia)) melhor = { Peca: p, Distancia: t };
+    }
+    if (!melhor) return null;
+    melhor.Posicao = o.add(d.mul(melhor.Distancia));
+    return melhor;
+  }
+}, "Workspace");
+
+/** Distância até a caixa da peça (sem rotação; bola/cilindro contam como caixa). null = não acerta. */
+function raioCaixa(o, d, p) {
+  let tmin = 0, tmax = Infinity;
+  for (const k of ["X", "Y", "Z"]) {
+    const lo = p.Position[k] - p.Size[k] / 2, hi = p.Position[k] + p.Size[k] / 2;
+    if (Math.abs(d[k]) < 1e-9) { if (o[k] < lo || o[k] > hi) return null; continue; }
+    let t1 = (lo - o[k]) / d[k], t2 = (hi - o[k]) / d[k];
+    if (t1 > t2) [t1, t2] = [t2, t1];
+    tmin = Math.max(tmin, t1); tmax = Math.min(tmax, t2);
+    if (tmin > tmax) return null;
+  }
+  return tmin;
+}
 registrar(class Players extends Servico {
   constructor() { super("Players"); this.LocalPlayer = null; this.PlayerAdded = new Sinal("PlayerAdded"); this.PlayerRemoving = new Sinal("PlayerRemoving"); }
   GetPlayers() { return this._filhos.filter((f) => f instanceof Player); }
@@ -564,6 +618,131 @@ registrar(class Emblemas extends Servico {
   _carregar(lista) { this._tem = new Set(Array.isArray(lista) ? lista.map(String) : []); }
 }, "Emblemas");
 
+// --------------------------------------------------------------- Animar
+// Animações suaves de peças, sem escrever laço:
+//   local anim = game:GetService("Animar")
+//   anim:Mover(peca, Vector3.new(0, 10, 0), 2)          -- vai até a posição em 2 s
+//   anim:Mover(peca, Vector3.new(0, 10, 0), 2, "suave") -- estilos: linear, suave, quicar, elastico
+//   anim:Girar(peca, Vector3.new(0, 180, 0), 1) · anim:Cor(peca, Color3.fromRGB(255,0,0), 1)
+//   anim:Tamanho(peca, Vector3.new(8, 1, 8), 1) · anim:Sumir(peca, 1) · anim:Aparecer(peca, 1)
+//   anim:VaiEVolta(peca, Vector3.new(0, 5, 0), 2)      -- anda até pos+deslocamento e volta, para sempre
+//   anim:Parar(peca) · anim.Terminou:Connect(function(peca, tipo) ... end)
+export const ESTILOS = {
+  linear: (t) => t,
+  suave: (t) => t * t * (3 - 2 * t),
+  quicar: (t) => {
+    const n = 7.5625, d = 2.75;
+    if (t < 1 / d) return n * t * t;
+    if (t < 2 / d) return n * (t -= 1.5 / d) * t + 0.75;
+    if (t < 2.5 / d) return n * (t -= 2.25 / d) * t + 0.9375;
+    return n * (t -= 2.625 / d) * t + 0.984375;
+  },
+  elastico: (t) => (t === 0 || t === 1 ? t : 2 ** (-10 * t) * Math.sin((t * 10 - 0.75) * ((2 * Math.PI) / 3)) + 1),
+};
+const misturar = (a, b, t) => a + (b - a) * t;
+registrar(class Animar extends Servico {
+  constructor() { super("Animar"); this._lista = []; this.Terminou = new Sinal("Terminou"); }
+  _nova(peca, tipo, prop, de, para, s, estilo, extra = {}) {
+    if (!(peca instanceof BasePart)) throw new Error("Animar: o 1º valor precisa ser uma peça");
+    const f = ESTILOS[String(estilo ?? "suave")] ;
+    if (!f) throw new Error(`Animar: estilos ${Object.keys(ESTILOS).join(", ")}`);
+    this._lista = this._lista.filter((a) => !(a.peca === peca && a.prop === prop));    // a nova substitui
+    if (this._lista.length >= 300) throw new Error("Animar: animações demais ao mesmo tempo");
+    this._lista.push({ peca, tipo, prop, de, para, dur: Math.max(0.01, +s || 1), t: 0, f, ...extra });
+    return true;
+  }
+  Mover(peca, destino, s, estilo) { return this._nova(peca, "Mover", "Position", peca.Position, Vector3.de(destino), s, estilo); }
+  Girar(peca, rotacao, s, estilo) { return this._nova(peca, "Girar", "Rotation", peca.Rotation, Vector3.de(rotacao), s, estilo); }
+  Tamanho(peca, tam, s, estilo) { return this._nova(peca, "Tamanho", "Size", peca.Size, Vector3.de(tam), s, estilo); }
+  Cor(peca, cor, s, estilo) { return this._nova(peca, "Cor", "Color", peca.Color, Color3.de(cor), s, estilo); }
+  Sumir(peca, s, estilo) { return this._nova(peca, "Sumir", "Transparency", peca.Transparency, 1, s, estilo, { colideNoFim: false }); }
+  Aparecer(peca, s, estilo) {
+    peca.CanCollide = true;
+    return this._nova(peca, "Aparecer", "Transparency", peca.Transparency, 0, s, estilo);
+  }
+  VaiEVolta(peca, deslocamento, s, estilo) {
+    return this._nova(peca, "VaiEVolta", "Position", peca.Position, peca.Position.add(Vector3.de(deslocamento)), s, estilo, { repetir: true });
+  }
+  Parar(peca) { this._lista = this._lista.filter((a) => a.peca !== peca); }
+  Animando(peca) { return this._lista.some((a) => a.peca === peca); }
+  _passo(dt) {
+    if (!this._lista.length) return;
+    const fim = [];
+    for (const a of this._lista) {
+      if (a.peca._destruida) { a.morta = true; continue; }
+      a.t += dt;
+      let k = Math.min(1, a.t / a.dur);
+      if (a.repetir) { const ciclo = (a.t / a.dur) % 2; k = ciclo <= 1 ? ciclo : 2 - ciclo; }
+      const e = a.f(k);
+      if (a.prop === "Color") a.peca.Color = new Color3(misturar(a.de.R, a.para.R, e), misturar(a.de.G, a.para.G, e), misturar(a.de.B, a.para.B, e));
+      else if (a.prop === "Transparency") a.peca.Transparency = misturar(a.de, a.para, e);
+      else a.peca[a.prop] = new Vector3(misturar(a.de.X, a.para.X, e), misturar(a.de.Y, a.para.Y, e), misturar(a.de.Z, a.para.Z, e));
+      if (!a.repetir && a.t >= a.dur) { a.morta = true; fim.push(a); }
+    }
+    this._lista = this._lista.filter((a) => !a.morta);
+    for (const a of fim) {
+      if (a.colideNoFim === false) a.peca.CanCollide = false;
+      this.Terminou.Fire(a.peca, a.tipo);
+    }
+  }
+}, "Animar");
+
+// ----------------------------------------------------------------- Ceu
+// Céu e luz do jogo (cada jogador vê o seu: use no LocalScript, ou ajuste no Studio).
+//   local ceu = game:GetService("Ceu")
+//   ceu.Hora = 18          -- 0 a 24 (6 = amanhecer, 12 = meio-dia, 18 = pôr do sol, 0 = noite)
+//   ceu.Neblina = 0.5      -- 0 (nenhuma) a 1 (muita)
+//   ceu.Estrelas = true    -- estrelas aparecem à noite
+registrar(class Ceu extends Servico {
+  constructor() { super("Ceu"); this._hora = 12; this._neblina = 0; this._estrelas = true; }
+  get Hora() { return this._hora; }
+  set Hora(v) { const n = Number(v); this._hora = Number.isFinite(n) ? ((n % 24) + 24) % 24 : 12; this._mudou("Hora"); }
+  get Neblina() { return this._neblina; }
+  set Neblina(v) { this._neblina = Math.max(0, Math.min(1, +v || 0)); this._mudou("Neblina"); }
+  get Estrelas() { return this._estrelas; }
+  set Estrelas(v) { this._estrelas = !!v; this._mudou("Estrelas"); }
+  static props = ["Hora", "Neblina", "Estrelas"];
+}, "Ceu");
+
+// -------------------------------------------------------------- Efeitos
+// Efeitos especiais (o jogo desenha; os scripts só pedem):
+//   local fx = game:GetService("Efeitos")
+//   fx:Explosao(posicao, raio)   -- clarão + som + empurra peças soltas + dano em quem está perto (até 100 no centro)
+//   fx:Confete(posicao)          -- festa de cores (vitória!)
+//   fx:Brilho(peca, segundos)    -- a peça pisca brilhando
+//   fx:Fumaca(posicao)
+registrar(class Efeitos extends Servico {
+  constructor() { super("Efeitos"); this.Mostrar = new Sinal("Mostrar"); this.Explodiu = new Sinal("Explodiu"); }
+  Explosao(posicao, raio = 10, dano = true) {
+    const c = Vector3.de(posicao), r = Math.max(1, Math.min(60, +raio || 10));
+    this.Mostrar.Fire("explosao", c, r);
+    try { this._pai?.GetService?.("Sons")?.Tocar("explosao"); } catch { /* sem som */ }
+    const ws = this._pai?.GetService?.("Workspace");
+    const atingidos = [];
+    for (const p of ws ? ws.GetDescendants() : []) {
+      if (!(p instanceof BasePart) || p._visual) continue;
+      const dif = p.Position.sub(c), dist = dif.Magnitude;
+      if (dist > r) continue;
+      const forca = 1 - dist / r;
+      const hum = p.Name === "HumanoidRootPart" ? p.Parent?.FindFirstChildOfClass("Humanoid") : null;
+      if (hum && dano) { hum.TakeDamage(Math.round(100 * forca)); atingidos.push(p.Parent); }
+      if (!p.Anchored) {
+        const dir = dist > 0.01 ? dif.Unit : new Vector3(0, 1, 0);
+        p.Velocity = p.Velocity.add(dir.mul(120 * forca)).add(new Vector3(0, 60 * forca, 0));
+        if (hum) p._empurrao = dir.mul(80 * forca);
+      }
+    }
+    this.Explodiu.Fire(c, r);
+    return atingidos.length;
+  }
+  Confete(posicao) { this.Mostrar.Fire("confete", Vector3.de(posicao), 6); }
+  Fumaca(posicao) { this.Mostrar.Fire("fumaca", Vector3.de(posicao), 4); }
+  Brilho(peca, segundos = 1) {
+    if (!(peca instanceof BasePart)) throw new Error("Efeitos: Brilho precisa de uma peça");
+    this.Mostrar.Fire("brilho", peca, Math.max(0.1, Math.min(10, +segundos || 1)));
+  }
+}, "Efeitos");
+
 // -------------------------------------------------------------- Internet
 // Pesquisa segura feita pelo servidor do ROLOX (Wikipédia e DuckDuckGo com busca segura).
 //   local net = game:GetService("Internet")
@@ -605,6 +784,9 @@ export class DataModel extends Instance {
   get Sons() { return this.GetService("Sons"); }
   get Emblemas() { return this.GetService("Emblemas"); }
   get Internet() { return this.GetService("Internet"); }
+  get Animar() { return this.GetService("Animar"); }
+  get Ceu() { return this.GetService("Ceu"); }
+  get Efeitos() { return this.GetService("Efeitos"); }
 }
 registrar(DataModel, "DataModel");
 
@@ -615,7 +797,7 @@ export class Mundo {
     this.assets = {};        // malhas importadas: id -> {obj, mtl, texturas}
     this.game = new DataModel();
     this.game._mundo = this;
-    for (const s of ["Workspace", "Players", "ReplicatedStorage", "ServerScriptService", "StarterPlayer", "RunService", "Rede", "Cofre", "Tela", "Sons", "Emblemas", "Internet"]) {
+    for (const s of ["Workspace", "Players", "ReplicatedStorage", "ServerScriptService", "StarterPlayer", "RunService", "Rede", "Cofre", "Tela", "Sons", "Emblemas", "Internet", "Animar", "Ceu", "Efeitos"]) {
       const c = new CLASSES[s](); c._nome = s; c.Parent = this.game;
     }
     const sps = new CLASSES.StarterPlayerScripts(); sps.Parent = this.game.StarterPlayer;
@@ -648,6 +830,7 @@ export function carregarInstancia(d, pai) {
     if (k === "Name") i._nome = v;
     else if (["Position", "Size", "Rotation"].includes(k)) i[k] = Vector3.de(v);
     else if (k === "Color") i.Color = Color3.de(v);
+    else if (k === "Material") { if (materialValido(v)) i.Material = v; }
     else i[k] = v;
   }
   for (const f of d.filhos || []) carregarInstancia(f, i);
@@ -658,16 +841,21 @@ export function carregarInstancia(d, pai) {
 export function salvarMundo(m, nome = "Meu jogo") {
   const servicos = {};
   for (const s of m.game.GetChildren()) {
-    if (s.ClassName === "Players" || s.ClassName === "RunService" || ["Rede", "Cofre", "Tela", "Sons", "Emblemas", "Internet"].includes(s.ClassName)) continue;
+    if (s.ClassName === "Players" || s.ClassName === "RunService" || ["Rede", "Cofre", "Tela", "Sons", "Emblemas", "Internet", "Animar", "Ceu", "Efeitos"].includes(s.ClassName)) continue;
     servicos[s.ClassName] = s.GetChildren().filter((f) => !f._temporaria).map(salvarInstancia);
   }
-  return { formato: "rolox-studio", versao: VERSAO_ARQUIVO, nome, servicos, assets: m.assets };
+  const c = m.game.Ceu;
+  return { formato: "rolox-studio", versao: VERSAO_ARQUIVO, nome, servicos, assets: m.assets,
+           ceu: { Hora: c.Hora, Neblina: c.Neblina, Estrelas: c.Estrelas } };
 }
 
 export function carregarMundo(dados) {
   if (!dados || dados.formato !== "rolox-studio") throw new Error("Arquivo não é um projeto do Rolox Studio");
   const m = new Mundo();
   m.assets = dados.assets || {};
+  if (dados.ceu && typeof dados.ceu === "object") {
+    for (const k of ["Hora", "Neblina", "Estrelas"]) if (k in dados.ceu) m.game.Ceu[k] = dados.ceu[k];
+  }
   for (const [servico, filhos] of Object.entries(dados.servicos || {})) {
     const s = m.game.FindFirstChild(servico) || m.game.GetChildren().find((c) => c.ClassName === servico);
     if (!s) continue;

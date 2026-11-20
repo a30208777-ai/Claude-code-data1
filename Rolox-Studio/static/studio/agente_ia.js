@@ -6,7 +6,7 @@
 // Apagar SEMPRE pede confirmação ao usuário (como no chat_ias.py). Tudo vira 1 passo
 // do desfazer (↶), porque o editor fotografa o mundo depois.
 
-import { Color3, Vector3, criar } from "./motor.js";
+import { Color3, Vector3, criar, materialValido } from "./motor.js";
 
 export const MAX_ACOES = 60;
 const LIMITE = 2000;                                       // coordenadas/tamanhos
@@ -80,6 +80,7 @@ export function aplicarPropriedades(i, p = {}) {
     if (typeof p.colide === "boolean") { i.CanCollide = p.colide; feito.push("colisão"); }
     if (p.transparencia !== undefined) { i.Transparency = num(p.transparencia, 0, 1); feito.push("transparência"); }
     if (FORMAS.has(p.forma)) { i.Shape = p.forma; feito.push("forma"); }
+    if (p.material !== undefined && materialValido(p.material)) { i.Material = p.material; feito.push("material"); }
   }
   if ("Value" in i && p.valor !== undefined) { i.Value = num(p.valor, 0, 1e12); feito.push("valor"); }
   if (typeof i.definirLinguagem === "function") {
@@ -136,6 +137,12 @@ export async function aplicarAcoes(mundo, acoes, { confirmar = async () => false
         if (!i || i.constructor.naoCriavel || i === mundo.workspace) { log.push(`❌ não dá para apagar ${a.alvo}`); continue; }
         if (await confirmar(`A IA quer apagar "${i.GetFullName()}". Permitir?`)) { const n = i.GetFullName(); i.Destroy(); log.push(`🗑️ apaguei ${n}`); }
         else log.push(`🚫 não apaguei ${i.GetFullName()} (você não permitiu)`);
+      } else if (tipo === "ceu") {
+        const c = mundo.game.Ceu;
+        if (a.hora !== undefined) c.Hora = num(a.hora, 0, 24);
+        if (a.neblina !== undefined) c.Neblina = num(a.neblina, 0, 1);
+        if (typeof a.estrelas === "boolean") c.Estrelas = a.estrelas;
+        log.push(`🌤️ céu: ${c.Hora}h, neblina ${c.Neblina}`);
       } else {
         log.push(`❌ ação desconhecida: ${tipo || "(vazia)"}`);
       }
@@ -151,7 +158,7 @@ export function resumoCena(mundo, maxLinhas = 120) {
   const visitar = (i, nivel) => {
     if (linhas.length >= maxLinhas || i._temporaria) return;
     let d = `${"  ".repeat(nivel)}${i.Name} [${i.ClassName}]`;
-    if ("Position" in i && i.Size) d += ` pos=${f(i.Position)} tam=${f(i.Size)}${i.Anchored ? "" : " solta"}${i.CanCollide ? "" : " sem-colisão"}`;
+    if ("Position" in i && i.Size) d += ` pos=${f(i.Position)} tam=${f(i.Size)}${i.Anchored ? "" : " solta"}${i.CanCollide ? "" : " sem-colisão"}${i.Material && i.Material !== "Plastico" ? ` ${i.Material}` : ""}`;
     if (typeof i.definirLinguagem === "function") d += ` ${i.Linguagem}, ${String(i.Source).split("\n").length} linhas`;
     if ("Value" in i) d += ` valor=${i.Value}`;
     linhas.push(d);
@@ -160,6 +167,8 @@ export function resumoCena(mundo, maxLinhas = 120) {
   for (const s of ["Workspace", "ServerScriptService", "ReplicatedStorage", "StarterPlayer"]) {
     const x = mundo.game.FindFirstChild(s); if (x) visitar(x, 0);
   }
+  const c = mundo.game.FindFirstChild("Ceu");
+  if (c && (c.Hora !== 12 || c.Neblina)) linhas.push(`Ceu: hora ${c.Hora}, neblina ${c.Neblina}`);
   if (linhas.length >= maxLinhas) linhas.push("... (mapa grande, resumo cortado)");
   return linhas.join("\n");
 }

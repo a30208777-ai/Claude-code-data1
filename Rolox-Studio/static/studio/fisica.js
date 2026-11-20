@@ -61,9 +61,24 @@ export class Fisica {
         const m = Math.min(1, dir.Magnitude);
         const u = m > 0.01 ? dir.Unit.mul(m) : new Vector3();
         hum.MoveDirection = u;
-        if (hum.Health <= 0) { vx = 0; vz = 0; }
-        else { vx = u.X * hum.WalkSpeed; vz = u.Z * hum.WalkSpeed; }
-        if ((e.pular || hum.Jump) && p._noChao && hum.Health > 0) { vy = hum.JumpPower; hum.Jump = false; }
+        const piso = p._noChao ? p._piso?.Material : null;
+        let alvoX = 0, alvoZ = 0;
+        if (hum.Health > 0) {
+          const vel = hum.WalkSpeed * (piso === "Areia" ? 0.6 : 1);
+          alvoX = u.X * vel; alvoZ = u.Z * vel;
+        }
+        // Gelo: o personagem demora para acelerar e para frear (escorrega)
+        const h0 = p._vh || { x: 0, z: 0 };
+        const k = piso === "Gelo" ? 1 - Math.exp(-1.2 * dt) : 1;
+        vx = h0.x + (alvoX - h0.x) * k; vz = h0.z + (alvoZ - h0.z) * k;
+        if (p._empurrao) {                      // explosão: empurra e vai diminuindo
+          vx += p._empurrao.X; vz += p._empurrao.Z;
+          p._empurrao = p._empurrao.Magnitude > 1 ? p._empurrao.mul(Math.exp(-4 * dt)) : null;
+        }
+        p._vh = { x: vx - (p._empurrao?.X || 0), z: vz - (p._empurrao?.Z || 0) };
+        if ((e.pular || hum.Jump) && p._noChao && hum.Health > 0) {
+          vy = hum.JumpPower * (piso === "Borracha" ? 1.6 : 1); hum.Jump = false;
+        }
         if (m > 0.01) p._rotY = Math.atan2(-u.X, -u.Z);
       }
       p._noChao = false;
@@ -88,7 +103,11 @@ export class Fisica {
           const ajuste = vel > 0 ? b.min[eixo] - p.Size[k] / 2 - 1e-4 : b.max[eixo] + p.Size[k] / 2 + 1e-4;
           pos = new Vector3(eixo === 0 ? ajuste : pos.X, eixo === 1 ? ajuste : pos.Y, eixo === 2 ? ajuste : pos.Z);
           p._pos = pos;
-          if (eixo === 1) { if (vel < 0) p._noChao = true; vy = 0; }
+          if (eixo === 1) {
+            if (vel < 0) { p._noChao = true; p._piso = s; }
+            // Borracha: quica (perde um pouco a cada pulo)
+            vy = vel < -25 && s.Material === "Borracha" ? -vel * 0.7 : 0;
+          }
           else if (eixo === 0) vx = 0; else vz = 0;
           a.min = caixa(p).min; a.max = caixa(p).max;
         }

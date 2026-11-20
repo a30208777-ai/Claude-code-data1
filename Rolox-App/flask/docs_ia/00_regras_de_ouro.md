@@ -12,4 +12,5 @@ sempre: sim
 7. Em loops infinitos SEMPRE tenha `wait(...)` dentro (sem isso o jogo trava).
 8. Cor é "#rrggbb". Peças novas já vêm ancoradas (não caem); use "ancorada": false só para coisa que deve cair.
 9. Se o pedido é grande (um jogo inteiro), faça um jogo pequeno que FUNCIONA, e diga o que dá para adicionar depois.
-10. Nunca invente serviço: só existem Players, RunService, Rede, Cofre, Tela, Sons, Emblemas, Internet.
+10. Nunca invente serviço: só existem Players, RunService, Rede, Cofre, Tela, Sons, Emblemas, Internet, Animar, Efeitos, Ceu.
+11. Capriche no visual: escolha "material" (Madeira, Grama, Pedra, Tijolo, Metal, Neon...) e cores que combinem.

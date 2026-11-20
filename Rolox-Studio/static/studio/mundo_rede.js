@@ -9,9 +9,9 @@
 // aparelhos, porque todos carregam o mesmo mapa. Peças criadas por Script no anfitrião
 // ganham chave "n<numero>" e são criadas nos outros.
 
-import { BasePart, Color3, Vector3, criar } from "./motor.js";
+import { BasePart, Color3, Vector3, criar, materialValido } from "./motor.js";
 
-export const PROPS = ["Position", "Rotation", "Size", "Color", "Transparency", "CanCollide", "Anchored", "Shape", "Name"];
+export const PROPS = ["Position", "Rotation", "Size", "Color", "Transparency", "CanCollide", "Anchored", "Shape", "Material", "Name"];
 const CLASSES = new Set(["Part", "SpawnLocation", "Model", "Folder"]);
 const MAX_POR_ENVIO = 300;
 
@@ -37,6 +37,8 @@ function aplicarProp(i, prop, v) {
     if (typeof v === "boolean") i[prop] = v;
   } else if (prop === "Shape") {
     if (["Block", "Ball", "Cylinder"].includes(v)) i.Shape = v;
+  } else if (prop === "Material") {
+    if (materialValido(v)) i.Material = v;
   } else if (prop === "Name") {
     if (typeof v === "string" && v.length <= 60) i.Name = v;
   }

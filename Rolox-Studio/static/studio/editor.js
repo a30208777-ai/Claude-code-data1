@@ -3,7 +3,7 @@
 import { OrbitControls } from "three/addons/OrbitControls.js";
 import { TransformControls } from "three/addons/TransformControls.js";
 import {
-  BasePart, BaseScript, Color3, Vector3, criar, mundoInicial, salvarMundo, carregarMundo, definirReporteDeErro,
+  BasePart, BaseScript, Color3, Vector3, criar, mundoInicial, salvarMundo, carregarMundo, definirReporteDeErro, MATERIAIS,
 } from "./motor.js";
 import { Render } from "./render.js";
 import { Jogo } from "./jogo.js";
@@ -214,9 +214,10 @@ requestAnimationFrame(loop);
 const ICONES = {
   Workspace: "🌍", Part: "▫️", SpawnLocation: "🟩", MeshPart: "🧊", Model: "📦", Folder: "📁",
   Script: "🐍", LocalScript: "📜", ModuleScript: "🧩", ServerScriptService: "🖥️", ReplicatedStorage: "🗄️",
-  StarterPlayer: "🧍", StarterPlayerScripts: "📂", Rede: "📡", Cofre: "🔐", Tela: "🖥️", Sons: "🔊", Emblemas: "🏅", Internet: "🌐", Som: "🎵", TelaVideo: "🎬", IntValue: "🔢", NumberValue: "🔢",
+  StarterPlayer: "🧍", StarterPlayerScripts: "📂", Rede: "📡", Cofre: "🔐", Tela: "🖥️", Sons: "🔊", Emblemas: "🏅", Internet: "🌐", Ceu: "🌤️", Animar: "🎞️", Efeitos: "✨", Som: "🎵", TelaVideo: "🎬", IntValue: "🔢", NumberValue: "🔢",
 };
-const SERVICOS_VISIVEIS = ["Workspace", "ServerScriptService", "ReplicatedStorage", "StarterPlayer"];
+const SERVICOS_VISIVEIS = ["Workspace", "ServerScriptService", "ReplicatedStorage", "StarterPlayer", "Ceu"];
+const NOMES_MATERIAIS = { Plastico: "Plástico", Agua: "Água" };
 
 function desenharExplorer() {
   const raiz = $("#explorer");
@@ -271,11 +272,14 @@ function desenharProps() {
     if (v instanceof Vector3) linhas.push(vec(p));
     else if (v instanceof Color3) linhas.push(linha(p, el("input", { type: "color", value: v.toHex(), oninput: (e) => { i.Color = e.target.value; marcar(); } })));
     else if (typeof v === "boolean") linhas.push(linha(p, el("input", { type: "checkbox", checked: v, onchange: (e) => { i[p] = e.target.checked; marcar(); } })));
-    else if (p === "Shape") {
+    else if (p === "Material") {
+      linhas.push(linha("Material", el("select", { onchange: (e) => { i.Material = e.target.value; marcar(); } },
+        MATERIAIS.map((m) => el("option", { value: m, selected: m === v }, NOMES_MATERIAIS[m] || m)))));
+    } else if (p === "Shape") {
       linhas.push(linha(p, el("select", { onchange: (e) => { i.Shape = e.target.value; i._mudou("Shape"); marcar(); } },
         ["Block", "Ball", "Cylinder"].map((s) => el("option", { value: s, selected: s === v }, { Block: "Bloco", Ball: "Bola", Cylinder: "Cilindro" }[s])))));
     } else if (typeof v === "number") {
-      linhas.push(linha(p, el("input", { type: "number", step: p === "Transparency" ? "0.1" : "1", value: v,
+      linhas.push(linha(p, el("input", { type: "number", step: p === "Transparency" || p === "Neblina" ? "0.1" : "1", value: v,
         onchange: (e) => { i[p] = +e.target.value; marcar(); } })));
     } else if (p === "MeshId") linhas.push(linha(p, el("input", { type: "text", value: v, readonly: true })));
     else if (p === "Midia") linhas.push(linha("Arquivo", el("input", { type: "text", value: v || "(nenhum)", readonly: true })));

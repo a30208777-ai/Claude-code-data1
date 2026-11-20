@@ -121,6 +121,7 @@ export class Jogo {
     this.entradas.set(this.local.raiz, this._relativoCamera(lado, frente, t.has(" ") || this.toque.pular));
     this._sincronizarCelulares();
     this.fisica.passo(dt, this.entradas);
+    this.mundo.game.Animar._passo(dt);
     this.mundo.game.RunService.Heartbeat.Fire(dt);
     try { this.lua.passo(); } catch (e) { this.saida(e.message, "erro"); }
     // respawn de quem morreu
