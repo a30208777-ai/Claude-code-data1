@@ -10,6 +10,7 @@ import flet as ft
 
 from . import avatar as avatar_mod
 from . import config
+from .studio import COMANDO_LIGAR, MODELOS as MODELOS_STUDIO, StudioLocal
 from .api import ErroRolox, RoloxAPI
 
 CHAVE_REFRESH = "rolox.refresh_token"
@@ -248,12 +249,13 @@ class RoloxApp:
                 ft.NavigationBarDestination(icon=ft.Icons.HOME, label="Início"),
                 ft.NavigationBarDestination(icon=ft.Icons.DNS, label="Servidores"),
                 ft.NavigationBarDestination(icon=ft.Icons.PERSON, label="Perfil"),
+                ft.NavigationBarDestination(icon=ft.Icons.BUILD, label="Studio"),
             ] + ([ft.NavigationBarDestination(icon=ft.Icons.ADMIN_PANEL_SETTINGS, label="ADM")]
                  if self.perfil.get("is_adm") else []),
         )
 
     def abrir_aba(self, indice: int) -> None:
-        abas = [self.aba_inicio, self.aba_servidores, self.aba_perfil]
+        abas = [self.aba_inicio, self.aba_servidores, self.aba_perfil, self.aba_studio]
         if self.perfil.get("is_adm"):
             abas.append(self.aba_adm)
         abas[min(indice, len(abas) - 1)]()
@@ -591,6 +593,79 @@ class RoloxApp:
             ], spacing=14, scroll=ft.ScrollMode.AUTO),
         ), self.barra(2))
 
+    # --------------------------------------------------------------- Studio
+    def aba_studio(self) -> None:
+        studio = StudioLocal()
+        status = ft.Row([ft.ProgressRing(width=18, height=18), ft.Text("Procurando o Studio neste aparelho...")])
+        corpo = ft.Column(spacing=12, horizontal_alignment=ft.CrossAxisAlignment.STRETCH)
+
+        def cartao(titulo: str, descricao: str, botoes: list) -> ft.Control:
+            return ft.Card(content=ft.Container(padding=14, content=ft.Column([
+                ft.Text(titulo, weight=ft.FontWeight.BOLD, size=16),
+                ft.Text(descricao, size=13),
+                ft.Row(botoes, wrap=True, spacing=8),
+            ], spacing=6)))
+
+        def desligado() -> list:
+            return [
+                cartao("O Studio não está ligado",
+                       "O Studio é o editor de jogos do Rolox (3D, peças, scripts em Lua e Python). "
+                       "Ele roda neste aparelho. No Termux, abra uma nova sessão (deslize da esquerda e "
+                       "toque em NEW SESSION) e rode:",
+                       []),
+                ft.Container(padding=10, border_radius=8, bgcolor=ft.Colors.with_opacity(0.08, ft.Colors.ON_SURFACE),
+                             content=ft.Text(COMANDO_LIGAR, selectable=True, font_family="monospace", size=13)),
+                ft.Text("Primeira vez? Antes rode: pip install -r requirements.txt", size=12, italic=True),
+                ft.FilledButton("Tentar de novo", icon=ft.Icons.REFRESH, on_click=verificar),
+            ]
+
+        async def ligado():
+            projetos = await studio.projetos()
+            itens = [
+                cartao("Abrir o Studio", "Crie e teste jogos. No celular use o Studio leve; no computador, o Studio PC.", [
+                    ft.FilledButton("Studio leve", icon=ft.Icons.PHONE_ANDROID, url=studio.url("leve")),
+                    ft.OutlinedButton("Studio PC", icon=ft.Icons.COMPUTER, url=studio.url("pc")),
+                ]),
+                ft.Text("Começar um jogo novo", size=18, weight=ft.FontWeight.BOLD),
+            ]
+            for ident, nome, descricao in MODELOS_STUDIO:
+                itens.append(cartao(nome, descricao, [
+                    ft.FilledButton("Criar", icon=ft.Icons.ADD_CIRCLE, url=studio.url("leve", modelo=ident)),
+                ]))
+            itens.append(ft.Row([ft.Text("Meus projetos", size=18, weight=ft.FontWeight.BOLD, expand=True),
+                                 ft.IconButton(ft.Icons.REFRESH, tooltip="Atualizar", on_click=verificar)]))
+            if not projetos:
+                itens.append(ft.Text("Nenhum projeto salvo ainda. No Studio, use Salvar.", size=13, italic=True))
+            for p in projetos:
+                itens.append(ft.Card(content=ft.ListTile(
+                    leading=ft.Icon(ft.Icons.SPORTS_ESPORTS),
+                    title=ft.Text(p["nome"]),
+                    subtitle=ft.Text(f"{max(1, round(p.get('tamanho', 0) / 1024))} KB"),
+                    trailing=ft.TextButton("Abrir", icon=ft.Icons.FOLDER_OPEN, url=studio.url("leve", projeto=p["nome"])),
+                )))
+            return itens
+
+        async def verificar(_=None):
+            status.controls = [ft.ProgressRing(width=18, height=18), ft.Text("Procurando o Studio neste aparelho...")]
+            self.page.update()
+            if await studio.ligado():
+                status.controls = [ft.Icon(ft.Icons.CHECK_CIRCLE, color=ft.Colors.GREEN), ft.Text(f"Studio ligado em {studio.base}")]
+                corpo.controls = await ligado()
+            else:
+                status.controls = [ft.Icon(ft.Icons.ERROR_OUTLINE, color=COR_HACK), ft.Text("Studio desligado")]
+                corpo.controls = desligado()
+            self.page.update()
+
+        self.mostrar(ft.Container(
+            padding=16,
+            content=ft.Column([
+                ft.Row([ft.Icon(ft.Icons.BUILD, color=COR_PRIMARIA), ft.Text("Rolox Studio", size=24, weight=ft.FontWeight.BOLD)]),
+                status,
+                corpo,
+            ], spacing=12, scroll=ft.ScrollMode.AUTO, expand=True),
+        ), self.barra(3))
+        self.page.run_task(verificar)
+
     # ------------------------------------------------------------------ ADM
     def aba_adm(self) -> None:
         resumo = ft.Text("")
@@ -693,5 +768,5 @@ class RoloxApp:
                 secao("IPs bloqueados", ft.Icons.SHIELD, ips),
                 secao("Servidores", ft.Icons.DNS, servidores),
             ], spacing=14, scroll=ft.ScrollMode.AUTO, expand=True),
-        ), self.barra(3))
+        ), self.barra(4))
         self.page.run_task(carregar)

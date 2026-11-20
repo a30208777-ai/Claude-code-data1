@@ -12,6 +12,7 @@ Segue a arquitetura v3: **o celular acessa direto as bases de dados do Supabase*
 | **Início** | Status (lobby, fila com posição ou servidor) e **alertas de segurança**: "Alguém tentou entrar na sua conta", com IP, data e botão para ver a senha que foi usada. |
 | **Servidores** | Lista servidores com jogadores/capacidade e etiqueta HACK/MOD; filtro "só os que posso entrar"; criar servidor; entrar ou ir para a fila. |
 | **Chat** | Chat do servidor com filtro de palavrões (filtro local antes da IA SELECT); botão Sair. O host manda heartbeat a cada 15 s. |
+| **Studio** | Mostra se o Rolox Studio está ligado neste aparelho, abre o Studio leve ou o PC, cria um jogo novo a partir de um modelo (Vazio, Obby, Coleta de moedas) e lista os projetos salvos para abrir direto. Se o Studio estiver desligado, mostra o comando para ligar no Termux. |
 | **Perfil (config)** | Idioma do chat, jogo onde usa hack/mod (troca rápida), mostrar localização, e-mail opcional, sair da conta. |
 
 ## Rodar

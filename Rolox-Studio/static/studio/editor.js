@@ -683,6 +683,17 @@ setInterval(() => {
 desenharExplorer();
 desenharProps();
 if (!historico.pilha.length) reiniciarHistorico();
+
+// abrir direto pelo endereço (o app Rolox usa isso):
+//   /studio/leve?projeto=meu-jogo     abre um projeto salvo
+//   /studio/leve?modelo=obby          começa com um modelo (vazio, obby, moedas)
+(() => {
+  const p = new URLSearchParams(location.search);
+  const projeto = p.get("projeto"), modelo = p.get("modelo");
+  if (projeto && /^[A-Za-z0-9_-]{1,40}$/.test(projeto)) carregarProjeto(projeto);
+  else if (modelo) { const x = MODELOS.find((m) => m.id === modelo); if (x) usarModelo(x); }
+  if (projeto || modelo) history.replaceState(null, "", location.pathname);   // recarregar não repete
+})();
 saida(`Rolox Studio ${PESADO ? "PC (pesado)" : "leve (celular)"} pronto.`, "sistema");
 if (PESADO) carregarPython().catch(() => {});      // no PC já deixa o Python carregando
 window.__studio = { estado, acoes, render };      // para testes e depuração
