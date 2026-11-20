@@ -36,7 +36,7 @@ LIMITES = {"bluetooth": 5, "cabo": 2}
 
 # Sites do ROLOX que podem LER a lista de projetos deste Studio (só GET /api/projetos),
 # para a aba Studio do site mostrar "ligado" e os projetos. Mais sites: ROLOX_STUDIO_ORIGENS=a,b
-ORIGENS_PADRAO = ("https://rolox.onrender.com",)
+ORIGENS_PADRAO = ("https://rolox-gj2i.onrender.com",)
 
 
 def origens_permitidas() -> set[str]:
