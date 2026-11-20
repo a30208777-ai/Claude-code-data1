@@ -17,6 +17,8 @@ from typing import Optional
 
 import requests
 
+import docs_ia
+
 CUSTO_TICKETS = 10
 MAX_MENSAGENS = 12          # histórico que vai para a IA
 MAX_CARACTERES = 2000       # por mensagem
@@ -169,6 +171,10 @@ def perguntar(mensagens: list[dict], http=requests, agora=time.monotonic,
               cena: str = "") -> tuple[Optional[str], Optional[str]]:
     """Tenta os modelos em ordem até um responder. Devolve (modelo, texto) ou (None, None)."""
     sistema = INSTRUCAO
+    escolhidos = docs_ia.escolher(mensagens)
+    if escolhidos:
+        sistema += "\n\n" + docs_ia.como_texto(escolhidos)
+        log.info("IA: documentos %s", ", ".join(d.nome for d in escolhidos))
     if cena:
         sistema += "\n\nMAPA ATUAL (nome [classe] pos tam):\n" + str(cena)[:MAX_CENA]
     historico = [{"role": "system", "content": sistema}] + mensagens
@@ -182,7 +188,7 @@ def perguntar(mensagens: list[dict], http=requests, agora=time.monotonic,
             cab["Authorization"] = f"Bearer {chave}"
         inicio = agora()
         try:
-            r = http.post(url, headers=cab, json={"model": nome, "messages": historico, "max_tokens": 1200},
+            r = http.post(url, headers=cab, json={"model": nome, "messages": historico, "max_tokens": 3000},
                           timeout=min(PRAZO_MODELO_S, resta))
         except requests.RequestException as e:
             log.info("IA %s: falhou (%s) em %.1fs", nome, type(e).__name__, agora() - inicio)
