@@ -21,6 +21,11 @@ SUPABASE_URL = os.environ.get("ROLOX_SUPABASE_URL", "https://llgriaqnlcylpaxudrl
 SUPABASE_CHAVE = os.environ.get("ROLOX_SUPABASE_CHAVE", "sb_publishable_GFKzsWxgUtXTff5fHWVVfQ_dUKdF62n")
 
 USERNAME_VALIDO = re.compile(r"^[a-z0-9]([a-z0-9._-]{1,30}[a-z0-9])$")
+MOTIVOS_DENUNCIA = {
+    "xingamento": "Xingamento / ofensa", "trapaca": "Trapaça / hack", "golpe": "Golpe / pediu senha",
+    "improprio": "Conteúdo impróprio", "spam": "Spam / propaganda", "outro": "Outro",
+}
+
 # redes que o parceiro pode mostrar (o banco confere o link: https e o domínio da própria rede)
 REDES_SOCIAIS = {
     "youtube": ("▶️", "YouTube", "https://youtube.com/@seucanal"),
@@ -65,6 +70,7 @@ MENSAGENS = {
     "quantidade_invalida": "Digite um número de tickets válido.",
     "42501": "Você não tem permissão para isso.",
     "nome_do_mapa": "Dê um nome para o mapa.",
+    "denuncia_invalida": "Escolha o motivo da denúncia.",
     "mapa_nao_encontrado": "Mapa não encontrado.",
     "mapa_invalido": "Esse arquivo não é um mapa do ROLOX Studio.",
     "mapa_grande": "Mapa grande demais (máx. 5 MB).",
@@ -405,6 +411,20 @@ class RoloxAPI:
 
     def cofre_salvar(self, mapa_id: str, dados: dict) -> None:
         self._req("POST", "/rest/v1/rpc/cofre_salvar", json={"p_mapa": mapa_id, "p_dados": dados})
+
+    # ---------------------------------------------------------- denúncias
+    def denunciar(self, tipo: str, alvo: str, motivo: str, detalhe: str = "") -> dict:
+        if tipo not in ("jogador", "jogo") or motivo not in MOTIVOS_DENUNCIA:
+            raise ErroRolox("denuncia_invalida")
+        return self._req("POST", "/rest/v1/rpc/denunciar", json={
+            "p_tipo": tipo, "p_alvo": (alvo or "").strip()[:64], "p_motivo": motivo, "p_detalhe": (detalhe or "").strip()[:300]})
+
+    def adm_denuncias(self, status: str = "aberta") -> list[dict]:
+        r = self._req("POST", "/rest/v1/rpc/adm_denuncias", json={"p_status": status})
+        return r if isinstance(r, list) else []
+
+    def adm_resolver_denuncia(self, denuncia_id: int, status: str, nota: str = "") -> None:
+        self._req("POST", "/rest/v1/rpc/adm_resolver_denuncia", json={"p_id": denuncia_id, "p_status": status, "p_nota": nota[:300]})
 
     def visitar_mapa(self, mapa_id: str) -> None:
         self._req("POST", "/rest/v1/rpc/visitar_mapa", json={"p_id": mapa_id})

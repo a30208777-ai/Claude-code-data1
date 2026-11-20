@@ -84,4 +84,5 @@
     </form>
   </div>
 {% else %}<p class="muted">Nenhum servidor.</p>{% endfor %}
+{% with voltar='/adm' %}{% include "_denuncias.html" %}{% endwith %}
 {% endblock %}

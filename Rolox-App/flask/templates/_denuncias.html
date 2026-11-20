@@ -1,0 +1,23 @@
+{# fila de denúncias (painel ADM e painel do Dono). Precisa: denuncias, voltar #}
+<h2 id="denuncias">🚩 Denúncias abertas ({{ denuncias|length }})</h2>
+{% for d in denuncias %}
+  <div class="cartao coluna">
+    <div class="titulo">
+      {% if d.tipo == 'jogo' %}🎮 Jogo: {{ d.alvo_nome }}{% else %}👤 <a class="nome-link" href="{{ url_for('jogador', nome=d.alvo) }}">{{ d.alvo_nome }}</a>{% endif %}
+      <span class="etiqueta">{{ motivos_denuncia.get(d.motivo, d.motivo) }}</span>
+      {% if d.vezes > 1 %}<span class="etiqueta neutra">{{ d.vezes }} denúncias</span>{% endif %}
+    </div>
+    {% if d.detalhe %}<div class="detalhe">“{{ d.detalhe }}”</div>{% endif %}
+    <div class="detalhe">por {{ d.denunciante }} · {{ d.criado_em|data }}</div>
+    <div class="linha botoes">
+      {% for acao, texto in [('resolvida', '✅ Resolvida'), ('descartada', 'Descartar')] %}
+      <form method="post" action="{{ url_for('resolver_denuncia', denuncia_id=d.id, acao=acao) }}">
+        <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="voltar" value="{{ voltar }}">
+        <button class="btn pequeno {{ '' if acao == 'resolvida' else 'contorno' }}">{{ texto }}</button>
+      </form>
+      {% endfor %}
+    </div>
+  </div>
+{% else %}
+  <p class="muted"><i>Nenhuma denúncia aberta. 🎉</i></p>
+{% endfor %}

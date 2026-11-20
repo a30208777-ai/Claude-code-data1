@@ -27,9 +27,13 @@
   <a class="btn-jogo" href="{{ url_for('dono') if eh_dono else url_for('jogos') }}" aria-label="Voltar">✕</a>
   {% endif %}
   <strong class="nome-jogo">{{ m.nome }}{% if teste %}<span class="etiqueta neutra">TESTE</span>{% endif %}</strong>
+  <button class="btn-jogo so-celular" id="abrirMais" aria-label="Mais opções" aria-expanded="false">⋯</button>
+  <div class="mais-jogo" id="maisJogo">
   {% if not teste %}<button class="btn-jogo" id="curtir" data-curti="{{ '1' if curti else '0' }}"
     aria-label="Curtir este jogo">{{ '❤️' if curti else '🤍' }}</button>{% endif %}
   <button class="btn-jogo" id="girarTela" hidden aria-label="Deitar a tela">🔄</button>
+  {% if not teste %}<button class="btn-jogo" id="abrirDenuncia" aria-label="Denunciar">🚩</button>{% endif %}
+  </div>
   <button class="btn-jogo" id="abrirRanking" aria-label="Ranking do jogo">🏆</button>
   {% if s %}<span class="online-jogo" id="online" title="Jogadores no mapa">👥 1</span>{% endif %}
   {% if s %}<button class="btn-jogo" id="abrirChat" aria-label="Chat">💬<span id="naoLidas" hidden></span></button>{% endif %}
@@ -44,6 +48,49 @@
   <button id="botaoPulo" aria-label="Pular">⤒</button>
 </div>
 <p id="dica" class="dica-jogo"></p>
+
+{% if not teste %}
+<dialog id="dlgDenuncia" class="dlg-jogo">
+  <form id="formDenuncia" class="pilha" method="dialog">
+    <h2>🚩 Denunciar</h2>
+    <label>O quê?
+      <select id="denTipo"><option value="jogo">Este jogo ({{ m.nome }})</option><option value="jogador">Um jogador</option></select>
+    </label>
+    <label id="denJogadorRotulo" hidden>Nome do jogador
+      <input type="text" id="denJogador" list="denNomes" maxlength="32" autocapitalize="none" autocorrect="off">
+      <datalist id="denNomes"></datalist>
+    </label>
+    <label>Motivo
+      <select id="denMotivo">{% for k, v in motivos_denuncia.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}</select>
+    </label>
+    <label>O que aconteceu? (opcional)<input type="text" id="denDetalhe" maxlength="300"></label>
+    <div class="linha"><button class="btn" value="enviar">Enviar</button><button class="btn contorno" value="cancelar" formnovalidate>Cancelar</button></div>
+  </form>
+</dialog>
+<script>
+  {
+    const dlg = document.getElementById('dlgDenuncia'), tipo = document.getElementById('denTipo');
+    const rotulo = document.getElementById('denJogadorRotulo'), campo = document.getElementById('denJogador');
+    tipo.addEventListener('change', () => { rotulo.hidden = tipo.value !== 'jogador'; });
+    document.getElementById('abrirDenuncia').addEventListener('click', (e) => {
+      e.currentTarget.blur();
+      // nomes de quem está no mapa agora (as etiquetas em cima das cabeças)
+      const lista = document.getElementById('denNomes'); lista.replaceChildren();
+      for (const n of document.querySelectorAll('#nomes .nome-jogador')) {
+        const o = document.createElement('option'); o.value = n.textContent.replace(' 🤝', '').trim(); lista.append(o);
+      }
+      dlg.showModal();
+    });
+    dlg.addEventListener('close', async () => {
+      if (dlg.returnValue !== 'enviar') return;
+      const corpo = { tipo: tipo.value, alvo: tipo.value === 'jogo' ? {{ m.id|tojson }} : campo.value.trim().toLowerCase(),
+                      motivo: document.getElementById('denMotivo').value, detalhe: document.getElementById('denDetalhe').value };
+      try { await api('/api/denunciar', corpo); aviso('🚩 Denúncia enviada. Obrigado!', 'ok'); }
+      catch (err) { aviso(err.message); }
+    });
+  }
+</script>
+{% endif %}
 
 <section id="painelRanking" class="chat-jogo ranking-jogo" hidden aria-label="Ranking">
   <div class="topo-chat"><b>🏆 Recordes</b><span class="nota">o maior de cada jogador</span>
@@ -108,6 +155,15 @@
   }
 </script>
 
+<script>
+  // celular em pé: ❤ 🔄 🚩 ficam dentro do "⋯" (a barra não aperta o nome do jogo)
+  {
+    const b = document.getElementById('abrirMais'), menu = document.getElementById('maisJogo');
+    b.addEventListener('click', (e) => { e.stopPropagation(); const a = menu.classList.toggle('aberto'); b.setAttribute('aria-expanded', a); b.blur(); });
+    menu.addEventListener('click', () => { menu.classList.remove('aberto'); b.setAttribute('aria-expanded', 'false'); });
+    addEventListener('pointerdown', (e) => { if (!menu.contains(e.target) && e.target !== b) menu.classList.remove('aberto'); });
+  }
+</script>
 <script>
   // tela deitada: tela cheia + trava em paisagem (onde o navegador deixa)
   {

@@ -28,6 +28,8 @@
   <p class="muted"><i>Nada esperando análise. 🎉</i></p>
 {% endfor %}
 
+{% with voltar='/dono' %}{% include "_denuncias.html" %}{% endwith %}
+
 <h2 id="parcerias">🤝 Parcerias</h2>
 {% if chave_nova %}
   <div class="cartao coluna chave-nova">

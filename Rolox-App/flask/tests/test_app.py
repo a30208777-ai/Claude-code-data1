@@ -327,6 +327,28 @@ class SupabaseFalso:
                 self.perfil["tickets"] += r["ganhou"]
                 self.presente = dict(r, ganhou=0)
             return Resp(200, r)
+        if p in ("/rest/v1/rpc/denunciar", "/rest/v1/rpc/adm_denuncias", "/rest/v1/rpc/adm_resolver_denuncia"):
+            self.denuncias = getattr(self, "denuncias", [])
+            nome = p.rsplit("/", 1)[1]
+            if nome == "denunciar":
+                if json["p_tipo"] == "jogador" and json["p_alvo"] not in ("bob", "alice"):
+                    return Resp(400, {"code": "P0001", "message": "jogador não encontrado"})
+                if json["p_alvo"] == "alice":
+                    return Resp(400, {"code": "P0001", "message": "você não pode se denunciar"})
+                if any(d["alvo"] == json["p_alvo"] for d in self.denuncias):
+                    return Resp(200, {"ok": True, "repetida": True, "alvo_nome": json["p_alvo"]})
+                self.denuncias.append({"id": len(self.denuncias) + 1, "tipo": json["p_tipo"], "alvo": json["p_alvo"],
+                                       "alvo_nome": json["p_alvo"], "motivo": json["p_motivo"], "detalhe": json["p_detalhe"],
+                                       "status": "aberta", "denunciante": "alice", "criado_em": "", "vezes": 1})
+                return Resp(200, {"ok": True, "id": len(self.denuncias), "alvo_nome": json["p_alvo"]})
+            if not (self.perfil["is_adm"] or self.dono):
+                return Resp(403, {"code": "42501", "message": "apenas ADM"})
+            if nome == "adm_denuncias":
+                return Resp(200, [d for d in self.denuncias if d["status"] == "aberta"])
+            for d in self.denuncias:
+                if d["id"] == json["p_id"]:
+                    d["status"] = json["p_status"]
+            return Resp(204)
         if p.startswith("/rest/v1/rpc/adm_"):
             if not self.perfil["is_adm"]:
                 return Resp(403, {"code": "42501", "message": "apenas ADM"})
@@ -1222,3 +1244,34 @@ def test_cofre_salva_e_volta(cliente, sb):
     cliente.post(f"/jogos/{mid}/jogar", data={"csrf": tok})
     assert f"/api/cofre/{mid}" in html(cliente.get(f"/jogar/{mid}?s=s9"))
     assert "cofre: null" in html(cliente.get(f"/jogar/{mid}?teste=1"))           # modo teste não salva
+
+
+def test_denuncias_jogador_e_moderacao(cliente, sb, monkeypatch):
+    import discord_log
+    enviados = []
+    monkeypatch.setattr(discord_log, "registrar_sync", lambda tipo, alvo, motivo="", por="", onde="", *a, **k: enviados.append((tipo, alvo, motivo, por)) or True)
+    entrar(cliente)
+    tok = csrf(cliente)
+    t = html(cliente.get("/jogador/bob")) if False else ""
+    r = cliente.post("/denunciar", data={"csrf": tok, "tipo": "jogador", "alvo": "bob", "motivo": "xingamento",
+                                         "detalhe": "me xingou", "voltar": "/jogador/bob"})
+    assert r.headers["Location"].endswith("/jogador/bob")
+    assert enviados[-1][0] == "denuncia" and "bob" in enviados[-1][1] and "Xingamento" in enviados[-1][2]
+    # repetida: não manda de novo para o Discord
+    cliente.post("/denunciar", data={"csrf": tok, "tipo": "jogador", "alvo": "bob", "motivo": "spam"})
+    assert len(enviados) == 1
+    # motivo inventado / voltar para fora do site
+    cliente.post("/denunciar", data={"csrf": tok, "tipo": "jogador", "alvo": "bob", "motivo": "nada"})
+    r = cliente.post("/denunciar", data={"csrf": tok, "tipo": "jogo", "alvo": "x", "motivo": "spam", "voltar": "//golpe.com"})
+    assert r.headers["Location"].endswith("/inicio")
+    # pelo jogo (JSON)
+    assert cliente.post("/api/denunciar", json={"tipo": "jogador", "alvo": "alice", "motivo": "spam"},
+                        headers={"X-CSRF": tok}).status_code == 400
+    # moderação: só ADM/dono
+    assert "Denúncias abertas" not in html(cliente.get("/dono"))
+    sb.dono = True
+    t = html(cliente.get("/dono"))
+    assert "Denúncias abertas (2)" in t and "me xingou" in t
+    cliente.post("/moderacao/denuncias/1/resolvida", data={"csrf": tok, "voltar": "/dono"})
+    assert "Denúncias abertas (1)" in html(cliente.get("/dono"))
+    assert cliente.post("/moderacao/denuncias/1/apagar", data={"csrf": tok}).status_code == 404

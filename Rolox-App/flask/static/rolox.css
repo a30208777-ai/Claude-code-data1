@@ -201,3 +201,15 @@ a.nome-link:hover { text-decoration: underline; }
 .bolinha { display: inline-block; width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--borda); vertical-align: middle; }
 a.cartao { color: inherit; text-decoration: none; }
 .online-jogo.anfitriao::before { content: "👑 "; }
+details.denunciar { margin: 16px 0; }
+details.denunciar summary { cursor: pointer; color: var(--perigo); font-weight: 600; }
+dialog.dlg-jogo { max-width: min(420px, calc(100vw - 32px)); border: 0; border-radius: 14px; padding: 16px; background: var(--cartao); color: var(--texto, inherit); }
+dialog.dlg-jogo::backdrop { background: #0008; }
+.mais-jogo { display: contents; }
+.so-celular { display: none; }
+@media (max-width: 600px) and (orientation: portrait) {
+  .so-celular { display: inline-grid; }
+  .mais-jogo { display: none; position: absolute; top: calc(100% - 4px); right: 12px; flex-direction: column; gap: 6px;
+    padding: 6px; border-radius: 12px; background: #000c; z-index: 6; }
+  .mais-jogo.aberto { display: flex; }
+}

@@ -1,7 +1,7 @@
 """Registro de banimentos e punições do ROLOX nos webhooks do Discord.
 
     Banimentos (ban, desban, IP bloqueado/desbloqueado) -> ROLOX_WEBHOOK_BANIMENTOS
-    Punições (sem chat, chat liberado, aviso)           -> ROLOX_WEBHOOK_PUNICOES
+    Punições (sem chat, chat liberado, aviso, denúncia) -> ROLOX_WEBHOOK_PUNICOES
 
 Os links ficam no arquivo ~/.rolox.env (NUNCA no GitHub: quem tem o link posta no canal):
 
@@ -31,6 +31,7 @@ TIPOS = {
     "sem_chat": ("punicoes", "🔇 Sem chat", 0xFB8C00),
     "com_chat": ("punicoes", "💬 Chat liberado", 0x1E88E5),
     "aviso": ("punicoes", "⚠️ Aviso", 0xFDD835),
+    "denuncia": ("punicoes", "🚩 Denúncia", 0x8E24AA),
 }
 VARIAVEIS = {"banimentos": "ROLOX_WEBHOOK_BANIMENTOS", "punicoes": "ROLOX_WEBHOOK_PUNICOES"}
 URL_VALIDA = re.compile(r"^https://(?:(?:ptb|canary)\.)?discord(?:app)?\.com/api/webhooks/\d+/[\w-]+$")

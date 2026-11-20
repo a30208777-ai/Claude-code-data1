@@ -32,7 +32,7 @@ import multijogador
 import discord_log
 from jinja2 import ChoiceLoader, FileSystemLoader, PrefixLoader
 from markupsafe import Markup
-from rolox_api import REDES_SOCIAIS, ErroRolox, RoloxAPI, Sessao
+from rolox_api import MOTIVOS_DENUNCIA, REDES_SOCIAIS, ErroRolox, RoloxAPI, Sessao
 from studio_local import STUDIO_URL as STUDIO_URL_PADRAO, COMANDO_INSTALAR, COMANDO_LIGAR, MODELOS as MODELOS_STUDIO, StudioLocal
 
 IDIOMAS = {"pt-BR": "Português", "en": "English", "es": "Español"}
@@ -154,6 +154,7 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
                 "eh_adm": bool(session.get("adm")) and "sb" in session,
                 "eh_dono": bool(session.get("dono")) and "sb" in session,
                 "desenhar_avatar": lambda a, largura=120: Markup(avatar_mod.svg(a, largura)),
+                "motivos_denuncia": MOTIVOS_DENUNCIA,
                 "selo": lambda parceiro: Markup('<span class="selo" title="Parceiro do ROLOX">🤝</span>') if parceiro else ""}
 
     def carregar_perfil() -> dict:
@@ -782,6 +783,48 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
         flash("Item colocado no seu avatar! 👕", "ok")
         return redirect(url_for("buscar", q=request.form.get("q", ""), tipo=request.form.get("tipo", "itens")))
 
+    # --------------------------------------------------------- denúncias
+    def _registrar_denuncia(dados) -> dict:
+        tipo, alvo = str(dados.get("tipo", "")), str(dados.get("alvo", ""))
+        motivo, detalhe = str(dados.get("motivo", "")), str(dados.get("detalhe", ""))
+        r = g.api.denunciar(tipo, alvo, motivo, detalhe)
+        if not r.get("repetida"):
+            nome = r.get("alvo_nome") or alvo
+            discord_log.registrar_sync("denuncia", f"{'🎮 jogo' if tipo == 'jogo' else '👤'} {nome}",
+                                       f"{MOTIVOS_DENUNCIA.get(motivo, motivo)}{(': ' + detalhe[:300]) if detalhe else ''}",
+                                       quem_sou(), "Site ROLOX")
+        return r
+
+    def denuncias_abertas() -> list[dict]:
+        try:
+            return g.api.adm_denuncias()
+        except ErroRolox:
+            return []                      # a fila não derruba o painel
+
+    @app.post("/denunciar")
+    @logado
+    def denunciar():
+        _registrar_denuncia(request.form)
+        flash("🚩 Denúncia enviada. Obrigado! A moderação vai olhar.", "ok")
+        voltar = request.form.get("voltar", "")
+        return redirect(voltar if voltar.startswith("/") and not voltar.startswith("//") else url_for("inicio"))
+
+    @app.post("/api/denunciar")
+    @logado
+    def api_denunciar():
+        r = _registrar_denuncia(request.get_json(silent=True) or {})
+        return jsonify({"ok": True, "repetida": bool(r.get("repetida"))})
+
+    @app.post("/moderacao/denuncias/<int:denuncia_id>/<acao>")
+    @logado
+    def resolver_denuncia(denuncia_id: int, acao: str):
+        if acao not in ("resolvida", "descartada"):
+            abort(404)
+        g.api.adm_resolver_denuncia(denuncia_id, acao, request.form.get("nota", ""))
+        flash("Denúncia " + ("resolvida." if acao == "resolvida" else "descartada."), "ok")
+        voltar = request.form.get("voltar", "")
+        return redirect(voltar if voltar in ("/adm", "/dono") else url_for("inicio"))
+
     # ---------------------------------------------------------- parceria
     @app.route("/parceria", methods=["GET", "POST"])
     @logado
@@ -807,7 +850,7 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
             abort(404)
         redes = [(k, *REDES_SOCIAIS[k], url) for k, url in (p.get("redes") or {}).items()
                  if k in REDES_SOCIAIS and isinstance(url, str) and url.startswith("https://")]
-        return render_template("jogador.html", p=p, redes=redes, aba="inicio")
+        return render_template("jogador.html", p=p, redes=redes, eu_nome=carregar_perfil().get("username"), aba="inicio")
 
     @app.post("/dono/parcerias/criar")
     @logado
@@ -815,7 +858,7 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
         r = g.api.dono_criar_chave_parceria(request.form.get("apelido", ""))
         # a chave aparece UMA vez (no banco fica só o hash); não vai para flash/cookie
         return render_template("dono.html", analise=g.api.mapas_em_analise(), publicados=g.api.mapas_publicados(),
-                               parcerias=g.api.dono_parcerias(), chave_nova=r, aba="dono")
+                               parcerias=g.api.dono_parcerias(), chave_nova=r, denuncias=denuncias_abertas(), aba="dono")
 
     @app.post("/dono/parcerias/<int:chave_id>/revogar")
     @logado
@@ -832,7 +875,8 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
         if not session.get("dono"):
             abort(403)
         return render_template("dono.html", analise=g.api.mapas_em_analise(),
-                               publicados=g.api.mapas_publicados(), parcerias=g.api.dono_parcerias(), aba="dono")
+                               publicados=g.api.mapas_publicados(), parcerias=g.api.dono_parcerias(),
+                               denuncias=denuncias_abertas(), aba="dono")
 
     @app.post("/dono/<mapa_id>/<acao>")
     @logado
@@ -862,7 +906,7 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
                 if discord_log.registrar_sync("ip_bloqueado", f"IP {i['ip']} (tentou entrar em {i.get('conta_alvo') or '?'})",
                                               i.get("motivo") or "", por, "Jogo ROLOX"):
                     g.api.adm_marcar_ip_registrado(i["ip"])
-        return render_template("adm.html", d=d, eu=g.api.user_id, jogos=nomes_jogos(),
+        return render_template("adm.html", d=d, eu=g.api.user_id, jogos=nomes_jogos(), denuncias=denuncias_abertas(),
                                discord=discord_log.configurado(), aba="adm")
 
     def quem_sou() -> str:

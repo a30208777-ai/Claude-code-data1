@@ -20,5 +20,6 @@
   {% endfor %}
   <p class="nota">Links colocados pelo próprio parceiro. Abrem fora do ROLOX.</p>
 {% endif %}
+{% if p.username != eu_nome %}{% with tipo='jogador', alvo=p.username, voltar=request.path %}{% include "_denunciar.html" %}{% endwith %}{% endif %}
 <p><a class="btn texto" href="javascript:history.back()">← Voltar</a></p>
 {% endblock %}
