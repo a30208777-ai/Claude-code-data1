@@ -7,7 +7,8 @@ import { ExecutorLua, ExecutorPython, carregarPython, criarApi } from "./scripts
 import { CameraJogador } from "./camera.js";
 
 export class Jogo {
-  constructor({ mundoEditor, render, saida, nomeJogador = "Jogador1", controlesExtras = () => [] }) {
+  constructor({ mundoEditor, render, saida, nomeJogador = "Jogador1", controlesExtras = () => [], avatar = {} }) {
+    this.avatar = avatar;
     this.saida = saida;
     this.render = render;
     this.mundo = carregarMundo(salvarMundo(mundoEditor));   // cópia: parar volta ao que estava
@@ -50,7 +51,7 @@ export class Jogo {
   }
 
   _spawn(player, indice) {
-    const p = criarPersonagem(this.mundo, player.Name);
+    const p = criarPersonagem(this.mundo, player.Name, indice === 0 ? this.avatar : {});
     p.raiz.Position = pontoDeNascimento(this.mundo, indice);
     player.Character = p.modelo;
     player.CharacterAdded.Fire(p.modelo);

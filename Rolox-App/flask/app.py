@@ -25,6 +25,7 @@ from flask import (Flask, abort, flash, g, jsonify, redirect, render_template, r
                    session, url_for)
 
 import avatar as avatar_mod
+import multijogador
 import discord_log
 from jinja2 import ChoiceLoader, FileSystemLoader, PrefixLoader
 from markupsafe import Markup
@@ -97,6 +98,8 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
         SESSION_COOKIE_SECURE=NO_RENDER or bool(os.environ.get("ROLOX_HTTPS")),
     )
     app.jinja_env.filters["data"] = formatar_data
+    passes = multijogador.Passes(app.config["SECRET_KEY"])
+    salas = multijogador.Salas()
     app.jinja_loader = ChoiceLoader([app.jinja_loader,
                                      PrefixLoader({"editor": FileSystemLoader(PASTA_STUDIO / "templates")})])
 
@@ -489,9 +492,33 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
             s = g.api.servidor(uid)
         if not teste and not m.get("caminho_aprovado"):
             abort(404)
+        avatar = avatar_mod.normalizar(perfil.get("avatar"))
+        passe = passes.criar(s["server_uid"], g.api.user_id, perfil.get("username", "Jogador"), avatar) if s else None
         return render_template("jogar.html", m=m, s=s, teste=teste, eu=perfil.get("username", "Jogador"),
+                               avatar=avatar, passe=passe,
                                host=bool(s) and s["host_id"] == g.api.user_id,
                                url_mapa=url_for("mapa_dados", mapa_id=mapa_id, versao="enviada" if teste else "aprovada"))
+
+    # multijogador: posições de quem está no mesmo servidor (sem Supabase a cada quadro)
+    def _passe_meu() -> dict:
+        d = request.get_json(silent=True) or request.form
+        passe = passes.ler(str(d.get("passe", "")))
+        if not passe or passe["u"] != g.api.user_id:
+            abort(403)
+        return passe
+
+    @app.post("/api/sala")
+    @logado
+    def sala_atualizar():
+        passe = _passe_meu()
+        estado = request.get_json(silent=True) or {}
+        return jsonify({"jogadores": salas.atualizar(passe, estado)})
+
+    @app.post("/api/sala/sair")
+    @logado
+    def sala_sair():
+        salas.sair(_passe_meu())
+        return ("", 204)
 
     @app.get("/api/mapas/<mapa_id>/dados")
     @logado

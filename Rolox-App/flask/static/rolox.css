@@ -151,3 +151,8 @@ main.tela-jogo #tela { position: fixed; inset: 0; width: 100vw; height: 100vh; h
   /* celular: chat em cima, para o joystick e o pulo continuarem livres */
   .chat-jogo { top: 62px; left: 12px; right: 12px; width: auto; height: 34vh; height: 34dvh; }
 }
+#nomes { position: fixed; inset: 0; pointer-events: none; z-index: 1; overflow: hidden; }
+.nome-jogador { position: absolute; left: 0; top: 0; padding: 2px 8px; border-radius: 8px; background: #000a; color: #fff;
+  font-size: .78rem; font-weight: 600; white-space: nowrap; max-width: 40vw; overflow: hidden; text-overflow: ellipsis; }
+.online-jogo { background: #0008; color: #fff; border-radius: 12px; padding: 0 10px; height: 44px; display: inline-grid;
+  place-items: center; font-size: .9rem; font-weight: 600; }

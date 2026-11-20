@@ -8,14 +8,16 @@ import { Jogo } from "./jogo.js";
 
 const ehToque = () => matchMedia("(pointer: coarse)").matches || "ontouchstart" in window;
 
-export async function jogarMapa({ canvas, urlMapa, nomeJogador = "Jogador", saida = () => {}, aoCarregar = () => {} }) {
+export async function jogarMapa({ canvas, urlMapa, nomeJogador = "Jogador", avatar = {}, saida = () => {}, aoCarregar = () => {} }) {
   const r = await fetch(urlMapa, { cache: "no-store" });
   if (!r.ok) throw new Error(r.status === 404 ? "mapa não encontrado" : `não deu para baixar o mapa (${r.status})`);
   const mundo = carregarMundo(await r.json());
   const modo = ehToque() ? "leve" : "pesado";
   const render = new Render(canvas, mundo, modo);
   render.grade.visible = false;                       // no jogo publicado não tem grade do editor
-  const jogo = new Jogo({ mundoEditor: mundo, render, saida, nomeJogador });
+  const jogo = new Jogo({ mundoEditor: mundo, render, saida, nomeJogador, avatar });
+  jogo.render = render;
+  jogo.extras = [];          // ex.: multijogador (quadro(dt) antes da física, nomes() depois de desenhar)
   await jogo.iniciar();
   aoCarregar(jogo);
 
@@ -29,10 +31,15 @@ export async function jogarMapa({ canvas, urlMapa, nomeJogador = "Jogador", said
   addEventListener("keyup", (e) => jogo.teclas.delete(e.key.toLowerCase()));
   addEventListener("blur", () => jogo.teclas.clear());
 
+  let antes = performance.now();
   function loop() {
     if (!jogo.rodando) return;
+    const agora = performance.now(), dt = Math.min(0.1, (agora - antes) / 1000);
+    antes = agora;
+    for (const x of jogo.extras) x.quadro?.(dt);
     jogo.passo();
     render.desenhar();
+    for (const x of jogo.extras) x.nomes?.();
     requestAnimationFrame(loop);
   }
   requestAnimationFrame(loop);

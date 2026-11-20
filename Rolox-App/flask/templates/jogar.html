@@ -11,6 +11,7 @@
 <script src="/static/vendor/fengari/fengari-web.js"></script>
 
 <canvas id="tela" aria-label="Jogo {{ m.nome }}"></canvas>
+<div id="nomes" aria-hidden="true"></div>
 
 <div id="carregando">⏳ Carregando {{ m.nome }}...</div>
 
@@ -25,6 +26,7 @@
   <a class="btn-jogo" href="{{ url_for('dono') if eh_dono else url_for('jogos') }}" aria-label="Voltar">✕</a>
   {% endif %}
   <strong class="nome-jogo">{{ m.nome }}{% if teste %}<span class="etiqueta neutra">TESTE</span>{% endif %}</strong>
+  {% if s %}<span class="online-jogo" id="online" title="Jogadores no mapa">👥 1</span>{% endif %}
   {% if s %}<button class="btn-jogo" id="abrirChat" aria-label="Chat">💬<span id="naoLidas" hidden></span></button>{% endif %}
 </header>
 
@@ -54,6 +56,7 @@
 {% block scripts %}
 <script type="module">
   import { jogarMapa, ligarToque } from "/static/studio/jogar.js";
+  import { Multijogador } from "/static/studio/multijogador.js";
 
   const toque = matchMedia("(pointer: coarse)").matches || "ontouchstart" in window;
   const carregando = document.getElementById("carregando");
@@ -65,9 +68,17 @@
   try {
     const jogo = await jogarMapa({
       canvas: document.getElementById("tela"), urlMapa: {{ url_mapa|tojson }},
-      nomeJogador: {{ eu|tojson }}, saida,
+      nomeJogador: {{ eu|tojson }}, avatar: {{ avatar|tojson }}, saida,
     });
     carregando.remove();
+    {% if passe %}
+    const mj = new Multijogador({
+      jogo, render: jogo.render, passe: {{ passe|tojson }}, csrf: CSRF, camada: document.getElementById("nomes"),
+      aoMudar: (n) => { document.getElementById("online").textContent = "👥 " + (n + 1); },
+    });
+    jogo.extras.push(mj);
+    mj.iniciar();
+    {% endif %}
     if (toque) {
       document.getElementById("toque").hidden = false;
       ligarToque(jogo, { base: document.getElementById("joystick"), manche: document.getElementById("manche"),

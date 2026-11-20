@@ -811,3 +811,28 @@ def test_cadastro_com_codigo_do_dono(cliente, sb):
                                     "codigo_dono": " ROLOX-AAAA-BBBB ", "csrf": tok})
     _, _, _, corpo, _ = next(x for x in sb.chamadas if x[1] == "/functions/v1/cadastro")
     assert corpo["username"] == "arthurdevpromax.off_dono" and corpo["codigo_dono"] == "ROLOX-AAAA-BBBB"
+
+
+def test_multijogador_dois_jogadores_se_veem(cliente, sb, tmp_path, monkeypatch):
+    monkeypatch.setenv("ROLOX_PASTA_SALAS", str(tmp_path))
+    entrar(cliente)
+    mid = enviar_mapa(cliente).get_json()["id"]
+    sb.dono = True
+    tok = csrf(cliente)
+    cliente.post(f"/dono/{mid}/aprovar", data={"csrf": tok})
+    cliente.post(f"/jogos/{mid}/jogar", data={"csrf": tok})
+    t = html(cliente.get(f"/jogar/{mid}?s=s9"))
+    passe = re.search(r'passe: ("[^"]+")', t).group(1).strip('"')
+    assert "Multijogador" in t
+    r = cliente.post("/api/sala", json={"passe": passe, "p": [1, 2, 3]}, headers={"X-CSRF": tok})
+    assert r.status_code == 200 and r.get_json() == {"jogadores": []}
+    # passe falso / sem CSRF
+    assert cliente.post("/api/sala", json={"passe": passe + "x", "p": [0, 0, 0]}, headers={"X-CSRF": tok}).status_code == 403
+    assert cliente.post("/api/sala", json={"passe": passe}).status_code == 400
+    # outro jogador (outro processo do site) entra na mesma sala
+    import multijogador
+    outro = multijogador.Passes("teste").criar("s9", "u7", "bob", {"camisa": "#e53935"})
+    multijogador.Salas(tmp_path).atualizar(multijogador.Passes("teste").ler(outro), {"p": [9, 0, 9], "m": True})
+    j = cliente.post("/api/sala", json={"passe": passe, "p": [1, 2, 3]}, headers={"X-CSRF": tok}).get_json()["jogadores"]
+    assert j[0]["n"] == "bob" and j[0]["p"] == [9.0, 0.0, 9.0]
+    assert cliente.post("/api/sala/sair", data={"passe": passe, "csrf": tok}).status_code == 204
