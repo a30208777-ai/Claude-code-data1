@@ -374,6 +374,14 @@ class RoloxAPI:
         r = self._req("POST", "/rest/v1/rpc/perfil_publico", json={"p_username": username})
         return r if isinstance(r, dict) and r.get("username") else None
 
+    def buscar_jogadores(self, termo: str, limite: int = 20) -> list[dict]:
+        r = self._req("POST", "/rest/v1/rpc/buscar_jogadores", json={"p_termo": termo, "p_limite": limite})
+        return r if isinstance(r, list) else []
+
+    def buscar_jogos(self, termo: str, limite: int = 20) -> list[dict]:
+        r = self._req("POST", "/rest/v1/rpc/buscar_jogos", json={"p_termo": termo, "p_limite": limite})
+        return r if isinstance(r, list) else []
+
     def parceiros_entre(self, nomes) -> set:
         nomes = sorted({str(n) for n in nomes if n})[:200]
         if not nomes:

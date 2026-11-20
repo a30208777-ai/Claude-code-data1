@@ -22,6 +22,7 @@
   <nav class="barra">
     <a href="{{ url_for('inicio') }}" class="{{ 'ativo' if aba == 'inicio' }}"><span>🏠</span>Início</a>
     <a href="{{ url_for('jogos') }}" class="{{ 'ativo' if aba in ('jogos', 'servidores') }}"><span>🎮</span>Jogos</a>
+    <a href="{{ url_for('buscar') }}" class="{{ 'ativo' if aba == 'buscar' }}"><span>🔍</span>Buscar</a>
     <a href="{{ url_for('perfil') }}" class="{{ 'ativo' if aba == 'perfil' }}"><span>👤</span>Perfil</a>
     <a href="{{ url_for('studio_tela') }}" class="{{ 'ativo' if aba == 'studio' }}"><span>🧱</span>Studio</a>
     <a href="{{ url_for('parceria') }}" class="{{ 'ativo' if aba == 'parceria' }}"><span>🤝</span>Parceria</a>

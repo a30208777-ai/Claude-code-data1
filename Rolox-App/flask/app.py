@@ -26,6 +26,7 @@ from flask import (Flask, abort, flash, g, jsonify, redirect, render_template, r
                    session, url_for)
 
 import avatar as avatar_mod
+import buscar as busca
 import ia_studio
 import multijogador
 import discord_log
@@ -729,6 +730,39 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
             flash(f"Servidor cheio. Você está na fila, posição {r['posicao']}.", "ok")
             return redirect(url_for("inicio"))
         return redirect(destino_do_servidor(uid))
+
+    # ------------------------------------------------------------ buscar
+    @app.get("/buscar")
+    @logado
+    def buscar():
+        q = request.args.get("q", "")[:60]
+        tipo = request.args.get("tipo", "todos")
+        if tipo not in ("todos", "jogadores", "jogos", "itens"):
+            tipo = "todos"
+        termo = busca.termo_valido(q)
+        jogadores = jogos = itens = []
+        if termo:
+            n = 30 if tipo != "todos" else 8
+            if tipo in ("todos", "jogadores"):
+                jogadores = g.api.buscar_jogadores(termo, n)
+            if tipo in ("todos", "jogos"):
+                jogos = g.api.buscar_jogos(termo, n)
+            if tipo in ("todos", "itens"):
+                itens = busca.buscar_itens(termo, n)
+        return render_template("buscar.html", q=q, tipo=tipo, termo=termo, jogadores=jogadores, jogos=jogos,
+                               itens=itens, niveis=busca.NIVEIS, curto=bool(q.strip()) and not termo, aba="buscar")
+
+    @app.post("/buscar/usar-item")
+    @logado
+    def buscar_usar_item():
+        campo, valor = request.form.get("campo", ""), request.form.get("valor", "")
+        if not busca.item_valido(campo, valor):
+            abort(400)
+        atual = avatar_mod.normalizar(carregar_perfil().get("avatar"))
+        atual[campo] = valor
+        g.api.atualizar_perfil(avatar=atual)
+        flash("Item colocado no seu avatar! 👕", "ok")
+        return redirect(url_for("buscar", q=request.form.get("q", ""), tipo=request.form.get("tipo", "itens")))
 
     # ---------------------------------------------------------- parceria
     @app.route("/parceria", methods=["GET", "POST"])

@@ -1,6 +1,6 @@
 [project]
 name = "rolox-mobile"
-version = "0.11.0"
+version = "0.12.0"
 description = "App Rolox para celular (Android/iOS) em Python + Flet"
 readme = "README.md"
 requires-python = ">=3.10"

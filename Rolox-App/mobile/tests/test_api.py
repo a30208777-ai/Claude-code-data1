@@ -417,3 +417,16 @@ def test_definir_redes_so_manda_redes_conhecidas():
         return resposta(200, {"redes": {}})
     rodar(logada(h).definir_redes({"youtube": " https://youtube.com/@a ", "orkut": "x"}))
     assert chamadas[-1] == {"p_redes": {"youtube": "https://youtube.com/@a"}}
+
+
+def test_buscar_no_app():
+    chamadas = []
+    def h(req):
+        chamadas.append((req.url.path, json.loads(req.content)))
+        return resposta(200, [{"username": "exemp", "nivel": 0}] if "jogadores" in req.url.path else [])
+    r = rodar(logada(h).buscar("  Exemp  "))
+    assert r["jogadores"][0]["username"] == "exemp" and r["jogos"] == []
+    assert chamadas[0][1]["p_termo"] == "exemp"
+    assert rodar(logada(h).buscar("e")) == {"jogadores": [], "jogos": []}
+    from rolox.api import RoloxAPI
+    assert RoloxAPI.link_buscar("boné").endswith("/buscar?q=bon%C3%A9")

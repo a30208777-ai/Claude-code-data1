@@ -174,6 +174,17 @@ class SupabaseFalso:
             return Resp(200, None)
         if p == "/rest/v1/rpc/parceiros_entre":
             return Resp(200, [n for n in json["p_nomes"] if n in getattr(self, "lista_parceiros", set())])
+        if p == "/rest/v1/rpc/buscar_jogadores":
+            t = json["p_termo"]
+            nomes = ["exemplo1", "exemp3", "meu.exemp", "exemp", "xexempx", "exemp1", "exemp2", "outro"]
+            def nv(n):
+                return 0 if n == t else 1 if n.startswith(t) else 2 if re.search(r"[._-]" + re.escape(t), n) else 3
+            achados = sorted((n for n in nomes if t in n), key=lambda n: (nv(n), len(n), n))[:json["p_limite"]]
+            return Resp(200, [{"username": n, "avatar": {}, "is_parceiro": n == "exemp", "nivel": nv(n)} for n in achados])
+        if p == "/rest/v1/rpc/buscar_jogos":
+            return Resp(200, [{"id": m["id"], "nome": m["nome"], "descricao": m.get("descricao", ""), "curtidas": 0,
+                               "visitas": 0, "nivel": 1} for m in self.mapas.values()
+                              if m.get("caminho_aprovado") and json["p_termo"] in m["nome"].lower()])
         if p == "/rest/v1/rpc/meus_amigos":
             return Resp(200, self.amigos)
         if p in ("/rest/v1/rpc/pedir_amizade", "/rest/v1/rpc/responder_amizade", "/rest/v1/rpc/desfazer_amizade"):
@@ -1148,3 +1159,35 @@ def test_parceiro_redes_pagina_e_selo(cliente, sb):
     msgs = cliente.get("/api/chat/s1?depois=0").get_json()
     assert msgs["mensagens"][0]["username"] == "bob" and msgs["mensagens"][0]["parceiro"] is True
     assert 'class="selo"' in html(cliente.get("/perfil"))
+
+
+def test_buscar_ordem_de_relevancia_jogadores_jogos_itens(cliente, sb):
+    entrar(cliente)
+    tok = csrf(cliente)
+    t = html(cliente.get("/buscar?q=exemp"))
+    ordem = [n for n in re.findall(r'href="/jogador/([^"]+)"', t)]
+    assert ordem[:5] == ["exemp", "exemp1", "exemp2", "exemp3", "exemplo1"]
+    assert ordem.index("meu.exemp") < ordem.index("xexempx")
+    assert 'class="nivel n0">exato' in t and "<span>🔍</span>Buscar" in t
+    assert "Digite pelo menos 2 letras" in html(cliente.get("/buscar?q=e"))
+    # jogos aprovados
+    mid = cliente.post("/api/mapas/enviar", json={"nome": "Obby Exemplo", "projeto": PROJETO}, headers={"X-CSRF": tok}).get_json()["id"]
+    sb.dono = True
+    cliente.post(f"/dono/{mid}/aprovar", data={"csrf": tok})
+    t = html(cliente.get("/buscar?q=obby&tipo=jogos"))
+    assert "Obby Exemplo" in t and f"/jogos/{mid}/jogar" in t and "/jogador/" not in t
+    # itens: "bone" acha Boné (sem acento), e dá para vestir
+    t = html(cliente.get("/buscar?q=bone&tipo=itens"))
+    assert "Boné" in t and 'value="acessorio"' in t
+    cliente.post("/buscar/usar-item", data={"csrf": tok, "campo": "acessorio", "valor": "bone", "q": "bone"})
+    assert sb.perfil["avatar"]["acessorio"] == "bone"
+    assert cliente.post("/buscar/usar-item", data={"csrf": tok, "campo": "acessorio", "valor": "<script>"}).status_code == 400
+    assert cliente.post("/buscar/usar-item", data={"csrf": tok, "campo": "tickets", "valor": "999"}).status_code == 400
+
+
+def test_buscar_itens_ordem():
+    import buscar
+    nomes = [i["nome"] for i in buscar.buscar_itens("camisa a")]
+    assert nomes[:3] == ["Camisa Azul", "Camisa Amarelo"][:2] + nomes[2:3]
+    assert buscar.buscar_itens("oculos")[0]["nome"] == "Óculos"
+    assert buscar.buscar_itens("x") == [] and buscar.nivel("Cabelo Moicano", "moi") == 2

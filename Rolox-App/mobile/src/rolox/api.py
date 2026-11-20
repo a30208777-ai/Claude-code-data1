@@ -313,6 +313,20 @@ class RoloxAPI:
             dados["ir"] = ir
         return f"{config.SITE_URL}/app/entrar#{urlencode(dados)}"
 
+    async def buscar(self, termo: str) -> dict:
+        """Jogadores e jogos em ordem de relevância (igual > começa com > palavra > contém)."""
+        termo = " ".join((termo or "").split()).lower()
+        if not 2 <= len(termo) <= 40:
+            return {"jogadores": [], "jogos": []}
+        jogadores = await self._req("POST", "/rest/v1/rpc/buscar_jogadores", json={"p_termo": termo[:32], "p_limite": 15})
+        jogos = await self._req("POST", "/rest/v1/rpc/buscar_jogos", json={"p_termo": termo, "p_limite": 15})
+        return {"jogadores": jogadores if isinstance(jogadores, list) else [],
+                "jogos": jogos if isinstance(jogos, list) else []}
+
+    @staticmethod
+    def link_buscar(termo: str = "") -> str:
+        return f"{config.SITE_URL}/buscar" + (f"?{urlencode({'q': termo})}" if termo else "")
+
     async def definir_redes(self, redes: dict) -> dict:
         limpo = {k: str(v or "").strip()[:200] for k, v in (redes or {}).items() if k in REDES_SOCIAIS}
         return await self._req("POST", "/rest/v1/rpc/definir_redes", json={"p_redes": limpo})

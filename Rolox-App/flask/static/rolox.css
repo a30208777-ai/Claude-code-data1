@@ -46,7 +46,7 @@ h2 { font-size: 1.1rem; margin: 20px 0 8px; display: flex; gap: 8px; align-items
 form.pilha { display: flex; flex-direction: column; gap: 12px; }
 label { display: flex; flex-direction: column; gap: 4px; font-size: .85rem; color: var(--suave); }
 label.chave { flex-direction: row; align-items: center; gap: 10px; color: var(--texto); font-size: .95rem; }
-input[type=text], input[type=password], input[type=email], input[type=number], select {
+input[type=text], input[type=password], input[type=email], input[type=number], input[type=search], input[type=url], select {
   font: inherit; color: var(--texto); background: var(--cartao);
   border: 1px solid var(--borda); border-radius: 10px; padding: 12px; width: 100%;
 }
@@ -195,3 +195,8 @@ main.tela-jogo #tela { position: fixed; inset: 0; width: 100vw; height: 100vh; h
 a.cartao.rede { color: inherit; text-decoration: none; }
 a.nome-link { color: inherit; text-decoration: none; }
 a.nome-link:hover { text-decoration: underline; }
+.nivel { font-size: .7rem; padding: 2px 6px; border-radius: 6px; white-space: nowrap; border: 1px solid var(--borda); color: var(--suave); }
+.nivel.n0 { border-color: #2e7d32; color: #2e7d32; font-weight: 700; }
+.nivel.n1 { border-color: var(--primaria); color: var(--primaria); }
+.bolinha { display: inline-block; width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--borda); vertical-align: middle; }
+a.cartao { color: inherit; text-decoration: none; }

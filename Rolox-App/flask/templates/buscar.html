@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block titulo %}Buscar · Rolox{% endblock %}
+{% block conteudo %}
+<h1>🔍 Buscar</h1>
+<form method="get" class="linha">
+  <input type="search" name="q" value="{{ q }}" class="cresce" placeholder="Jogador, jogo ou item" maxlength="40"
+         autocapitalize="none" autocorrect="off" {{ 'autofocus' if not q }}>
+  <input type="hidden" name="tipo" value="{{ tipo }}">
+  <button class="btn pequeno">Buscar</button>
+</form>
+<div class="abas-ordem">
+  {% for t, nome in [('todos', 'Tudo'), ('jogadores', '👤 Jogadores'), ('jogos', '🎮 Jogos'), ('itens', '👕 Itens')] %}
+  <a href="{{ url_for('buscar', q=q, tipo=t) }}" class="{{ 'ativo' if tipo == t }}">{{ nome }}</a>
+  {% endfor %}
+</div>
+{% if curto %}<p class="muted">Digite pelo menos 2 letras.</p>{% endif %}
+
+{% macro marca(n) %}<span class="nivel n{{ n }}">{{ niveis[n] }}</span>{% endmacro %}
+
+{% if termo %}
+  {% if tipo in ('todos', 'jogadores') %}
+  <h2>👤 Jogadores</h2>
+  {% for p in jogadores %}
+    <a class="cartao" href="{{ url_for('jogador', nome=p.username) }}">
+      <div class="avatar-mini">{{ desenhar_avatar(p.avatar, 28) }}</div>
+      <div class="info"><div class="titulo">{{ p.username }}{{ selo(p.is_parceiro) }}</div></div>
+      {{ marca(p.nivel) }}
+    </a>
+  {% else %}<p class="muted">Nenhum jogador com "{{ q }}".</p>{% endfor %}
+  {% if tipo == 'todos' and jogadores|length >= 8 %}<a class="btn texto" href="{{ url_for('buscar', q=q, tipo='jogadores') }}">Ver mais jogadores</a>{% endif %}
+  {% endif %}
+
+  {% if tipo in ('todos', 'jogos') %}
+  <h2>🎮 Jogos</h2>
+  {% for m in jogos %}
+    <div class="cartao">
+      <span class="icone">🕹️</span>
+      <div class="info">
+        <div class="titulo">{{ m.nome }}</div>
+        <div class="detalhe">👁 {{ m.visitas or 0 }} · ❤ {{ m.curtidas or 0 }}{% if m.descricao %} · {{ m.descricao }}{% endif %}</div>
+      </div>
+      {{ marca(m.nivel if m.nivel < 4 else 3) }}
+      <form method="post" action="{{ url_for('jogar_entrar', mapa_id=m.id) }}">
+        <input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn pequeno">▶</button>
+      </form>
+    </div>
+  {% else %}<p class="muted">Nenhum jogo com "{{ q }}".</p>{% endfor %}
+  {% if tipo == 'todos' and jogos|length >= 8 %}<a class="btn texto" href="{{ url_for('buscar', q=q, tipo='jogos') }}">Ver mais jogos</a>{% endif %}
+  {% endif %}
+
+  {% if tipo in ('todos', 'itens') %}
+  <h2>👕 Itens</h2>
+  {% for i in itens %}
+    <div class="cartao">
+      <span class="icone">{% if i.cor %}<span class="bolinha" style="background: {{ i.cor }}"></span>{% else %}{{ i.emoji }}{% endif %}</span>
+      <div class="info"><div class="titulo">{{ i.nome }}</div><div class="detalhe">{{ i.tipo }} · grátis</div></div>
+      {{ marca(i.nivel) }}
+      <form method="post" action="{{ url_for('buscar_usar_item') }}">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <input type="hidden" name="campo" value="{{ i.campo }}"><input type="hidden" name="valor" value="{{ i.valor }}">
+        <input type="hidden" name="q" value="{{ q }}"><input type="hidden" name="tipo" value="{{ tipo }}">
+        <button class="btn pequeno contorno">Usar</button>
+      </form>
+    </div>
+  {% else %}<p class="muted">Nenhum item com "{{ q }}".</p>{% endfor %}
+  {% endif %}
+{% elif not curto %}
+  <p class="muted">Procure por nome de jogador, nome de jogo ou item do avatar (ex.: "boné", "camisa azul").</p>
+{% endif %}
+{% endblock %}

@@ -335,6 +335,35 @@ class RoloxApp:
                 ft.Text("Nenhum jogo aprovado ainda. Crie um no Studio!", italic=True, size=13)]
 
         amigos = ft.Column(spacing=4)
+        busca = ft.TextField(label="Buscar jogador ou jogo", dense=True, expand=True, max_length=40,
+                             prefix_icon=ft.Icons.SEARCH, capitalization=ft.TextCapitalization.NONE)
+
+        async def buscar(_=None):
+            termo = (busca.value or "").strip()
+            if len(termo) < 2:
+                self.aviso("Digite pelo menos 2 letras.")
+                return
+            async def acao():
+                r = await self.api.buscar(termo)
+                nivel = {0: "exato", 1: "começa com", 2: "palavra", 3: "contém", 4: "na descrição"}
+                itens = [ft.Text("👤 Jogadores", weight=ft.FontWeight.BOLD)]
+                itens += [ft.ListTile(title=ft.Text(j["username"] + (" 🤝" if j.get("is_parceiro") else "")),
+                                      subtitle=ft.Text(nivel.get(j.get("nivel"), ""), size=12), dense=True)
+                          for j in r["jogadores"]] or [ft.Text("Nenhum jogador.", italic=True, size=13)]
+                itens.append(ft.Text("🎮 Jogos", weight=ft.FontWeight.BOLD))
+                itens += [ft.ListTile(title=ft.Text(m["nome"]), dense=True,
+                                      subtitle=ft.Text(f"{nivel.get(m.get('nivel'), '')} · 👁 {m.get('visitas') or 0}", size=12),
+                                      trailing=ft.TextButton("Jogar", on_click=lambda _, mid=m["id"]: (
+                                          self.page.pop_dialog(), self.page.run_task(self.abrir_site, mid))))
+                          for m in r["jogos"]] or [ft.Text("Nenhum jogo.", italic=True, size=13)]
+                itens.append(ft.TextButton("Itens e mais resultados no site", url=RoloxAPI.link_buscar(termo)))
+                self.page.show_dialog(ft.AlertDialog(
+                    title=ft.Text(f"🔍 {termo}"),
+                    content=ft.Column(itens, tight=True, scroll=ft.ScrollMode.AUTO, height=420, width=340),
+                    actions=[ft.TextButton("Fechar", on_click=lambda _: self.page.pop_dialog())]))
+            await self.executar(acao)
+
+        busca.on_submit = buscar
         novo_amigo = ft.TextField(label="Nome de usuário", dense=True, expand=True, max_length=32,
                                   capitalization=ft.TextCapitalization.NONE)
 
@@ -410,6 +439,7 @@ class RoloxApp:
                                 size=12, italic=True),
                     ], spacing=4, expand=True),
                 ], vertical_alignment=ft.CrossAxisAlignment.START),
+                ft.Row([busca, ft.IconButton(ft.Icons.SEARCH, tooltip="Buscar", on_click=buscar)]),
                 ft.Divider(),
                 ft.Row([ft.Icon(ft.Icons.PEOPLE), ft.Text("Amigos", size=18, expand=True),
                         ft.TextButton("Abrir no site", on_click=lambda _: self.page.run_task(self.abrir_site, None, "amigos"))]),
