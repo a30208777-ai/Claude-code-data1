@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block titulo %}Studio · Rolox{% endblock %}
+{% block conteudo %}
+<div class="linha">
+  <h1 class="cresce">🧱 ROLOX Studio</h1>
+  <a class="btn texto" href="{{ url_for('studio_tela') }}" title="Atualizar">↻ Atualizar</a>
+</div>
+
+{% if ligado %}
+  <p class="status-studio ok">● Studio ligado em {{ studio.base }}</p>
+
+  <div class="cartao coluna">
+    <div class="titulo">Abrir o Studio</div>
+    <div class="detalhe">Crie e teste jogos. No celular use o Studio leve; no computador, o Studio PC.</div>
+    <div class="linha botoes">
+      <a class="btn pequeno" href="{{ studio.url('leve') }}" target="_blank" rel="noopener">📱 Studio leve</a>
+      <a class="btn pequeno contorno" href="{{ studio.url('pc') }}" target="_blank" rel="noopener">💻 Studio PC</a>
+    </div>
+  </div>
+
+  <h2>Começar um jogo novo</h2>
+  {% for ident, nome, descricao in modelos %}
+    <div class="cartao">
+      <div class="info">
+        <div class="titulo">{{ nome }}</div>
+        <div class="detalhe">{{ descricao }}</div>
+      </div>
+      <a class="btn pequeno" href="{{ studio.url('leve', modelo=ident) }}" target="_blank" rel="noopener">＋ Criar</a>
+    </div>
+  {% endfor %}
+
+  <h2>Meus projetos</h2>
+  {% for p in projetos %}
+    <div class="cartao">
+      <span class="icone">🎮</span>
+      <div class="info">
+        <div class="titulo">{{ p.nome }}</div>
+        <div class="detalhe">{{ studio.tamanho_kb(p) }} KB</div>
+      </div>
+      <a class="btn pequeno contorno" href="{{ studio.url('leve', projeto=p.nome) }}" target="_blank" rel="noopener">Abrir</a>
+    </div>
+  {% else %}
+    <p class="muted"><i>Nenhum projeto salvo ainda. No Studio, use Salvar.</i></p>
+  {% endfor %}
+{% else %}
+  <p class="status-studio desligado">● Studio desligado</p>
+
+  <div class="cartao coluna">
+    <div class="titulo">O Studio não está ligado</div>
+    <div class="detalhe">O Studio é o editor de jogos do ROLOX (3D, peças, scripts em Lua e Python). Ele roda
+      neste aparelho. No Termux, abra uma nova sessão (deslize da esquerda e toque em NEW SESSION) e rode:</div>
+  </div>
+  <pre class="comando">{{ comando }}</pre>
+  <p class="nota">Primeira vez? Antes, dentro da pasta Rolox-Studio, rode: {{ instalar }}</p>
+  <p><a class="btn" href="{{ url_for('studio_tela') }}">↻ Tentar de novo</a></p>
+{% endif %}
+{% endblock %}

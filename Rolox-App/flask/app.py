@@ -23,6 +23,7 @@ import avatar as avatar_mod
 import discord_log
 from markupsafe import Markup
 from rolox_api import ErroRolox, RoloxAPI, Sessao
+from studio_local import COMANDO_INSTALAR, COMANDO_LIGAR, MODELOS as MODELOS_STUDIO, StudioLocal
 
 IDIOMAS = {"pt-BR": "Português", "en": "English", "es": "Español"}
 ARQUIVO_SEGREDO = Path(os.path.expanduser("~/.rolox_flask_segredo"))
@@ -50,8 +51,9 @@ def formatar_data(iso: str) -> str:
 
 
 def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
-              segredo: Optional[str] = None) -> Flask:
+              segredo: Optional[str] = None, studio: Optional[StudioLocal] = None) -> Flask:
     app = Flask(__name__)
+    studio = studio or StudioLocal()
     app.config.update(
         SECRET_KEY=segredo or _segredo(),
         SESSION_COOKIE_HTTPONLY=True,
@@ -302,6 +304,17 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
         """Prévia ao vivo do editor de avatar."""
         a = avatar_mod.normalizar({k: request.args.get(k, "") for k in avatar_mod.PADRAO})
         return app.response_class(avatar_mod.svg(a, 160), mimetype="image/svg+xml")
+
+    # ------------------------------------------------------------ Studio
+    @app.get("/studio")
+    @logado
+    def studio_tela():
+        """ROLOX Studio: o editor roda neste aparelho (Rolox-Studio/servidor.py, porta 8600)."""
+        ligado = studio.ligado()
+        return render_template("studio.html", studio=studio, ligado=ligado,
+                               projetos=studio.projetos() if ligado else [],
+                               modelos=MODELOS_STUDIO, comando=COMANDO_LIGAR,
+                               instalar=COMANDO_INSTALAR, aba="studio")
 
     # --------------------------------------------------------------- ADM
     @app.get("/adm")

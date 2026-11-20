@@ -99,3 +99,13 @@ dialog::backdrop { background: #0008; }
 
 .avatar-mini { flex: none; background: var(--cartao); border: 1px solid var(--borda); border-radius: 12px; padding: 6px; }
 .grade-avatar { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+/* Studio */
+.cartao.coluna { flex-direction: column; align-items: stretch; gap: 6px; }
+.cartao .botoes { flex-wrap: wrap; margin-top: 4px; }
+.status-studio { font-weight: 600; margin: 4px 0 12px; }
+.status-studio.ok { color: #2e7d32; }
+.status-studio.desligado { color: var(--perigo); }
+@media (prefers-color-scheme: dark) { .status-studio.ok { color: #81c784; } }
+pre.comando { background: var(--cartao); border: 1px solid var(--borda); border-radius: 10px; padding: 12px;
+  font-family: ui-monospace, monospace; font-size: .85rem; white-space: pre-wrap; overflow-wrap: anywhere; user-select: all; }

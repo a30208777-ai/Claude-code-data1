@@ -491,3 +491,88 @@ def test_adm_sem_chat_e_banimento_vao_para_o_discord(cliente, sb, monkeypatch):
     assert enviados and enviados[0][0] == "ip_bloqueado"
     assert ("adm_marcar_ip_registrado", {"p_ip": "1.2.3.4"}) in sb.adm_chamadas
 
+
+
+# ------------------------------------------------------------ Studio
+class StudioFalso:
+    """Imita o servidor do ROLOX Studio (Rolox-Studio/servidor.py) em localhost:8600."""
+
+    def __init__(self, ligado=True, projetos=None):
+        self.ligado = ligado
+        self.lista = projetos if projetos is not None else []
+        self.pedidos = []
+
+    def get(self, url, timeout=None):
+        import requests
+        self.pedidos.append(url)
+        if not self.ligado:
+            raise requests.ConnectionError("recusado")
+        caminho = urlsplit(url).path
+        if caminho == "/":
+            r = Resp(200)
+            r.text = "<title>Rolox Studio</title>"
+            return r
+        if caminho == "/api/projetos":
+            return Resp(200, self.lista)
+        return Resp(404)
+
+
+def cliente_com_studio(sb, studio):
+    from studio_local import StudioLocal
+    app = criar_app(lambda s: RoloxAPI(s, url="https://falso", chave="k", http=sb), segredo="teste",
+                    studio=StudioLocal("http://localhost:8600", http=studio))
+    app.testing = True
+    return app.test_client()
+
+
+def test_studio_precisa_de_login(sb):
+    c = cliente_com_studio(sb, StudioFalso())
+    r = c.get("/studio")
+    assert r.status_code == 302 and "/login" in r.headers["Location"]
+
+
+def test_studio_desligado_mostra_como_ligar(sb):
+    studio = StudioFalso(ligado=False)
+    c = cliente_com_studio(sb, studio)
+    entrar(c)
+    t = html(c.get("/studio"))
+    assert "Studio desligado" in t and "python servidor.py" in t and "pip install -r requirements.txt" in t
+    assert "Tentar de novo" in t and studio.pedidos == ["http://localhost:8600/"]
+
+
+def test_studio_ligado_mostra_modelos_e_projetos(sb):
+    studio = StudioFalso(projetos=[{"nome": "meu_jogo", "tamanho": 5120},
+                                   {"nome": "../segredo", "tamanho": 10},     # nome inválido: some
+                                   "lixo"])
+    c = cliente_com_studio(sb, studio)
+    entrar(c)
+    t = html(c.get("/studio"))
+    assert "Studio ligado em http://localhost:8600" in t
+    assert 'href="http://localhost:8600/studio/leve"' in t and 'href="http://localhost:8600/studio/pc"' in t
+    for modelo in ("vazio", "obby", "moedas"):
+        assert f"/studio/leve?modelo={modelo}" in t
+    assert "/studio/leve?projeto=meu_jogo" in t and "5 KB" in t
+    assert "segredo" not in t
+    assert 'class="ativo"><span>🧱</span>Studio' in t
+
+
+def test_studio_ligado_sem_projetos(sb):
+    c = cliente_com_studio(sb, StudioFalso(projetos=[]))
+    entrar(c)
+    assert "Nenhum projeto salvo ainda" in html(c.get("/studio"))
+
+
+def test_studio_url_valida_nomes():
+    from studio_local import StudioLocal
+    s = StudioLocal("http://localhost:8600/")
+    assert s.url("pc") == "http://localhost:8600/studio/pc"
+    assert s.url("leve", projeto="Jogo-1") == "http://localhost:8600/studio/leve?projeto=Jogo-1"
+    for ruim in (dict(modo="x"), dict(projeto="../a"), dict(modelo="nao-existe")):
+        with pytest.raises(ValueError):
+            s.url(**{"modo": "leve", **ruim})
+
+
+def test_aba_studio_aparece_para_todos(cliente):
+    entrar(cliente)
+    t = html(cliente.get("/inicio"))
+    assert "<span>🧱</span>Studio" in t
