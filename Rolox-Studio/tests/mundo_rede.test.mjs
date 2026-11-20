@@ -131,3 +131,17 @@ test("Emblemas: dá uma vez só, Tem, limite e código inválido", () => {
   for (let i = 0; i < 28; i++) e.Dar("e" + i);
   assert.throws(() => e.Dar("demais"));
 });
+
+test("Internet: pesquisa chega no Resultado (com e sem o site)", async () => {
+  const m = mundoInicial();
+  const net = m.game.GetService("Internet");
+  const chegou = [];
+  net.Resultado.Connect((t, texto, lista) => chegou.push([t, texto, lista.length]));
+  net.Pesquisar("gatos");                                        // sem o site: avisa
+  net._buscar = async (t) => ({ texto: `${t}: felinos`, resultados: [{ titulo: t, resumo: "felinos" }] });
+  net.Pesquisar("  gatos  ");
+  await new Promise((r) => setTimeout(r, 5));
+  assert.ok(chegou.some((c) => c[1].startsWith("Sem internet")));            // a ordem não importa
+  assert.ok(chegou.some((c) => c[0] === "gatos" && c[1] === "gatos: felinos" && c[2] === 1));
+  assert.throws(() => net.Pesquisar("a"));
+});

@@ -28,6 +28,7 @@ from flask import (Flask, abort, flash, g, jsonify, redirect, render_template, r
 import avatar as avatar_mod
 import buscar as busca
 import ia_studio
+import internet
 import multijogador
 import discord_log
 from jinja2 import ChoiceLoader, FileSystemLoader, PrefixLoader
@@ -770,8 +771,17 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
     def buscar():
         q = request.args.get("q", "")[:60]
         tipo = request.args.get("tipo", "todos")
-        if tipo not in ("todos", "jogadores", "jogos", "itens"):
+        if tipo not in ("todos", "jogadores", "jogos", "itens", "internet"):
             tipo = "todos"
+        if tipo == "internet":
+            erro, web = None, []
+            if q.strip():
+                try:
+                    web = internet.pesquisar(q, usuario=g.api.user_id)
+                except internet.ErroInternet as e:
+                    erro = e.mensagem
+            return render_template("buscar.html", q=q, tipo=tipo, termo="", web=web, erro_web=erro,
+                                   jogadores=[], jogos=[], itens=[], niveis=busca.NIVEIS, curto=False, aba="buscar")
         termo = busca.termo_valido(q)
         jogadores = jogos = itens = []
         if termo:
@@ -784,6 +794,16 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
                 itens = busca.buscar_itens(termo, n)
         return render_template("buscar.html", q=q, tipo=tipo, termo=termo, jogadores=jogadores, jogos=jogos,
                                itens=itens, niveis=busca.NIVEIS, curto=bool(q.strip()) and not termo, aba="buscar")
+
+    @app.get("/api/internet")
+    @logado
+    def api_internet():
+        """Pesquisa na internet (fontes seguras) feita pelo servidor — para jogos e jogadores."""
+        try:
+            r = internet.pesquisar(request.args.get("q", ""), usuario=g.api.user_id)
+        except internet.ErroInternet as e:
+            return jsonify({"erro": e.codigo, "mensagem": e.mensagem}), 429 if e.codigo == "muitas_pesquisas" else 400
+        return jsonify({"resultados": r, "texto": internet.como_texto(r)})
 
     @app.post("/buscar/usar-item")
     @logado

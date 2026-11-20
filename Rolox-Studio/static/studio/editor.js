@@ -12,7 +12,7 @@ import { PCtoCelular, ehCelular, LIMITES } from "./pctocelular.js";
 import { carregarPython } from "./scripts.js";
 import { MODELOS } from "./modelos.js";
 import { extrairAcoes, aplicarAcoes, resumoCena } from "./agente_ia.js";
-import { ligarTela, ligarSons } from "./tela_jogo.js";
+import { ligarTela, ligarSons, ligarInternet } from "./tela_jogo.js";
 
 const MODO = document.body.dataset.modo;           // "leve" | "pesado"
 const PESADO = MODO === "pesado";
@@ -213,7 +213,7 @@ requestAnimationFrame(loop);
 const ICONES = {
   Workspace: "🌍", Part: "▫️", SpawnLocation: "🟩", MeshPart: "🧊", Model: "📦", Folder: "📁",
   Script: "🐍", LocalScript: "📜", ModuleScript: "🧩", ServerScriptService: "🖥️", ReplicatedStorage: "🗄️",
-  StarterPlayer: "🧍", StarterPlayerScripts: "📂", Rede: "📡", Cofre: "🔐", Tela: "🖥️", Sons: "🔊", Emblemas: "🏅", IntValue: "🔢", NumberValue: "🔢",
+  StarterPlayer: "🧍", StarterPlayerScripts: "📂", Rede: "📡", Cofre: "🔐", Tela: "🖥️", Sons: "🔊", Emblemas: "🏅", Internet: "🌐", IntValue: "🔢", NumberValue: "🔢",
 };
 const SERVICOS_VISIVEIS = ["Workspace", "ServerScriptService", "ReplicatedStorage", "StarterPlayer"];
 
@@ -622,6 +622,7 @@ async function iniciarJogo() {
   });
   estado.jogo = jogo;
   jogo._camadaTela = ligarTela(jogo, $("#painelCena"));
+  if (document.querySelector('meta[name="csrf"]')) ligarInternet(jogo);      // Studio do site
   jogo._pararMusica = ligarSons(jogo);
   try { await jogo.iniciar(); }
   catch (err) { saida(`Erro ao iniciar: ${err.message}`, "erro"); pararJogo(); return; }

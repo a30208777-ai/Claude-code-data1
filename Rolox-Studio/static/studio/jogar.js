@@ -6,7 +6,7 @@ import { carregarMundo } from "./motor.js";
 import { Render } from "./render.js";
 import { Jogo } from "./jogo.js";
 import { MundoRede } from "./mundo_rede.js";
-import { ligarTela, ligarSons } from "./tela_jogo.js";
+import { ligarTela, ligarSons, ligarInternet } from "./tela_jogo.js";
 
 const ehToque = () => matchMedia("(pointer: coarse)").matches || "ontouchstart" in window;
 
@@ -36,6 +36,7 @@ export async function jogarMapa({ canvas, urlMapa, nomeJogador = "Jogador", avat
                             body: JSON.stringify({ codigo, nome, emoji }) }).catch(() => {});
     });
   }
+  ligarInternet(jogo);
   ligarTela(jogo, document.body);        // antes dos scripts: o que eles mostram logo no começo aparece
   ligarSons(jogo);
   // Cofre: dados salvos do jogador neste jogo (carrega ANTES dos scripts rodarem)

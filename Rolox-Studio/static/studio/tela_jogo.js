@@ -1,6 +1,16 @@
 // ROLOX — desenha a Tela (textos, botões, barras, avisos) e toca os Sons do jogo.
 // Os sons são SINTETIZADOS na hora (Web Audio): nada de arquivo, nada de direito autoral.
 
+/** Internet pelo servidor do ROLOX (só funciona aberto pelo site). */
+export function ligarInternet(jogo, url = "/api/internet") {
+  jogo.mundo.game.Internet._buscar = async (termo) => {
+    const r = await fetch(`${url}?q=${encodeURIComponent(termo)}`, { cache: "no-store" });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.mensagem || `erro ${r.status}`);
+    return d;
+  };
+}
+
 export function ligarTela(jogo, container) {
   const tela = jogo.mundo.game.Tela;
   // emblema ganho: aviso + som (no jogo do site e no Studio)

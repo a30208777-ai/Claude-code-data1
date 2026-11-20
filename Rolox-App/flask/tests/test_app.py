@@ -1305,3 +1305,16 @@ def test_emblemas_ganhar_e_mostrar_no_perfil(cliente, sb):
     assert "Emblemas (1)" in t and "🏆 Zerou o Obby" in t and "🎮 Obby" in t
     cliente.post(f"/jogos/{mid}/jogar", data={"csrf": tok})
     assert f"/api/emblemas/{mid}" in html(cliente.get(f"/jogar/{mid}?s=s9"))
+
+
+def test_internet_rota_e_aba_buscar(cliente, monkeypatch):
+    import internet
+    monkeypatch.setattr(internet, "pesquisar", lambda q, usuario="", **k: (_ for _ in ()).throw(
+        internet.ErroInternet("termo_bloqueado", "Essa pesquisa não é permitida no ROLOX.")) if "porn" in q else
+        [{"titulo": "Dinossauro", "resumo": "Répteis", "link": "https://pt.wikipedia.org/wiki/Dinossauro", "fonte": "Wikipédia"}])
+    entrar(cliente)
+    d = cliente.get("/api/internet?q=dinossauro").get_json()
+    assert d["texto"] == "Dinossauro: Répteis" and d["resultados"][0]["fonte"] == "Wikipédia"
+    assert cliente.get("/api/internet?q=porno").status_code == 400
+    t = html(cliente.get("/buscar?q=dinossauro&tipo=internet"))
+    assert "🌐 Internet" in t and 'href="https://pt.wikipedia.org/wiki/Dinossauro"' in t and "nofollow" in t

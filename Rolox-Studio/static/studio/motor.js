@@ -530,6 +530,27 @@ registrar(class Emblemas extends Servico {
   _carregar(lista) { this._tem = new Set(Array.isArray(lista) ? lista.map(String) : []); }
 }, "Emblemas");
 
+// -------------------------------------------------------------- Internet
+// Pesquisa segura feita pelo servidor do ROLOX (Wikipédia e DuckDuckGo com busca segura).
+//   local net = game:GetService("Internet")
+//   net.Resultado:Connect(function(termo, texto) print(texto) end)
+//   net:Pesquisar("dinossauros")      -- a resposta chega no Resultado (não trava o jogo)
+registrar(class Internet extends Servico {
+  constructor() {
+    super("Internet");
+    this.Resultado = new Sinal("Resultado");       // (termo, texto, lista)
+    this._buscar = null;                           // posto pela página (site); sem ele: sem internet
+  }
+  Pesquisar(termo) {
+    const t = String(termo ?? "").trim().slice(0, 100);
+    if (t.length < 2) throw new Error("Internet: pesquise pelo menos 2 letras");
+    if (!this._buscar) { setTimeout(() => this.Resultado.Fire(t, "Sem internet aqui (abra pelo site do ROLOX).", []), 0); return; }
+    this._buscar(t).then(
+      (d) => this.Resultado.Fire(t, String(d.texto ?? ""), Array.isArray(d.resultados) ? d.resultados.map((r) => `${r.titulo}: ${r.resumo}`) : []),
+      (e) => this.Resultado.Fire(t, `Erro na pesquisa: ${e.message}`, []));
+  }
+}, "Internet");
+
 export class DataModel extends Instance {
   constructor() { super("Jogo"); }
   static naoCriavel = true;
@@ -549,6 +570,7 @@ export class DataModel extends Instance {
   get Tela() { return this.GetService("Tela"); }
   get Sons() { return this.GetService("Sons"); }
   get Emblemas() { return this.GetService("Emblemas"); }
+  get Internet() { return this.GetService("Internet"); }
 }
 registrar(DataModel, "DataModel");
 
@@ -559,7 +581,7 @@ export class Mundo {
     this.assets = {};        // malhas importadas: id -> {obj, mtl, texturas}
     this.game = new DataModel();
     this.game._mundo = this;
-    for (const s of ["Workspace", "Players", "ReplicatedStorage", "ServerScriptService", "StarterPlayer", "RunService", "Rede", "Cofre", "Tela", "Sons", "Emblemas"]) {
+    for (const s of ["Workspace", "Players", "ReplicatedStorage", "ServerScriptService", "StarterPlayer", "RunService", "Rede", "Cofre", "Tela", "Sons", "Emblemas", "Internet"]) {
       const c = new CLASSES[s](); c._nome = s; c.Parent = this.game;
     }
     const sps = new CLASSES.StarterPlayerScripts(); sps.Parent = this.game.StarterPlayer;
@@ -602,7 +624,7 @@ export function carregarInstancia(d, pai) {
 export function salvarMundo(m, nome = "Meu jogo") {
   const servicos = {};
   for (const s of m.game.GetChildren()) {
-    if (s.ClassName === "Players" || s.ClassName === "RunService" || ["Rede", "Cofre", "Tela", "Sons", "Emblemas"].includes(s.ClassName)) continue;
+    if (s.ClassName === "Players" || s.ClassName === "RunService" || ["Rede", "Cofre", "Tela", "Sons", "Emblemas", "Internet"].includes(s.ClassName)) continue;
     servicos[s.ClassName] = s.GetChildren().filter((f) => !f._temporaria).map(salvarInstancia);
   }
   return { formato: "rolox-studio", versao: VERSAO_ARQUIVO, nome, servicos, assets: m.assets };

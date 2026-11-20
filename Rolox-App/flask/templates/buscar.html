@@ -9,11 +9,23 @@
   <button class="btn pequeno">Buscar</button>
 </form>
 <div class="abas-ordem">
-  {% for t, nome in [('todos', 'Tudo'), ('jogadores', '👤 Jogadores'), ('jogos', '🎮 Jogos'), ('itens', '👕 Itens')] %}
+  {% for t, nome in [('todos', 'Tudo'), ('jogadores', '👤 Jogadores'), ('jogos', '🎮 Jogos'), ('itens', '👕 Itens'), ('internet', '🌐 Internet')] %}
   <a href="{{ url_for('buscar', q=q, tipo=t) }}" class="{{ 'ativo' if tipo == t }}">{{ nome }}</a>
   {% endfor %}
 </div>
 {% if curto %}<p class="muted">Digite pelo menos 2 letras.</p>{% endif %}
+
+{% if tipo == 'internet' %}
+  <p class="nota">Pesquisa feita pelo servidor do ROLOX só em fontes seguras (Wikipédia e DuckDuckGo com busca segura).</p>
+  {% if erro_web %}<p class="muted">{{ erro_web }}</p>{% endif %}
+  {% for r in web %}
+    <a class="cartao" href="{{ r.link }}" target="_blank" rel="noopener noreferrer nofollow">
+      <span class="icone">🌐</span>
+      <div class="info"><div class="titulo">{{ r.titulo }}</div><div class="detalhe">{{ r.resumo }}</div>
+        <div class="detalhe">{{ r.fonte }} ↗</div></div>
+    </a>
+  {% else %}{% if q and not erro_web %}<p class="muted">Nada encontrado para "{{ q }}".</p>{% endif %}{% endfor %}
+{% endif %}
 
 {% macro marca(n) %}<span class="nivel n{{ n }}">{{ niveis[n] }}</span>{% endmacro %}
 
