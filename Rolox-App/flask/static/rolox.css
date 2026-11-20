@@ -156,3 +156,4 @@ main.tela-jogo #tela { position: fixed; inset: 0; width: 100vw; height: 100vh; h
   font-size: .78rem; font-weight: 600; white-space: nowrap; max-width: 40vw; overflow: hidden; text-overflow: ellipsis; }
 .online-jogo { background: #0008; color: #fff; border-radius: 12px; padding: 0 10px; height: 44px; display: inline-grid;
   place-items: center; font-size: .9rem; font-weight: 600; }
+.cartao:target { outline: 3px solid var(--primaria); outline-offset: 2px; }

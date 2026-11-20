@@ -13,6 +13,9 @@ SUPABASE_CHAVE = os.environ.get("ROLOX_SUPABASE_CHAVE", "sb_publishable_GFKzsWxg
 # Rolox Studio (editor de jogos) rodando neste aparelho: Rolox-Studio/servidor.py
 STUDIO_URL = os.environ.get("ROLOX_STUDIO_URL", "http://localhost:8600")
 
+# Site do ROLOX (jogos 3D, Studio, multijogador)
+SITE_URL = os.environ.get("ROLOX_SITE_URL", "https://rolox-gj2i.onrender.com").rstrip("/")
+
 # Intervalos de atualização (segundos)
 INTERVALO_CHAT = 2
 INTERVALO_ALERTAS = 10

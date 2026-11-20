@@ -343,3 +343,16 @@ def test_sem_chat_do_adm_e_mensagem_para_o_jogador():
         rodar(api.enviar("s1", "oi"))
     assert "sem chat até 15:30" in e.value.mensagem and "spam" in e.value.mensagem
 
+
+
+def test_jogos_publicados_e_link_do_site():
+    def h(req):
+        assert req.url.path == "/rest/v1/mapas"
+        assert req.url.params["caminho_aprovado"] == "not.is.null"
+        return resposta(200, [{"id": "m1", "nome": "Obby", "descricao": "pule"}, {"id": None, "nome": "x"}, "lixo"])
+
+    j = rodar(logada(h).jogos_publicados())
+    assert j == [{"id": "m1", "nome": "Obby", "descricao": "pule"}]
+    from rolox.api import RoloxAPI
+    assert RoloxAPI.link_jogos().endswith("/jogos")
+    assert RoloxAPI.link_jogos("m1").endswith("/jogos#mapa-m1")

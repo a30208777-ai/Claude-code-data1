@@ -262,6 +262,19 @@ class RoloxAPI:
             autenticado=self.sessao is not None,
         )
 
+    # ------------------------------------------------------- jogos (mapas)
+    async def jogos_publicados(self) -> list[dict]:
+        """Mapas aprovados pelo dono (jogáveis no site, com multijogador e chat)."""
+        linhas = await self._req("GET", "/rest/v1/mapas", params={
+            "select": "id,nome,descricao,aprovado_em", "caminho_aprovado": "not.is.null",
+            "order": "aprovado_em.desc", "limit": "50"}) or []
+        return [m for m in linhas if isinstance(m, dict) and m.get("id") and m.get("nome")]
+
+    @staticmethod
+    def link_jogos(mapa_id: Optional[str] = None) -> str:
+        """Página do site para jogar (o login é o mesmo do app)."""
+        return f"{config.SITE_URL}/jogos" + (f"#mapa-{mapa_id}" if mapa_id else "")
+
     # ------------------------------------------------------------ servidores
     async def servidores(self) -> list[dict]:
         linhas = await self._req(

@@ -9,7 +9,7 @@
   num servidor com a galera e com chat.</p>
 
 {% for m in publicados %}
-  <div class="cartao">
+  <div class="cartao" id="mapa-{{ m.id }}">
     <span class="icone">🕹️</span>
     <div class="info">
       <div class="titulo">{{ m.nome }}</div>

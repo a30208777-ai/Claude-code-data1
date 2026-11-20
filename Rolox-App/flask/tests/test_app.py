@@ -770,7 +770,7 @@ def test_jogo_aprovado_todos_jogam_com_chat(cliente, sb):
     cliente.post(f"/dono/{mid}/aprovar", data={"csrf": tok})
     sb.dono = False
     t = html(cliente.get("/jogos"))
-    assert "Obby da lava" in t and f"/jogos/{mid}/jogar" in t
+    assert "Obby da lava" in t and f"/jogos/{mid}/jogar" in t and f"id=\"mapa-{mid}\"" in t
     r = cliente.post(f"/jogos/{mid}/jogar", data={"csrf": tok})
     assert r.status_code == 302 and f"/jogar/{mid}?s=s9" in r.headers["Location"]
     novo = next(s for s in sb.servidores if s["server_uid"] == "s9")

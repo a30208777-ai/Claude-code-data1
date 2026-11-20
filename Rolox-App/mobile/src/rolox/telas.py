@@ -298,7 +298,27 @@ class RoloxApp:
                 trailing=ft.IconButton(ft.Icons.VISIBILITY, tooltip="Ver senha usada", on_click=ver),
             ))
 
+        jogos = ft.Row(scroll=ft.ScrollMode.AUTO, spacing=8)
+
+        def cartao_jogo(m: dict) -> ft.Control:
+            return ft.Card(content=ft.Container(width=170, padding=10, content=ft.Column([
+                ft.Text(m["nome"], weight=ft.FontWeight.BOLD, max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
+                ft.Text(m.get("descricao") or "Mapa da comunidade", size=12, max_lines=2,
+                        overflow=ft.TextOverflow.ELLIPSIS),
+                ft.FilledButton("Jogar", icon=ft.Icons.PLAY_ARROW, url=RoloxAPI.link_jogos(m["id"])),
+            ], spacing=4)))
+
+        async def carregar_jogos():
+            try:
+                lista_jogos = await self.api.jogos_publicados()
+            except ErroRolox:
+                lista_jogos = []
+            jogos.controls = [cartao_jogo(m) for m in lista_jogos[:12]] or [
+                ft.Text("Nenhum jogo aprovado ainda. Crie um no Studio!", italic=True, size=13)]
+
         async def atualizar():
+            if not jogos.controls:
+                await carregar_jogos()
             onde = await self.api.onde_estou()
             if onde["servidor"]:
                 status.value = "Você está em um servidor."
@@ -332,6 +352,10 @@ class RoloxApp:
                                 size=12, italic=True),
                     ], spacing=4, expand=True),
                 ], vertical_alignment=ft.CrossAxisAlignment.START),
+                ft.Divider(),
+                ft.Row([ft.Icon(ft.Icons.SPORTS_ESPORTS), ft.Text("Jogos da comunidade", size=18, expand=True),
+                        ft.TextButton("Ver todos", url=RoloxAPI.link_jogos())]),
+                jogos,
                 ft.Divider(),
                 ft.Row([ft.Icon(ft.Icons.SHIELD), ft.Text("Alertas de segurança", size=18)]),
                 lista,
