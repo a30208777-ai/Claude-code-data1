@@ -6,6 +6,9 @@
   <meta name="csrf" content="{{ csrf }}">
   <title>{% block titulo %}Rolox{% endblock %}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='rolox.css') }}">
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
+  <meta name="theme-color" content="#26105c">
 </head>
 <body>
   <main class="{% block classe_main %}{% endblock %}">

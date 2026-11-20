@@ -20,6 +20,12 @@ COR_PRIMARIA = ft.Colors.DEEP_PURPLE
 COR_HACK = ft.Colors.ORANGE_700
 
 
+def logo(altura: int) -> ft.Control:
+    """Logo do ROLOX (símbolo + nome). Arquivo em src/assets (gerado por ferramentas/gerar_logo.py)."""
+    return ft.Image(src="logo_nome.png", height=altura,
+                     error_content=ft.Text("ROLOX", size=altura * 0.5, weight=ft.FontWeight.BOLD, color=COR_PRIMARIA))
+
+
 def formatar_data(iso: str) -> str:
     try:
         return datetime.fromisoformat(iso.replace("Z", "+00:00")).astimezone().strftime("%d/%m %H:%M")
@@ -168,7 +174,7 @@ class RoloxApp:
             padding=24,
             content=ft.Column(
                 [
-                    ft.Text("ROLOX", size=40, weight=ft.FontWeight.BOLD, color=COR_PRIMARIA),
+                    logo(84),
                     ft.Text("Entre na sua conta"),
                     usuario,
                     senha,
@@ -202,6 +208,7 @@ class RoloxApp:
             padding=24,
             content=ft.Column(
                 [
+                    logo(56),
                     ft.Text("Criar conta", size=28, weight=ft.FontWeight.BOLD),
                     usuario, senha, local,
                     ft.Text("Você pode adicionar um e-mail depois, em Perfil.",
@@ -430,6 +437,7 @@ class RoloxApp:
         ger = self.mostrar(ft.Container(
             padding=16,
             content=ft.Column([
+                logo(40),
                 ft.Row([
                     desenhar_avatar(self.perfil.get("avatar"), 0.4),
                     ft.Column([

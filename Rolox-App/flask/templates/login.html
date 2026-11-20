@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block conteudo %}
-<div class="logo">ROLOX</div>
+<div class="logo"><img src="{{ url_for('static', filename='logo_nome.png') }}" alt="ROLOX" width="242" height="84"></div>
 <p class="sub">Entre na sua conta</p>
 <form method="post" class="pilha">
   <input type="hidden" name="csrf" value="{{ csrf }}">

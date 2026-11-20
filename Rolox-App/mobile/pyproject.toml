@@ -1,6 +1,6 @@
 [project]
 name = "rolox-mobile"
-version = "0.20.0"
+version = "0.21.0"
 description = "App Rolox para celular (Android/iOS) em Python + Flet"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -19,6 +19,14 @@ org = "com.rolox"
 product = "Rolox"
 company = "Rolox"
 copyright = "Rolox"
+
+# ícone (src/assets/icon.png) e tela de abertura (src/assets/splash.png): ferramentas/gerar_logo.py
+[tool.flet.splash]
+color = "#26105c"
+dark_color = "#140a33"
+
+[tool.flet.android]
+adaptive_icon_background = "#26105c"
 
 [tool.flet.app]
 path = "src"

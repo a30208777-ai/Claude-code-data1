@@ -39,6 +39,10 @@ main.cheio { display: flex; flex-direction: column; height: 100dvh; padding-bott
 h1 { font-size: 1.6rem; margin: 8px 0 4px; }
 h2 { font-size: 1.1rem; margin: 20px 0 8px; display: flex; gap: 8px; align-items: center; }
 .logo { font-size: 2.6rem; font-weight: 800; color: var(--primaria); text-align: center; margin: 32px 0 4px; letter-spacing: 1px; }
+.logo img { display: inline-block; max-width: 80%; height: auto; }
+.logo.pequena { margin: 16px 0 0; }
+.logo-topo { margin: 0 0 10px; }
+.logo-topo img { display: block; height: 40px; width: auto; }
 .sub { text-align: center; color: var(--suave); margin: 0 0 20px; }
 .nota { font-size: .8rem; color: var(--suave); font-style: italic; }
 .muted { color: var(--suave); }
