@@ -25,6 +25,7 @@ from flask import (Flask, abort, flash, g, jsonify, redirect, render_template, r
                    session, url_for)
 
 import avatar as avatar_mod
+import ia_studio
 import multijogador
 import discord_log
 from jinja2 import ChoiceLoader, FileSystemLoader, PrefixLoader
@@ -426,7 +427,31 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
         def studio_editor(modo):
             if modo not in ("leve", "pc"):
                 abort(404)
-            return render_template("editor/studio.html", modo="leve" if modo == "leve" else "pesado", site=True)
+            perfil = carregar_perfil()
+            return render_template("editor/studio.html", modo="leve" if modo == "leve" else "pesado", site=True,
+                                   tickets="∞" if perfil.get("is_adm") else perfil.get("tickets", 0),
+                                   custo_ia=ia_studio.CUSTO_TICKETS)
+
+        @app.post("/api/studio/ia")
+        @logado
+        def studio_ia():
+            """IA do Studio: cobra 10 tickets, pergunta aos modelos e devolve os tickets se ninguém responder."""
+            mensagens = ia_studio.limpar_historico((request.get_json(silent=True) or {}).get("mensagens"))
+            if not mensagens or mensagens[-1]["role"] != "user":
+                return jsonify({"erro": "vazio", "mensagem": "Escreva uma pergunta."}), 400
+            cobranca = g.api.gastar_tickets_studio_ia()          # erro "tickets insuficientes" vira 400
+            modelo, texto = ia_studio.perguntar(mensagens)
+            if texto is None:
+                saldo = cobranca.get("tickets")
+                if cobranca.get("cobranca"):
+                    try:
+                        saldo = g.api.devolver_tickets_studio_ia(cobranca["cobranca"]).get("tickets", saldo)
+                    except ErroRolox:
+                        pass
+                return jsonify({"erro": "sem_ia", "tickets": saldo,
+                                "mensagem": "Nenhuma IA respondeu agora. Seus tickets foram devolvidos. Tente de novo."}), 503
+            return jsonify({"resposta": texto, "modelo": modelo, "tickets": cobranca.get("tickets"),
+                            "infinito": bool(cobranca.get("infinito"))})
 
         @app.get("/aprender/python-no-celular")
         def aprender_python():

@@ -495,6 +495,12 @@ const acoes = {
             `Se mandar de novo, a versão nova substitui a que está em análise.`);
     } catch (err) { modal(`Não foi possível enviar: ${err.message}`); }
   },
+  ia() {
+    const p = $("#painelIA");
+    if (!p) return;
+    p.hidden = !p.hidden;
+    if (!p.hidden) $("#iaTexto").focus();
+  },
   exportar() {
     const nome = estado.nome || "meu-jogo";
     const blob = new Blob([JSON.stringify(salvarMundo(estado.mundo, nome))], { type: "application/json" });
@@ -723,3 +729,77 @@ if (!historico.pilha.length) reiniciarHistorico();
 saida(`Rolox Studio ${PESADO ? "PC (pesado)" : "leve (celular)"} pronto.`, "sistema");
 if (PESADO) carregarPython().catch(() => {});      // no PC já deixa o Python carregando
 window.__studio = { estado, acoes, render };      // para testes e depuração
+
+// ------------------------------------------------------------ IA do Studio (site)
+(() => {
+  const form = $("#iaForm");
+  if (!form) return;
+  const caixa = $("#iaMensagens"), campo = $("#iaTexto"), botao = $("#iaEnviar");
+  const csrf = document.querySelector('meta[name="csrf"]')?.content;
+  const historico = [];
+
+  // texto da IA: blocos ```código``` viram caixas com Copiar / Colar no script
+  function mostrar(texto, quem, modelo) {
+    const bolha = el("div", { class: `msgIA ${quem}` });
+    const partes = texto.split(/```[a-zA-Z]*\n?/);
+    partes.forEach((parte, i) => {
+      if (!parte.trim()) return;
+      if (i % 2 === 1) {
+        const pre = el("pre", {}, parte.replace(/\n$/, ""));
+        const copiar = el("button", { class: "mini", onclick: () => navigator.clipboard?.writeText(pre.textContent) }, "📋 Copiar");
+        const colar = el("button", { class: "mini", onclick: () => colarNoScript(pre.textContent) }, "➕ Colar no script aberto");
+        bolha.append(pre, el("div", { class: "botoesCodigo" }, copiar, colar));
+      } else {
+        // **negrito** vira <b> (montado com nós de texto: a resposta nunca vira HTML)
+        const p = el("p", {});
+        parte.trim().split(/\*\*(.+?)\*\*/g).forEach((pedaco, j) => {
+          if (pedaco) p.append(j % 2 ? el("b", {}, pedaco) : document.createTextNode(pedaco));
+        });
+        bolha.append(p);
+      }
+    });
+    if (modelo) bolha.append(el("small", { class: "vazio" }, modelo));
+    caixa.append(bolha);
+    caixa.scrollTop = caixa.scrollHeight;
+  }
+
+  function colarNoScript(codigo) {
+    if (!scriptAberto) { modal("Abra um Script ou LocalScript (no Explorer) e toque de novo em ➕."); return; }
+    const t = $("#scriptTexto");
+    t.value = t.value.trimEnd() + (t.value.trim() ? "\n\n" : "") + codigo + "\n";
+    scriptAberto.Source = t.value; mudou(); atualizarRealce();
+    saida("Código da IA colado no script " + scriptAberto.Name, "sistema");
+  }
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const texto = campo.value.trim();
+    if (!texto || botao.disabled) return;
+    historico.push({ role: "user", content: texto });
+    mostrar(texto, "eu");
+    campo.value = "";
+    botao.disabled = true; botao.textContent = "Pensando...";
+    try {
+      const r = await fetch("/api/studio/ia", {
+        method: "POST", headers: { "Content-Type": "application/json", "X-CSRF": csrf },
+        body: JSON.stringify({ mensagens: historico }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (d.tickets !== undefined && d.tickets !== null) $("#iaTickets").textContent = "🎟️ " + d.tickets;
+      if (!r.ok) {
+        historico.pop();
+        mostrar(d.mensagem || `Erro ${r.status}`, "erro");
+        return;
+      }
+      historico.push({ role: "assistant", content: d.resposta });
+      mostrar(d.resposta, "ia", d.modelo);
+    } catch {
+      historico.pop();
+      mostrar("Sem conexão com o site. Tente de novo.", "erro");
+    } finally { botao.disabled = false; botao.textContent = "Enviar"; }
+  });
+  campo.addEventListener("keydown", (e) => {
+    e.stopPropagation();                                   // atalhos do editor não disparam enquanto digita
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); form.requestSubmit(); }
+  });
+})();

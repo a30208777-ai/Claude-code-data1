@@ -343,6 +343,13 @@ class RoloxAPI:
     def desfazer_amizade(self, outro: str) -> None:
         self._req("POST", "/rest/v1/rpc/desfazer_amizade", json={"p_outro": outro})
 
+    def gastar_tickets_studio_ia(self) -> dict:
+        return self._req("POST", "/rest/v1/rpc/gastar_tickets_studio_ia", json={})
+
+    def devolver_tickets_studio_ia(self, cobranca: int) -> dict:
+        return self._req("POST", "/rest/v1/rpc/devolver_tickets_studio_ia",
+                         json={"p_cobranca": cobranca, "p_chave": self.chave_proxy or None})
+
     def visitar_mapa(self, mapa_id: str) -> None:
         self._req("POST", "/rest/v1/rpc/visitar_mapa", json={"p_id": mapa_id})
 

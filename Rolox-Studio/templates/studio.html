@@ -24,7 +24,8 @@
       <button data-acao="salvar" title="Salvar (Ctrl+S)">Salvar</button>
       <button data-acao="exportar" title="Baixar arquivo .rolox">Exportar</button>
       <button data-acao="importarRolox" title="Abrir arquivo .rolox">Importar .rolox</button>
-      {% if site %}<button data-acao="enviarRolox" class="destaque" title="Mandar para o dono aprovar">🚀 Enviar ao ROLOX</button>
+      {% if site %}<button data-acao="ia" title="IA do Studio ({{ custo_ia }} tickets por mensagem)">🤖 IA</button>
+      <button data-acao="enviarRolox" class="destaque" title="Mandar para o dono aprovar">🚀 Enviar ao ROLOX</button>
       <a href="/jogos" class="botao-link" title="Voltar ao site">← Site</a>{% endif %}
     </div>
     <div class="grupo">
@@ -104,6 +105,23 @@
       </div>
     </div>
   </div>
+
+  {% if site %}
+  <aside id="painelIA" hidden aria-label="IA do Studio">
+    <div class="topoIA">
+      <b>🤖 IA do Studio</b>
+      <span id="iaTickets" title="Seus tickets">🎟️ {{ tickets }}</span>
+      <button data-acao="ia" class="mini" aria-label="Fechar a IA">✕</button>
+    </div>
+    <p class="vazio">Peça ajuda para criar o jogo ou um script. Cada mensagem custa <b>{{ custo_ia }} tickets</b>
+      (se nenhuma IA responder, os tickets voltam).</p>
+    <div id="iaMensagens" aria-live="polite"></div>
+    <form id="iaForm">
+      <textarea id="iaTexto" rows="2" maxlength="2000" placeholder="Ex.: faça uma porta que abre quando eu toco"></textarea>
+      <button class="destaque" id="iaEnviar">Enviar</button>
+    </form>
+  </aside>
+  {% endif %}
 
   <div id="modal" hidden role="dialog" aria-modal="true">
     <div class="caixa">
