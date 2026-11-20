@@ -1,0 +1,117 @@
+# Compila o app ROLOX (Rolox-App/mobile, Python + Flet) em APK para Android.
+#
+# Quando roda:
+#   - push no branch claude/rolox-apk que mexa no app ou neste arquivo
+#   - à mão: aba Actions -> "APK do ROLOX" -> Run workflow
+#   - tag apk-v* (ex.: apk-v0.1.0): além do artefato, publica o APK em Releases
+#
+# Onde baixar: Actions -> execução -> Artifacts -> rolox-apk (zip com o .apk)
+#
+# O `flet build apk --yes` instala sozinho o Flutter certo para o Flet 1.1.2 e o
+# que faltar do Android SDK. O APK sai assinado com chave de debug (instala no
+# celular com "fontes desconhecidas"; para a Play Store precisa de chave própria).
+
+name: APK do ROLOX
+
+on:
+  push:
+    branches: [claude/rolox-apk]
+    tags: ["apk-v*"]
+    paths:
+      - "Rolox-App/mobile/**"
+      - ".github/workflows/apk.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write # só é usado para criar o Release nas tags apk-v*
+
+concurrency:
+  group: apk-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FLET_VERSION: "1.1.2"
+  FLUTTER_VERSION: "3.47.9" # a que o Flet 1.1.2 pede (flet.version.flutter_version)
+  PYTHONUTF8: "1"
+  PYTHONIOENCODING: "utf-8"
+  FLET_CLI_NO_RICH_OUTPUT: "1"
+
+jobs:
+  apk:
+    name: Testes + APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    defaults:
+      run:
+        working-directory: Rolox-App/mobile
+
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v4
+
+      - name: Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: Rolox-App/mobile/pyproject.toml
+
+      - name: Java 17 (o Flet exige JDK 17 para o Android)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Cache do Flutter e do Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/flutter/${{ env.FLUTTER_VERSION }}
+            ~/.pub-cache
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: flet-${{ env.FLET_VERSION }}-flutter-${{ env.FLUTTER_VERSION }}-${{ runner.os }}-v1
+
+      - name: Instalar Flet ${{ env.FLET_VERSION }} e pytest
+        run: |
+          python -m pip install --upgrade pip
+          pip install "flet[all]==${FLET_VERSION}" httpx "pytest>=8"
+          flet --version
+
+      - name: Testes do app (pytest)
+        run: python -m pytest -q
+
+      - name: Compilar o APK
+        run: |
+          flet build apk \
+            --yes \
+            --no-rich-output \
+            --verbose \
+            --build-number "${{ github.run_number }}" \
+            --build-version "0.1.${{ github.run_number }}"
+
+      - name: Dar nome ao APK
+        id: nome
+        run: |
+          ls -la build/apk
+          apk=$(ls build/apk/*.apk | head -n 1)
+          if [ -z "$apk" ]; then echo "nenhum .apk em build/apk" >&2; exit 1; fi
+          destino="build/apk/ROLOX-0.1.${{ github.run_number }}.apk"
+          mv "$apk" "$destino"
+          echo "apk=Rolox-App/mobile/$destino" >> "$GITHUB_OUTPUT"
+          du -h "$destino"
+
+      - name: Enviar o APK (Artifacts)
+        uses: actions/upload-artifact@v4
+        with:
+          name: rolox-apk
+          path: ${{ steps.nome.outputs.apk }}
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Publicar em Releases (só em tags apk-v*)
+        if: startsWith(github.ref, 'refs/tags/apk-v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ steps.nome.outputs.apk }}
+          generate_release_notes: true

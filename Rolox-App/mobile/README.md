@@ -28,6 +28,19 @@ flet build apk                  # gera o APK em build/apk
 python -m pytest                # testes do cliente da API
 ```
 
+### APK pelo GitHub (sem instalar nada)
+
+O workflow `.github/workflows/apk.yml` compila o APK nos servidores do GitHub:
+
+- **push** no branch `claude/rolox-apk` (que mexa em `Rolox-App/mobile/`), ou **Actions → "APK do ROLOX" → Run workflow**;
+- ele roda os testes, instala Flutter/Java 17/Android SDK e faz `flet build apk`;
+- baixe em **Actions → a execução → Artifacts → `rolox-apk`** (um zip com `ROLOX-0.1.N.apk`);
+- uma tag `apk-v*` (ex.: `apk-v0.1.0`) também publica o APK em **Releases**.
+
+O APK sai assinado com chave de *debug*: instala no celular permitindo "fontes desconhecidas", mas não serve para a Play Store. O ícone fica em `src/assets/icon.png`.
+
+No APK não há `~/.rolox.env`, então os registros de banimentos/punições no Discord ficam desligados no celular (o painel ADM avisa "desligado"). Os links dos webhooks **não** vão dentro do APK de propósito: qualquer um que abrisse o arquivo conseguiria postar nos canais.
+
 O endereço do Supabase e a *publishable key* ficam em `src/rolox/config.py` (ou nas variáveis `ROLOX_SUPABASE_URL` / `ROLOX_SUPABASE_CHAVE`). A publishable key é pública por natureza; **nunca** coloque a service_role key no app.
 
 ## Backend necessário (pasta `../supabase`)
