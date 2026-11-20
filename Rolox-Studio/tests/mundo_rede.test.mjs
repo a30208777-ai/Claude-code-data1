@@ -145,3 +145,19 @@ test("Internet: pesquisa chega no Resultado (com e sem o site)", async () => {
   assert.ok(chegou.some((c) => c[0] === "gatos" && c[1] === "gatos: felinos" && c[2] === 1));
   assert.throws(() => net.Pesquisar("a"));
 });
+
+test("Som e TelaVideo: Midia só aceita arquivo do bucket; Tocar/Parar; salvam no projeto", async () => {
+  const { MIDIA } = await import("../static/studio/motor.js");
+  const m = mundoInicial();
+  const s = criar("Som", m.workspace); s.Name = "Musica";
+  const ok = "11111111-1111-1111-1111-111111111111/0123456789abcdef.mp3";
+  s.Midia = ok; s.Midia = "https://site-malvado.com/x.mp3";
+  assert.equal(s.Midia, ok);
+  s.Volume = 5; assert.equal(s.Volume, 1);
+  s.Tocar(); assert.ok(s.Tocando); s.Parar(); assert.ok(!s.Tocando);
+  const v = criar("TelaVideo", m.workspace); v.Midia = ok.replace(".mp3", ".mp4");
+  const copia = carregarMundo(salvarMundo(m));
+  assert.equal(copia.workspace.FindFirstChild("Musica").Midia, ok);
+  assert.equal(copia.workspace.FindFirstChild("TelaVideo").Midia.endsWith(".mp4"), true);
+  assert.ok(MIDIA.test(ok) && !MIDIA.test("../x.mp3"));
+});

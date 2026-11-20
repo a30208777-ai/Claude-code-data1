@@ -13,6 +13,7 @@ import { carregarPython } from "./scripts.js";
 import { MODELOS } from "./modelos.js";
 import { extrairAcoes, aplicarAcoes, resumoCena } from "./agente_ia.js";
 import { ligarTela, ligarSons, ligarInternet } from "./tela_jogo.js";
+import { ligarMidias } from "./midia_jogo.js";
 
 const MODO = document.body.dataset.modo;           // "leve" | "pesado"
 const PESADO = MODO === "pesado";
@@ -213,7 +214,7 @@ requestAnimationFrame(loop);
 const ICONES = {
   Workspace: "🌍", Part: "▫️", SpawnLocation: "🟩", MeshPart: "🧊", Model: "📦", Folder: "📁",
   Script: "🐍", LocalScript: "📜", ModuleScript: "🧩", ServerScriptService: "🖥️", ReplicatedStorage: "🗄️",
-  StarterPlayer: "🧍", StarterPlayerScripts: "📂", Rede: "📡", Cofre: "🔐", Tela: "🖥️", Sons: "🔊", Emblemas: "🏅", Internet: "🌐", IntValue: "🔢", NumberValue: "🔢",
+  StarterPlayer: "🧍", StarterPlayerScripts: "📂", Rede: "📡", Cofre: "🔐", Tela: "🖥️", Sons: "🔊", Emblemas: "🏅", Internet: "🌐", Som: "🎵", TelaVideo: "🎬", IntValue: "🔢", NumberValue: "🔢",
 };
 const SERVICOS_VISIVEIS = ["Workspace", "ServerScriptService", "ReplicatedStorage", "StarterPlayer"];
 
@@ -277,6 +278,7 @@ function desenharProps() {
       linhas.push(linha(p, el("input", { type: "number", step: p === "Transparency" ? "0.1" : "1", value: v,
         onchange: (e) => { i[p] = +e.target.value; marcar(); } })));
     } else if (p === "MeshId") linhas.push(linha(p, el("input", { type: "text", value: v, readonly: true })));
+    else if (p === "Midia") linhas.push(linha("Arquivo", el("input", { type: "text", value: v || "(nenhum)", readonly: true })));
   }
   if (i instanceof BasePart && !PESADO) {
     const mexer = (dy, giro = 0) => () => {
@@ -497,6 +499,31 @@ const acoes = {
             `Se mandar de novo, a versão nova substitui a que está em análise.`);
     } catch (err) { modal(`Não foi possível enviar: ${err.message}`); }
   },
+  /** Site: envia um som ou vídeo (bucket "midias") e cria o Som / TelaVideo no mapa. */
+  midia() {
+    const csrf = document.querySelector('meta[name="csrf"]')?.content;
+    if (!csrf) { modal("Sons e vídeos só podem ser enviados pelo Studio do site."); return; }
+    const inp = el("input", { type: "file", accept: "audio/mpeg,audio/ogg,audio/wav,audio/webm,video/mp4,video/webm" });
+    inp.addEventListener("change", async () => {
+      const f = inp.files[0]; if (!f) return;
+      if (f.size > 20 * 1024 * 1024) { modal("Arquivo grande demais (máximo 20 MB; som até 5 MB)."); return; }
+      saida(`Enviando ${f.name}...`, "sistema");
+      const dados = new FormData(); dados.append("arquivo", f);
+      try {
+        const r = await fetch("/api/midias", { method: "POST", headers: { "X-CSRF": csrf }, body: dados });
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(d.mensagem || `erro ${r.status}`);
+        const i = criar(d.tipo === "video" ? "TelaVideo" : "Som");
+        i.Name = (f.name.replace(/\.[^.]+$/, "").replace(/[^\w À-ÿ-]/g, "").slice(0, 30)) || i.ClassName;
+        i.Midia = d.midia;
+        if (d.tipo === "video") { i.Position = posicaoNaFrente().add(new Vector3(0, 3, 0)); }
+        i.Parent = estado.mundo.workspace;
+        mudou(); desenharExplorer(); selecionar(i);
+        saida(`${d.tipo === "video" ? "🎬 Vídeo" : "🎵 Som"} "${i.Name}" pronto. Use ${i.Name}:Tocar() num script (ou marque TocarAoComecar).`, "sistema");
+      } catch (err) { modal(`Não deu para enviar: ${err.message}`); }
+    });
+    inp.click();
+  },
   ia() {
     const p = $("#painelIA");
     if (!p) return;
@@ -626,13 +653,14 @@ async function iniciarJogo() {
   jogo._pararMusica = ligarSons(jogo);
   try { await jogo.iniciar(); }
   catch (err) { saida(`Erro ao iniciar: ${err.message}`, "erro"); pararJogo(); return; }
+  jogo._pararMidias = ligarMidias(jogo, render);
   $("#controlesToque").hidden = !(CELULAR || "ontouchstart" in window);
 }
 
 function pararJogo() {
   const jogo = estado.jogo; if (!jogo) return;
   jogo.parar();
-  jogo._camadaTela?.remove(); jogo._pararMusica?.();
+  jogo._camadaTela?.remove(); jogo._pararMusica?.(); jogo._pararMidias?.();
   estado.jogo = null;
   render.definirMundo(estado.mundo);
   orbita.enabled = true;

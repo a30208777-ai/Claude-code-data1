@@ -242,6 +242,40 @@ export class BasePart extends Instance {
   static props = ["Name", "Position", "Size", "Rotation", "Color", "Anchored", "CanCollide", "Transparency", "Shape"];
 }
 registrar(class Part extends BasePart { constructor() { super("Part"); } }, "Part");
+
+// ------------------------------------------------------ sons e vídeos do criador
+// Arquivos enviados pelo criador no Studio do site (bucket "midias"). Midia = "<pasta>/<arquivo>".
+//   workspace.Musica:Tocar() / :Parar()     (Som: Volume 0..1, Repetir, TocarAoComecar)
+//   workspace.Telao:Tocar() / :Parar()      (TelaVideo: uma peça que passa o vídeo; ComSom, Repetir)
+export const MIDIA = /^[0-9a-f-]{36}\/[0-9a-f]{16}\.(mp3|ogg|wav|webm|mp4)$/;
+function definirMidia(i, v) { const s = String(v ?? ""); i._midia = s === "" || MIDIA.test(s) ? s : i._midia; i._mudou?.("Midia"); }
+registrar(class Som extends Instance {
+  constructor() {
+    super("Som");
+    this._midia = ""; this._volume = 1; this.Repetir = false; this.TocarAoComecar = false; this._tocando = false;
+  }
+  get Midia() { return this._midia; }
+  set Midia(v) { definirMidia(this, v); }
+  get Volume() { return this._volume; }
+  set Volume(v) { this._volume = Math.max(0, Math.min(1, Number(v) || 0)); this._mudou("Volume"); }
+  get Tocando() { return this._tocando; }
+  Tocar() { this._tocando = true; this._mudou("Tocando"); }
+  Parar() { this._tocando = false; this._mudou("Tocando"); }
+  static props = ["Name", "Midia", "Volume", "Repetir", "TocarAoComecar"];
+}, "Som");
+registrar(class TelaVideo extends BasePart {
+  constructor() {
+    super("TelaVideo");
+    this._ancorada = true; this._tam = new Vector3(8, 4.5, 0.3); this._cor = Color3.fromHex("#111111");
+    this._midia = ""; this.Repetir = true; this.ComSom = false; this.TocarAoComecar = true; this._tocando = false;
+  }
+  get Midia() { return this._midia; }
+  set Midia(v) { definirMidia(this, v); }
+  get Tocando() { return this._tocando; }
+  Tocar() { this._tocando = true; this._mudou("Tocando"); }
+  Parar() { this._tocando = false; this._mudou("Tocando"); }
+  static props = [...BasePart.props, "Midia", "Repetir", "ComSom", "TocarAoComecar"];
+}, "TelaVideo");
 registrar(class SpawnLocation extends BasePart {
   constructor() { super("SpawnLocation"); this.Anchored = true; this._tam = new Vector3(6, 1, 6); this._cor = Color3.fromHex("#4caf50"); }
 }, "SpawnLocation");

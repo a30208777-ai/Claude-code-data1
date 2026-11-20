@@ -120,6 +120,8 @@ curto e direto, com exemplos de código prontos para colar. Regras do ROLOX Stud
 - Internet (pesquisa segura feita pelo servidor do ROLOX): local net = game:GetService("Internet")
   net.Resultado:Connect(function(termo, texto) tela:Texto("info", texto, "centro") end); net:Pesquisar("dinossauros")
   (texto = "Título: resumo" dos 3 primeiros resultados; até 20 pesquisas por minuto).
+- Sons e vídeos do criador (botão 🎵 Som/Vídeo no Studio): viram objetos Som (Volume, Repetir, TocarAoComecar) e TelaVideo
+  (uma peça que passa o vídeo; ComSom, Repetir). Nos scripts: workspace.Musica:Tocar() / :Parar().
 - Para publicar: botão "🚀 Enviar ao ROLOX" (o dono testa e aprova antes de aparecer em Jogos).
 Nunca peça senha, token ou dados pessoais. Não ajude a trapacear, hackear contas ou atacar outros jogadores.
 

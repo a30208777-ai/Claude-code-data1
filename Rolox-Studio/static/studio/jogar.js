@@ -7,6 +7,7 @@ import { Render } from "./render.js";
 import { Jogo } from "./jogo.js";
 import { MundoRede } from "./mundo_rede.js";
 import { ligarTela, ligarSons, ligarInternet } from "./tela_jogo.js";
+import { ligarMidias } from "./midia_jogo.js";
 
 const ehToque = () => matchMedia("(pointer: coarse)").matches || "ontouchstart" in window;
 
@@ -59,6 +60,7 @@ export async function jogarMapa({ canvas, urlMapa, nomeJogador = "Jogador", avat
   jogo.render = render;
   jogo.extras = [];          // ex.: multijogador (quadro(dt) antes da física, nomes() depois de desenhar)
   await jogo.iniciar();
+  ligarMidias(jogo, render);             // sons e vídeos do criador
   aoCarregar(jogo);
 
   // teclado (ignora quando está digitando no chat)

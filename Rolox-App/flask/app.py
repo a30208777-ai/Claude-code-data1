@@ -28,6 +28,7 @@ from flask import (Flask, abort, flash, g, jsonify, redirect, render_template, r
 import avatar as avatar_mod
 import buscar as busca
 import ia_studio
+import midias
 import internet
 import multijogador
 import discord_log
@@ -458,7 +459,22 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
             perfil = carregar_perfil()
             return render_template("editor/studio.html", modo="leve" if modo == "leve" else "pesado", site=True,
                                    tickets="∞" if perfil.get("is_adm") else perfil.get("tickets", 0),
-                                   custo_ia=ia_studio.CUSTO_TICKETS)
+                                   custo_ia=ia_studio.CUSTO_TICKETS, midias_base=g.api.url_midias())
+
+        @app.post("/api/midias")
+        @logado
+        def enviar_midia():
+            """Studio do site: envia um som ou vídeo do criador para o bucket "midias"."""
+            f = request.files.get("arquivo")
+            if not f:
+                return jsonify({"erro": "sem_arquivo", "mensagem": "Escolha um arquivo."}), 400
+            dados = f.read(midias.MAX_VIDEO + 1)
+            try:
+                info = midias.preparar(dados, g.api.user_id)
+            except ValueError as e:
+                return jsonify({"erro": "arquivo_invalido", "mensagem": str(e)}), 400
+            g.api.enviar_midia(info["midia"], dados, info["content_type"])
+            return jsonify({"tipo": info["tipo"], "midia": info["midia"], "url": f"{g.api.url_midias()}/{info['midia']}"})
 
         @app.post("/api/studio/ia")
         @logado
@@ -625,6 +641,7 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
         except ErroRolox:
             curti = False
         return render_template("jogar.html", m=m, s=s, teste=teste, eu=perfil.get("username", "Jogador"), curti=curti,
+                               midias_base=g.api.url_midias(),
                                avatar=avatar, passe=passe,
                                host=bool(s) and s["host_id"] == g.api.user_id,
                                url_mapa=url_for("mapa_dados", mapa_id=mapa_id, versao="enviada" if teste else "aprovada"))

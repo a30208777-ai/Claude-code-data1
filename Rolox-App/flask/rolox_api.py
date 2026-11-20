@@ -271,14 +271,15 @@ class RoloxAPI:
     # ------------------------------------------------ mapas (bucket "mapas")
     BUCKET = "mapas"
 
-    def _storage(self, metodo: str, caminho: str, dados: Optional[bytes] = None) -> Any:
+    def _storage(self, metodo: str, caminho: str, dados: Optional[bytes] = None,
+                 content_type: str = "application/json") -> Any:
         """Storage do Supabase com o token do jogador (as regras do bucket valem)."""
         if not self.sessao:
             raise ErroRolox("sessao_expirada")
         for tentativa in (1, 2):
             cab = {"apikey": self.chave, "Authorization": f"Bearer {self.sessao.access_token}"}
             if dados is not None:
-                cab["Content-Type"] = "application/json"
+                cab["Content-Type"] = content_type
             try:
                 r = self.http.request(metodo, f"{self.url}/storage/v1/object/{caminho}", data=dados,
                                       headers=cab, timeout=self.timeout)
@@ -306,6 +307,17 @@ class RoloxAPI:
         return self._req("POST", "/rest/v1/rpc/enviar_mapa", json={
             "p_id": mapa_id, "p_nome": nome, "p_descricao": (descricao or "").strip()[:300],
             "p_caminho": caminho})
+
+    def enviar_midia(self, caminho: str, dados: bytes, content_type: str) -> None:
+        """Sobe som/vídeo para o bucket "midias" (o mesmo arquivo de novo = já existe: tudo bem)."""
+        try:
+            self._storage("POST", f"midias/{caminho}", dados, content_type)
+        except ErroRolox as e:
+            if e.codigo not in ("storage_409", "mapa_nao_encontrado"):     # 409/400 = já enviado antes
+                raise
+
+    def url_midias(self) -> str:
+        return f"{self.url}/storage/v1/object/public/midias"
 
     def baixar_mapa(self, caminho: str) -> bytes:
         return self._storage("GET", f"authenticated/{self.BUCKET}/{caminho}").content

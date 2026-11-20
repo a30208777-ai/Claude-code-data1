@@ -117,7 +117,11 @@ class SupabaseFalso:
         if p.startswith("/storage/v1/object/"):
             resto = p.removeprefix("/storage/v1/object/")
             if metodo == "POST":
-                assert resto.startswith("mapas/u1/"), "só grava na própria pasta"
+                assert resto.startswith(("mapas/u1/", "midias/u1/")), "só grava na própria pasta"
+                if resto.startswith("midias/"):
+                    self.midias = getattr(self, "midias", {})
+                    self.midias[resto] = (data, (headers or {}).get("Content-Type"))
+                    return Resp(200, {"Key": resto})
                 self.arquivos[resto.removeprefix("mapas/")] = data
                 return Resp(200, {"Key": resto})
             chave = resto.removeprefix("authenticated/mapas/")
@@ -1318,3 +1322,30 @@ def test_internet_rota_e_aba_buscar(cliente, monkeypatch):
     assert cliente.get("/api/internet?q=porno").status_code == 400
     t = html(cliente.get("/buscar?q=dinossauro&tipo=internet"))
     assert "🌐 Internet" in t and 'href="https://pt.wikipedia.org/wiki/Dinossauro"' in t and "nofollow" in t
+
+
+def test_midias_som_e_video_conferidos_pelo_arquivo(cliente, sb):
+    import io
+    import midias
+    assert midias.tipo_do_arquivo(b"ID3\x04" + b"0" * 20)[0] == "som"
+    assert midias.tipo_do_arquivo(b"\x00\x00\x00\x18ftypmp42" + b"0" * 8)[1] == "mp4"
+    assert midias.tipo_do_arquivo(b"MZ\x90\x00 programa.exe") is None
+    entrar(cliente)
+    tok = csrf(cliente)
+    som = b"ID3\x04\x00" + b"x" * 1000
+    r = cliente.post("/api/midias", data={"arquivo": (io.BytesIO(som), "musica.mp3")}, headers={"X-CSRF": tok},
+                     content_type="multipart/form-data")
+    d = r.get_json()
+    assert r.status_code == 200 and d["tipo"] == "som" and d["midia"].startswith("u1/") and d["midia"].endswith(".mp3")
+    assert sb.midias[f"midias/{d['midia']}"][1] == "audio/mpeg"
+    assert d["url"].endswith("/storage/v1/object/public/midias/" + d["midia"])
+    # "vídeo" que na verdade é programa: recusado
+    r = cliente.post("/api/midias", data={"arquivo": (io.BytesIO(b"MZ\x90" + b"x" * 100), "video.mp4")},
+                     headers={"X-CSRF": tok}, content_type="multipart/form-data")
+    assert r.status_code == 400 and "não é um som" in r.get_json()["mensagem"]
+    grande = b"ID3" + b"x" * (5 * 1024 * 1024)
+    r = cliente.post("/api/midias", data={"arquivo": (io.BytesIO(grande), "g.mp3")}, headers={"X-CSRF": tok},
+                     content_type="multipart/form-data")
+    assert r.status_code == 400 and "5 MB" in r.get_json()["mensagem"]
+    t = html(cliente.get("/studio/leve"))
+    assert 'data-acao="midia"' in t and "window.ROLOX_MIDIAS" in t
