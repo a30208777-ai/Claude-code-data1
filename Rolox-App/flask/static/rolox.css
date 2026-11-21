@@ -366,3 +366,6 @@ body.flash-foto::after { content: ""; position: fixed; inset: 0; z-index: 20; ba
 
 .filtro-jogos { width: 100%; box-sizing: border-box; margin: 6px 0 10px; }
 .cartao[hidden] { display: none !important; }
+
+.erro-emoji { text-align: center; font-size: 3rem; margin: 0; }
+.erro-titulo { text-align: center; margin: 4px 0; }

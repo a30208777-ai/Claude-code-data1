@@ -1740,3 +1740,12 @@ def test_jogo_tem_botao_voltar(cliente, sb):
     cliente.post(f"/dono/{mid}/aprovar", data={"csrf": tok})
     t = html(cliente.get(f"/jogar/{mid}?teste=1"))
     assert 'id="voltarInicio"' in t and "_ondeRenascer" in t
+
+
+def test_paginas_de_erro_amigaveis(cliente, sb):
+    entrar(cliente)
+    r = cliente.get("/nao-existe-mesmo")
+    assert r.status_code == 404 and "Página não encontrada" in html(r) and "🏠 Início" in html(r)
+    r = cliente.get("/api/nao-existe")
+    assert r.status_code == 404 and r.get_json()["erro"] == 404
+    assert cliente.get("/dono").status_code == 403 and "Sem permissão" in html(cliente.get("/dono"))

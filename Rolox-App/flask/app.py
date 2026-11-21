@@ -199,6 +199,21 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
             session["dono"] = False
         return p
 
+    # páginas de erro amigáveis (a API continua respondendo JSON)
+    PAGINAS_ERRO = {404: ("🧭", "Página não encontrada", "Esse endereço não existe ou o jogo saiu do ar."),
+                    403: ("🔒", "Sem permissão", "Você não pode abrir isso com esta conta."),
+                    413: ("📦", "Grande demais", "O arquivo ou os dados enviados passam do limite.")}
+
+    def _pagina_erro(e):
+        codigo = getattr(e, "code", 500) or 500
+        emoji, titulo, msg = PAGINAS_ERRO.get(codigo, ("⚠️", "Algo deu errado", "Tente de novo daqui a pouco."))
+        if request.path.startswith("/api/"):
+            return jsonify({"erro": codigo, "mensagem": msg}), codigo
+        return render_template("erro.html", emoji_erro=emoji, titulo_erro=titulo, mensagem=msg), codigo
+
+    for _c in PAGINAS_ERRO:
+        app.register_error_handler(_c, _pagina_erro)
+
     @app.errorhandler(ErroRolox)
     def erro_rolox(e: ErroRolox):
         expirou = e.codigo == "sessao_expirada"
