@@ -336,3 +336,9 @@ body.flash-foto::after { content: ""; position: fixed; inset: 0; z-index: 20; ba
 @keyframes balaoEntra { to { opacity: 1; transform: translate(-50%, -60%) scale(1); } }
 @keyframes balaoSai { from { opacity: 1; transform: translate(-50%, -60%) scale(1); } to { opacity: 0; transform: translate(-50%, -90%) scale(.8); } }
 .nome-jogador[data-em]::before { content: attr(data-em); display: block; text-align: center; font-size: 1.8em; line-height: 1.1; }
+
+/* 🗺️ minimapa */
+.minimapa { position: fixed; z-index: 3; left: 10px; top: max(64px, calc(env(safe-area-inset-top) + 56px)); width: 132px; height: 132px;
+  border-radius: 14px; border: 2px solid #ffffff55; box-shadow: 0 4px 14px #0007; pointer-events: none; }
+.minimapa[hidden] { display: none; }
+@media (max-height: 420px) { .minimapa { width: 96px; height: 96px; } }
