@@ -180,3 +180,8 @@ body > .tela-rolox { position: fixed; }
 .paleta-pincel[hidden] { display: none; }
 .paleta-pincel input[type=color] { width: 40px; height: 32px; padding: 0; border: 0; background: none; }
 .paleta-pincel select { color: #222; background: #fff; border-radius: 6px; padding: 4px; }
+/* 💬 pergunta na tela (tela:Pergunta) */
+.tela-pergunta { pointer-events: auto; background: #1b1033ee; color: #fff; padding: 16px 18px; border-radius: 16px; max-width: min(90vw, 420px);
+  text-align: center; box-shadow: 0 8px 24px #0008; animation: tela-surge .25s ease-out; }
+.tela-pergunta p { margin: 0 0 12px; font-size: 1.1rem; font-weight: 700; }
+.tela-opcoes { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }

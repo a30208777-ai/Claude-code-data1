@@ -21,6 +21,11 @@ local function eh(v, f) return type(v) == "userdata" and api[f](api, v) end
 
 wrap = function(v)
   if v == nil or v == js.null then return nil end
+  if type(v) == "number" then                     -- 2 (do jogo) vira 2 e não "2.0" no print/..
+    local i = math.tointeger(v)
+    if i and math.abs(i) < 9007199254740992 then return i end
+    return v
+  end
   if type(v) ~= "userdata" then return v end
   if api:ehV3(v) then return setmetatable({ X = v.X, Y = v.Y, Z = v.Z }, V3Meta) end
   if api:ehC3(v) then return setmetatable({ R = v.R, G = v.G, B = v.B }, C3Meta) end

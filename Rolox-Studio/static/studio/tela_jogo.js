@@ -36,6 +36,17 @@ export function ligarTela(jogo, container) {
       el.className = "tela-botao"; el.textContent = item.texto;
       el.addEventListener("pointerdown", (e) => e.stopPropagation());
       el.addEventListener("click", (e) => { e.stopPropagation(); tela._clicar(id); el.blur(); });
+    } else if (item.tipo === "pergunta") {
+      el = document.createElement("div"); el.className = "tela-pergunta";
+      const t = document.createElement("p"); t.textContent = item.texto;          // texto puro
+      const linha = document.createElement("div"); linha.className = "tela-opcoes";
+      item.opcoes.forEach((o, n) => {
+        const b = document.createElement("button"); b.className = "tela-botao"; b.textContent = o;
+        b.addEventListener("pointerdown", (e) => e.stopPropagation());
+        b.addEventListener("click", (e) => { e.stopPropagation(); tela._responder(id, n); });
+        linha.append(b);
+      });
+      el.append(t, linha);
     } else if (item.tipo === "barra") {
       el = document.createElement("div"); el.className = "tela-barra";
       const cheio = document.createElement("div"); cheio.style.width = `${(100 * item.valor) / item.maximo}%`;

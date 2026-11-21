@@ -114,7 +114,8 @@ curto e direto, com exemplos de código prontos para colar. Regras do ROLOX Stud
   c:Ler("moedas", 0), c:Salvar("moedas", 10), c:Somar("vitorias", 1). Use no LocalScript (são dados do próprio jogador).
 - Tela (por cima do jogo, de cada jogador; use no LocalScript): local tela = game:GetService("Tela")
   tela:Texto("placar", "Moedas: 3", "topo"), tela:Botao("abrir", "Abrir", "baixo") + tela.Clicado:Connect(function(id) end),
-  tela:Barra("vida", 80, 100, "topo"), tela:Aviso("Você venceu!", 3), tela:Remover("placar"). Lugares: topo, centro, baixo, esquerda, direita.
+  tela:Barra("vida", 80, 100, "topo"), tela:Aviso("Você venceu!", 3), tela:Remover("placar"),
+  tela:Pergunta("npc", "Quer ajuda?", "Sim", "Não") + tela.Respondeu:Connect(function(id, opcao, n) end). Lugares: topo, centro, baixo, esquerda, direita.
 - Sons (gerados na hora): game:GetService("Sons"):Tocar("moeda") (moeda, pulo, vitoria, dano, clique, porta, explosao, erro);
   Sons:Musica("calma"|"acao"|"").
 - Emblemas (conquista do jogo, fica no perfil do jogador): game:GetService("Emblemas"):Dar("zerou", "Zerou o Obby", "🏆");

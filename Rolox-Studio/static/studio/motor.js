@@ -563,6 +563,7 @@ registrar(class Tela extends Servico {
     super("Tela");
     this._itens = new Map();                 // id -> {tipo, texto, lugar, valor, maximo}
     this.Clicado = new Sinal("Clicado");
+    this.Respondeu = new Sinal("Respondeu"); // (id, opção escolhida, número da opção 1..4)
     this.Mudou = new Sinal("Mudou");         // para quem desenha (página do jogo)
   }
   _id(id) { const k = String(id ?? ""); if (!TELA_ID.test(k)) throw new Error("Tela: id inválido (letras, números, _ ou -)"); return k; }
@@ -586,6 +587,20 @@ registrar(class Tela extends Servico {
   Remover(id) { const k = String(id ?? ""); if (this._itens.delete(k)) this.Mudou.Fire(k, null); }
   Limpar() { for (const k of [...this._itens.keys()]) this.Remover(k); }
   _clicar(id) { if (this._itens.get(id)?.tipo === "botao") this.Clicado.Fire(id); }
+  /** 💬 Pergunta com até 4 botões: tela:Pergunta("loja", "Quer a espada?", "Sim", "Não").
+   *  A escolha chega em tela.Respondeu(id, opção, número) e a caixa some. */
+  Pergunta(id, texto, ...opcoes) {
+    const k = this._id(id);
+    const lista = opcoes.flat().map((o) => String(o ?? "").slice(0, 30)).filter(Boolean).slice(0, 4);
+    if (!lista.length) lista.push("OK");
+    this._por(k, { tipo: "pergunta", texto: String(texto ?? "").slice(0, 200), opcoes: lista, lugar: "centro" });
+  }
+  _responder(id, n) {
+    const item = this._itens.get(id);
+    if (item?.tipo !== "pergunta" || !(n >= 0 && n < item.opcoes.length)) return;
+    this.Remover(id);
+    this.Respondeu.Fire(id, item.opcoes[n], n + 1);
+  }
 }, "Tela");
 registrar(class Sons extends Servico {
   constructor() { super("Sons"); this.Tocou = new Sinal("Tocou"); this.musica = ""; }

@@ -1,4 +1,4 @@
-palavras: tela, interface, ui, gui, hud, texto, botao, botoes, barra, vida, menu, aviso, mensagem, mostrar, contador, loja do jogo, painel
+palavras: tela, pergunta, perguntar, quiz, dialogo, conversa, npc, escolha, interface, ui, gui, hud, texto, botao, botoes, barra, vida, menu, aviso, mensagem, mostrar, contador, loja do jogo, painel
 
 # Receita: coisas na tela (Tela)
 Só no LocalScript (cada jogador vê a sua tela). `local tela = game:GetService("Tela")`
@@ -6,6 +6,8 @@ Só no LocalScript (cada jogador vê a sua tela). `local tela = game:GetService(
 - tela:Botao(id, texto, lugar)        → botão; clique chega em tela.Clicado:Connect(function(id) ... end)
 - tela:Barra(id, valor, maximo, lugar)
 - tela:Aviso(texto, segundos)         → mensagem grande no meio que some sozinha
+- tela:Pergunta(id, texto, "Sim", "Não") → caixa com até 4 botões; a escolha chega em
+  tela.Respondeu:Connect(function(id, opcao, numero) ... end) e a caixa some (conversa com NPC, quiz, loja)
 - tela:Remover(id) / tela:Limpar()
 Lugares: "topo", "centro", "baixo", "esquerda", "direita". id: só letras, números, _ ou -.
 O texto é sempre texto puro (HTML não funciona). Máximo 200 letras no Texto e 40 no Botão.
