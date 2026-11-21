@@ -8,8 +8,14 @@ import httpx
 import pytest
 
 from atualizador import android
-from atualizador.baixar import (URL_ZIP, URL_VERSAO, ErroAtualizador, baixar_zip, escolher_apk, extrair_apk,
-                                tamanho_legivel, versao_online)
+from atualizador.baixar import (URL_INFO, ErroAtualizador, PrecisaNavegador, baixar_arquivo, buscar_info,
+                                chave_versao, eh_mais_nova, escolher_apk, extrair_apk, ler_info, tamanho_legivel)
+
+INFO_DO_DONO = """{
+  "version":0.20 ;
+  "link":"https://www.transfernow.net/pt/d/start?utm_source=20261121KTAtiSy6&utm_term=25Dt4R";
+  "proctetion":"ttjZz!ODDg&uisk::28$!#)3!$!2)4+$!jejx_((((_+3(_(#)29_?!#!2"
+}"""
 
 APK_FALSO = b"PK\x03\x04" + b"apk" * 1000
 
@@ -54,33 +60,62 @@ def cliente(rotas):
     return httpx.AsyncClient(transport=httpx.MockTransport(tratar), follow_redirects=True)
 
 
-def test_baixa_com_progresso_e_segue_redirecionamento():
-    corpo = zip_com({"Rolox-apk-main/ROLOX.apk": APK_FALSO})
-    def rotas(req):
-        if str(req.url) == URL_ZIP:
-            return httpx.Response(302, headers={"location": "https://codeload.github.com/x.zip"})
-        return httpx.Response(200, content=corpo, headers={"content-length": str(len(corpo))})
-    vistos = []
-    dados = asyncio.run(baixar_zip(lambda f, t: vistos.append((f, t)), cliente(rotas)))
-    assert dados == corpo and vistos[-1] == (len(corpo), len(corpo))
+def test_le_o_arquivo_do_dono_mesmo_fora_do_padrao_json():
+    info = ler_info(INFO_DO_DONO)
+    assert info.versao == "0.20"                      # não vira 0.2
+    assert info.link == "https://www.transfernow.net/pt/d/start?utm_source=20261121KTAtiSy6&utm_term=25Dt4R"
+    assert info.protecao.startswith("ttjZz!") and info.protecao.endswith("!2")
+    certo = ler_info('{"version": "1.2.3", "link": "https:\\/\\/x.com\\/r.apk", "proctetion": ""}')
+    assert certo.versao == "1.2.3" and certo.link == "https://x.com/r.apk"
+    with pytest.raises(ErroAtualizador, match="sem a versão"):
+        ler_info('{"link": "https://x.com"}')
+    with pytest.raises(ErroAtualizador, match="link https"):
+        ler_info('{"version": 1, "link": "http://x.com"}')
+    assert URL_INFO == "https://raw.githubusercontent.com/a30208777-ai/Rolox-apk/refs/heads/main/Vision-apk-link.json"
 
 
-def test_baixar_sem_versao_publicada_ou_sem_internet():
+def test_compara_versoes_como_numeros():
+    assert chave_versao("0.20") == (0, 20)
+    assert eh_mais_nova("0.20", "0.9") and eh_mais_nova("0.20", None) and eh_mais_nova("1.0", "0.99")
+    assert not eh_mais_nova("0.20", "0.20") and not eh_mais_nova("0.19", "0.20") and not eh_mais_nova(None, "0.1")
+
+
+def test_buscar_info_no_github():
+    info = asyncio.run(buscar_info(cliente(lambda r: httpx.Response(200, text=INFO_DO_DONO))))
+    assert info.versao == "0.20"
     with pytest.raises(ErroAtualizador, match="Ainda não tem versão"):
-        asyncio.run(baixar_zip(cliente=cliente(lambda r: httpx.Response(404))))
+        asyncio.run(buscar_info(cliente(lambda r: httpx.Response(404))))
     def cai(req):
         raise httpx.ConnectError("sem rede")
     with pytest.raises(ErroAtualizador, match="Sem internet"):
-        asyncio.run(baixar_zip(cliente=cliente(cai)))
+        asyncio.run(buscar_info(cliente(cai)))
 
 
-def test_versao_online():
-    sha = "a" * 40
-    assert asyncio.run(versao_online(cliente(lambda r: httpx.Response(200, text=sha + "\n")))) == sha
-    assert asyncio.run(versao_online(cliente(lambda r: httpx.Response(404)))) is None
-    assert asyncio.run(versao_online(cliente(lambda r: httpx.Response(200, text="<html>")))) is None
-    assert URL_VERSAO.endswith("/repos/a30208777-ai/Rolox-apk/commits/main")
-    assert URL_ZIP == "https://github.com/a30208777-ai/Rolox-apk/archive/refs/heads/main.zip"
+def test_link_de_pagina_abre_no_navegador():
+    html = "<html><body>TransferNow</body></html>"
+    with pytest.raises(PrecisaNavegador):
+        asyncio.run(baixar_arquivo("https://www.transfernow.net/pt/d/start?x=1",
+                                   cliente=cliente(lambda r: httpx.Response(200, text=html, headers={"content-type": "text/html"}))))
+    with pytest.raises(PrecisaNavegador):            # sem content-type, mas não começa com PK
+        asyncio.run(baixar_arquivo("https://x.com/a", cliente=cliente(lambda r: httpx.Response(200, content=b"<!doctype html>"))))
+
+
+def test_link_direto_baixa_com_progresso(tmp_path):
+    corpo = zip_com({"Rolox-apk-main/ROLOX.apk": APK_FALSO})
+    def rotas(req):
+        if req.url.host == "x.com":
+            return httpx.Response(302, headers={"location": "https://cdn.x.com/rolox.zip"})
+        return httpx.Response(200, content=corpo, headers={"content-length": str(len(corpo))})
+    vistos = []
+    dados = asyncio.run(baixar_arquivo("https://x.com/rolox.zip", lambda f, t: vistos.append((f, t)), cliente(rotas)))
+    assert dados == corpo and vistos[-1] == (len(corpo), len(corpo))
+    assert extrair_apk(dados, tmp_path).apk.read_bytes() == APK_FALSO
+    # o link já é o .apk: guarda ele inteiro
+    apk = zip_com({"AndroidManifest.xml": b"x", "classes.dex": b"y"})
+    b = extrair_apk(apk, tmp_path / "direto")
+    assert b.apk.read_bytes() == apk and b.nome_original == "ROLOX.apk"
+    with pytest.raises(ErroAtualizador, match="não existe mais"):
+        asyncio.run(baixar_arquivo("https://x.com/a", cliente=cliente(lambda r: httpx.Response(404))))
 
 
 def test_no_pc_as_funcoes_de_android_avisam():

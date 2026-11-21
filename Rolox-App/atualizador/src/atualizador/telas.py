@@ -8,14 +8,15 @@ from typing import Optional
 import flet as ft
 
 from . import android
-from .baixar import ErroAtualizador, baixar_zip, extrair_apk, tamanho_legivel, versao_online
+from .baixar import (ErroAtualizador, InfoVersao, PrecisaNavegador, baixar_arquivo, buscar_info, eh_mais_nova,
+                     extrair_apk, tamanho_legivel)
 
 COR = ft.Colors.DEEP_PURPLE
 COR_DESTAQUE = ft.Colors.ORANGE_700
 LINK_DISCORD = "https://discord.gg/6NZ5Ftq3p"
 ESQUEMA_ROLOX = "rolox://abrir"
 
-P_VERSAO = "atualizador.versao_baixada"      # commit do GitHub da última versão baixada
+P_VERSAO = "atualizador.versao_baixada"      # versão (do Vision-apk-link.json) da última baixada
 P_ATALHO = "atualizador.atalho_perguntado"
 
 
@@ -28,7 +29,7 @@ class AtualizadorApp:
     def __init__(self, page: ft.Page):
         self.page = page
         self.prefs = ft.SharedPreferences()
-        self.versao_nova: Optional[str] = None
+        self.info: Optional[InfoVersao] = None
         self.apk_pronto = None              # Baixado, esperando instalar
         self.ocupado = False
 
@@ -113,16 +114,24 @@ class AtualizadorApp:
         self.t_rolox.value = "ROLOX instalado ✅" if instalado else "ROLOX ainda não está instalado"
         self.b_jogar.visible = instalado
         self.page.update()
-        self.versao_nova = await versao_online()
+        try:
+            self.info = await buscar_info()
+        except ErroAtualizador as e:
+            self.info = None
+            self.t_versao.value = str(e)
+            self.page.update()
+            return
         baixada = await self._get(P_VERSAO)
-        if self.versao_nova is None:
-            self.t_versao.value = "Não deu para conferir a versão (sem internet?)"
-        elif instalado and baixada == self.versao_nova:
-            self.t_versao.value = "Você está na versão mais nova 🎉"
+        v = self.info.versao
+        if instalado and not eh_mais_nova(v, baixada):
+            self.t_versao.value = f"Você está na versão mais nova ({v}) 🎉"
             self.b_baixar.content = "Baixar de novo"
+        elif instalado:
+            self.t_versao.value = f"Tem versão nova do ROLOX: {v} ⬇️"
+            self.b_baixar.content = f"Atualizar para a {v}"
         else:
-            self.t_versao.value = "Tem versão nova do ROLOX! ⬇️" if instalado else f"Versão {self.versao_nova[:7]} pronta para baixar"
-            self.b_baixar.content = "Atualizar o ROLOX" if instalado else "Baixar o ROLOX"
+            self.t_versao.value = f"Versão {v} pronta para baixar"
+            self.b_baixar.content = f"Baixar o ROLOX {v}"
         self.page.update()
 
     # ------------------------------------------------------------------ ações
@@ -146,19 +155,30 @@ class AtualizadorApp:
             self.page.update()
 
         try:
-            dados = await baixar_zip(progresso)
+            if self.info is None:
+                self.info = await buscar_info()
+            dados = await baixar_arquivo(self.info.link, progresso)
             self.t_status.value = "Extraindo..."
             self.barra.value = None
             self.page.update()
             self.apk_pronto = await asyncio.to_thread(extrair_apk, dados, android.pasta_downloads())
             del dados
-            if self.versao_nova:
-                await self._set(P_VERSAO, self.versao_nova)
+            await self._set(P_VERSAO, self.info.versao)
             self.t_status.value = f"Pronto: {self.apk_pronto.nome_original} ({tamanho_legivel(self.apk_pronto.tamanho)})"
             self.barra.visible = False
             self.b_instalar.visible = True
             self.page.update()
             await self.instalar()
+        except PrecisaNavegador as e:
+            # o link é uma página de download (ex.: TransferNow): o jogador baixa por lá
+            self.barra.visible = False
+            self.t_status.value = ("Abri a página de download no navegador. Baixe o arquivo do ROLOX, "
+                                   "abra o .apk e toque em Instalar. Depois volte aqui e toque em Jogar.")
+            await self._set(P_VERSAO, self.info.versao if self.info else "")
+            try:
+                await ft.UrlLauncher().launch_url(str(e), mode=ft.LaunchMode.EXTERNAL_APPLICATION)
+            except Exception:
+                self.aviso("Não deu para abrir o navegador.")
         except ErroAtualizador as e:
             self.barra.visible = False
             self.t_status.value = str(e)

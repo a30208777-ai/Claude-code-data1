@@ -1,13 +1,16 @@
 """Baixar e extrair o ROLOX (sem nada de Android aqui: dá para testar no PC).
 
-O ROLOX publicado fica no GitHub, no repositório a30208777-ai/Rolox-apk. O Atualizador baixa o
-.zip do repositório, procura o .apk do ROLOX dentro dele e guarda só esse arquivo.
+O dono publica no GitHub (repositório a30208777-ai/Rolox-apk) o arquivo Vision-apk-link.json com
+a versão nova e o link de download. O Atualizador lê esse arquivo, compara a versão e baixa pelo
+link: se o link entregar o .apk (ou um .zip com ele), instala; se for uma página de download
+(ex.: TransferNow), abre no navegador.
 """
 
 from __future__ import annotations
 
 import hashlib
 import io
+import re
 import zipfile
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
@@ -16,15 +19,20 @@ from typing import Callable, Optional
 import httpx
 
 REPO = "a30208777-ai/Rolox-apk"
-URL_ZIP = f"https://github.com/{REPO}/archive/refs/heads/main.zip"
-URL_VERSAO = f"https://api.github.com/repos/{REPO}/commits/main"
+# arquivo que diz qual é a versão nova do ROLOX e onde baixar (o dono edita no GitHub)
+URL_INFO = f"https://raw.githubusercontent.com/{REPO}/refs/heads/main/Vision-apk-link.json"
 AGENTE = "AtualizadorROLOX/1.0"
 MAX_ZIP = 400 * 1024 * 1024          # 400 MB: mais que isso não é o ROLOX
+MAX_INFO = 64 * 1024
 PRAZO = httpx.Timeout(30.0, read=60.0)
 
 
 class ErroAtualizador(Exception):
     """Erro com mensagem para mostrar ao jogador."""
+
+
+class PrecisaNavegador(Exception):
+    """O link é uma página de download (ex.: TransferNow), não o arquivo: abrir no navegador."""
 
 
 @dataclass
@@ -35,46 +43,96 @@ class Baixado:
     nome_original: str
 
 
-async def versao_online(cliente: Optional[httpx.AsyncClient] = None) -> Optional[str]:
-    """Código (commit) da versão mais nova publicada, ou None se não deu para saber."""
-    dono = cliente is None
-    cliente = cliente or httpx.AsyncClient(timeout=PRAZO, headers={"User-Agent": AGENTE})
+@dataclass
+class InfoVersao:
+    versao: str          # como está escrito no arquivo ("0.20" continua "0.20", não vira 0.2)
+    link: str
+    protecao: str
+
+
+def _campo(texto: str, *nomes: str) -> Optional[str]:
+    """Valor de "nome": ... mesmo com o arquivo fora do padrão JSON (ex.: ';' no lugar de ',')."""
+    for nome in nomes:
+        m = re.search(r'"%s"\s*:\s*("((?:[^"\\]|\\.)*)"|[0-9][0-9.]*)' % re.escape(nome), texto)
+        if m:
+            return m.group(2) if m.group(2) is not None else m.group(1)
+    return None
+
+
+def ler_info(texto: str) -> InfoVersao:
+    """Lê o Vision-apk-link.json. Aceita JSON certinho e também o jeito que o dono escreveu
+    (com ';' no fim das linhas). A versão é lida como TEXTO para 0.20 não virar 0.2."""
+    versao = _campo(texto, "version", "versao", "versão")
+    link = _campo(texto, "link", "url")
+    protecao = _campo(texto, "proctetion", "protection", "protecao", "proteção") or ""
+    if not versao or not re.fullmatch(r"\d+(\.\d+)*", versao.strip()):
+        raise ErroAtualizador("O arquivo de versão do ROLOX está sem a versão (version).")
+    link = (link or "").replace("\\/", "/").strip()
+    if not link.startswith("https://"):
+        raise ErroAtualizador("O arquivo de versão do ROLOX está sem um link https de download.")
+    return InfoVersao(versao.strip(), link, protecao)
+
+
+def chave_versao(v: Optional[str]) -> tuple:
+    """'0.20' -> (0, 20): compara versões como números (0.20 é mais nova que 0.9)."""
     try:
-        r = await cliente.get(URL_VERSAO, headers={"Accept": "application/vnd.github.sha", "User-Agent": AGENTE})
+        return tuple(int(x) for x in str(v).strip().split("."))
+    except (TypeError, ValueError):
+        return ()
+
+
+def eh_mais_nova(online: Optional[str], instalada: Optional[str]) -> bool:
+    return bool(online) and (not instalada or chave_versao(online) > chave_versao(instalada))
+
+
+async def buscar_info(cliente: Optional[httpx.AsyncClient] = None) -> InfoVersao:
+    """Baixa e lê o arquivo de versão do GitHub."""
+    dono = cliente is None
+    cliente = cliente or httpx.AsyncClient(timeout=PRAZO, follow_redirects=True, headers={"User-Agent": AGENTE})
+    try:
+        r = await cliente.get(URL_INFO, headers={"Cache-Control": "no-cache"})
+        if r.status_code == 404:
+            raise ErroAtualizador("Ainda não tem versão do ROLOX publicada.")
         if r.status_code != 200:
-            return None
-        sha = r.text.strip()
-        return sha if len(sha) == 40 and all(c in "0123456789abcdef" for c in sha) else None
-    except httpx.HTTPError:
-        return None
+            raise ErroAtualizador(f"O GitHub respondeu {r.status_code}. Tente de novo daqui a pouco.")
+        if len(r.content) > MAX_INFO:
+            raise ErroAtualizador("O arquivo de versão do ROLOX está estranho (grande demais).")
+        return ler_info(r.text)
+    except httpx.HTTPError as e:
+        raise ErroAtualizador("Sem internet ou o GitHub não respondeu. Confira a conexão.") from e
     finally:
         if dono:
             await cliente.aclose()
 
 
-async def baixar_zip(progresso: Callable[[int, Optional[int]], None] = lambda feito, total: None,
-                     cliente: Optional[httpx.AsyncClient] = None) -> bytes:
-    """Baixa o .zip do repositório. `progresso(bytes_baixados, total_ou_None)`."""
+async def baixar_arquivo(link: str, progresso: Callable[[int, Optional[int]], None] = lambda feito, total: None,
+                         cliente: Optional[httpx.AsyncClient] = None) -> bytes:
+    """Baixa o que o link entregar. Se for uma PÁGINA (site de transferência), levanta PrecisaNavegador."""
     dono = cliente is None
     cliente = cliente or httpx.AsyncClient(timeout=PRAZO, follow_redirects=True, headers={"User-Agent": AGENTE})
     try:
-        async with cliente.stream("GET", URL_ZIP) as r:
+        async with cliente.stream("GET", link) as r:
             if r.status_code == 404:
-                raise ErroAtualizador("Ainda não tem versão do ROLOX publicada para baixar.")
+                raise ErroAtualizador("O link de download do ROLOX não existe mais. Avise no Discord.")
             if r.status_code != 200:
-                raise ErroAtualizador(f"O GitHub respondeu {r.status_code}. Tente de novo daqui a pouco.")
+                raise ErroAtualizador(f"O site do download respondeu {r.status_code}. Tente de novo daqui a pouco.")
+            tipo = r.headers.get("content-type", "").lower()
+            if "text/html" in tipo or "json" in tipo:
+                raise PrecisaNavegador(link)
             total = int(r.headers.get("content-length") or 0) or None
             if total and total > MAX_ZIP:
                 raise ErroAtualizador("O arquivo do ROLOX está grande demais.")
             buf = io.BytesIO()
             async for parte in r.aiter_bytes():
+                if buf.tell() == 0 and not parte.startswith(b"PK"):
+                    raise PrecisaNavegador(link)          # não é .apk nem .zip: é uma página
                 buf.write(parte)
                 if buf.tell() > MAX_ZIP:
                     raise ErroAtualizador("O arquivo do ROLOX está grande demais.")
                 progresso(buf.tell(), total)
             return buf.getvalue()
     except httpx.HTTPError as e:
-        raise ErroAtualizador("Sem internet ou o GitHub não respondeu. Confira a conexão.") from e
+        raise ErroAtualizador("Sem internet ou o site do download não respondeu. Confira a conexão.") from e
     finally:
         if dono:
             await cliente.aclose()
@@ -104,7 +162,11 @@ def extrair_apk(dados_zip: bytes, pasta: Path) -> Baixado:
     except zipfile.BadZipFile as e:
         raise ErroAtualizador("O arquivo baixado veio estragado. Tente de novo.") from e
     with z:
-        escolhido = escolher_apk(z.namelist())
+        nomes = z.namelist()
+        if "AndroidManifest.xml" in nomes:          # o link já era o .apk (não um .zip com o .apk)
+            dados = dados_zip
+            return _salvar(dados, pasta, "ROLOX.apk")
+        escolhido = escolher_apk(nomes)
         if not escolhido:
             raise ErroAtualizador("Não achei o app do ROLOX (.apk) no pacote baixado.")
         info = z.getinfo(escolhido)
@@ -113,12 +175,16 @@ def extrair_apk(dados_zip: bytes, pasta: Path) -> Baixado:
         dados = z.read(escolhido)
     if dados[:2] != b"PK":                      # um .apk é um zip por dentro
         raise ErroAtualizador("O arquivo do ROLOX não parece um app Android válido.")
+    return _salvar(dados, pasta, PurePosixPath(escolhido).name)
+
+
+def _salvar(dados: bytes, pasta: Path, nome_original: str) -> Baixado:
     pasta.mkdir(parents=True, exist_ok=True)
     destino = pasta / "rolox.apk"
     temporario = pasta / "rolox.apk.parte"
     temporario.write_bytes(dados)
     temporario.replace(destino)
-    return Baixado(destino, len(dados), hashlib.sha256(dados).hexdigest(), PurePosixPath(escolhido).name)
+    return Baixado(destino, len(dados), hashlib.sha256(dados).hexdigest(), nome_original)
 
 
 def tamanho_legivel(n: Optional[int]) -> str:
