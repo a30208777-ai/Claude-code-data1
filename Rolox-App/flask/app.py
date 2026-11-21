@@ -683,7 +683,12 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
             curti = mapa_id in g.api.minhas_curtidas()
         except ErroRolox:
             curti = False
-        return render_template("jogo.html", m=m, autor=autor, recordes=recordes, curti=curti,
+        uids = {x["server_uid"] for x in servs}
+        try:                                            # 👥 amigos jogando este jogo agora
+            amigos_aqui = [a for a in g.api.meus_amigos() if a["tipo"] == "amigo" and a.get("server_uid") in uids]
+        except ErroRolox:
+            amigos_aqui = []
+        return render_template("jogo.html", m=m, autor=autor, recordes=recordes, curti=curti, amigos_aqui=amigos_aqui,
                                jogando=sum(x.get("humanos", 0) for x in servs if not x.get("is_hack_server")),
                                jogando_hack=sum(x.get("humanos", 0) for x in servs if x.get("is_hack_server")),
                                servidores=len(servs), eu=perfil.get("username"), aba="jogos")

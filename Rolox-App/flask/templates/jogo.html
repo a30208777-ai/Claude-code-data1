@@ -37,6 +37,19 @@
 <p class="nota">Este jogo ainda não foi aprovado pelo dono (só você vê esta página).</p>
 {% endif %}
 
+{% if amigos_aqui %}
+<h2>👥 Amigos jogando agora</h2>
+{% for a in amigos_aqui %}
+  <div class="cartao">
+    <span class="icone">🟢</span>
+    <div class="info"><div class="titulo"><a href="{{ url_for('jogador', nome=a.username) }}">{{ a.username }}</a></div></div>
+    <form method="post" action="{{ url_for('amigos_entrar', uid=a.server_uid) }}">
+      <input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn pequeno">Entrar junto</button>
+    </form>
+  </div>
+{% endfor %}
+{% endif %}
+
 <h2>🏆 Recordes</h2>
 {% for r in recordes %}
   <div class="cartao recorde{{ ' meu' if r.username == eu }}">

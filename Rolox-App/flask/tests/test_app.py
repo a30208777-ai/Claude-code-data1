@@ -1749,3 +1749,19 @@ def test_paginas_de_erro_amigaveis(cliente, sb):
     r = cliente.get("/api/nao-existe")
     assert r.status_code == 404 and r.get_json()["erro"] == 404
     assert cliente.get("/dono").status_code == 403 and "Sem permissão" in html(cliente.get("/dono"))
+
+
+def test_pagina_do_jogo_mostra_amigos_jogando(cliente, sb):
+    entrar(cliente)
+    tok = csrf(cliente)
+    mid = enviar_mapa(cliente).get_json()["id"]
+    sb.dono = True
+    cliente.post(f"/dono/{mid}/aprovar", data={"csrf": tok})
+    assert "Amigos jogando agora" not in html(cliente.get(f"/jogos/{mid}"))
+    sb.servidores.append({"server_uid": "s5", "gameid": sb.mapas[mid]["gameid"], "host_id": "u7", "capacidade": 10,
+                          "is_hack_server": False, "status": "aberto"})
+    sb.membros["s5"] = ["u7"]
+    sb.amigos = [{"username": "bob", "tipo": "amigo", "online": True, "server_uid": "s5", "jogo": "Obby"},
+                 {"username": "carla", "tipo": "amigo", "online": True, "server_uid": "s1"}]
+    t = html(cliente.get(f"/jogos/{mid}"))
+    assert "👥 Amigos jogando agora" in t and "bob" in t and "/amigos/entrar/s5" in t and "carla" not in t
