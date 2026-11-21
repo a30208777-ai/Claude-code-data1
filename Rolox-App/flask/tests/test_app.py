@@ -276,6 +276,23 @@ class SupabaseFalso:
             if nome == "conversa_privada":
                 return Resp(200, [m for m in self.dms if m["com"] == json["p_com"]])
             return Resp(200, [{"username": m["com"], "nao_lidas": 0, "previa": m["texto"]} for m in self.dms[-1:]])
+        if p in ("/rest/v1/rpc/criar_servidor_privado", "/rest/v1/rpc/usar_codigo_privado", "/rest/v1/rpc/codigo_do_meu_privado"):
+            self.privados = getattr(self, "privados", {})
+            nome = p.rsplit("/", 1)[1]
+            if nome == "criar_servidor_privado":
+                uid = f"p{len(self.privados) + 1}"
+                self.servidores.append({"server_uid": uid, "gameid": json["p_gameid"], "host_id": "u1", "capacidade": 20,
+                                        "is_hack_server": json["p_hack"], "status": "aberto", "privado": True})
+                self.membros[uid] = []
+                self.privados[uid] = "ABC234"
+                return Resp(200, {"server_uid": uid, "codigo": "ABC234"})
+            if nome == "usar_codigo_privado":
+                uid = next((k for k, v in self.privados.items() if v == json["p_codigo"].strip().upper()), None)
+                if not uid:
+                    return Resp(400, {"code": "P0001", "message": "código inválido ou o servidor já fechou"})
+                srv = next(x for x in self.servidores if x["server_uid"] == uid)
+                return Resp(200, {"server_uid": uid, "gameid": srv["gameid"]})
+            return Resp(200, self.privados.get(json["p_server"]))
         if p == "/rest/v1/rpc/definir_categoria":
             m = self.mapas[json["p_mapa"]]
             if m["autor_id"] != "u1" and not self.dono:
@@ -1827,3 +1844,24 @@ def test_categorias_dos_jogos(cliente, sb):
     assert cliente.post(f"/jogos/{mid}/categoria", data={"csrf": tok, "categoria": "xxx"}).status_code == 400
     sb.mapas[mid]["autor_id"] = "u9"
     assert "Mudar categoria" not in html(cliente.get(f"/jogos/{mid}"))
+
+
+def test_servidor_privado_com_codigo(cliente, sb):
+    entrar(cliente)
+    tok = csrf(cliente)
+    mid = enviar_mapa(cliente).get_json()["id"]
+    sb.dono = True
+    cliente.post(f"/dono/{mid}/aprovar", data={"csrf": tok})
+    sb.dono = False
+    assert "🔐 Criar servidor privado" in html(cliente.get(f"/jogos/{mid}"))
+    r = cliente.post(f"/jogos/{mid}/privado", data={"csrf": tok})
+    assert r.headers["Location"].endswith(f"/jogar/{mid}?s=p1")
+    t = html(cliente.get(f"/jogar/{mid}?s=p1"))
+    assert "🔐 ABC234" in t
+    # o matchmaking normal NÃO coloca ninguém no privado
+    r = cliente.post(f"/jogos/{mid}/jogar", data={"csrf": tok})
+    assert "s=p1" not in r.headers["Location"]
+    r = cliente.post("/privado/entrar", data={"csrf": tok, "codigo": "abc234"})
+    assert r.headers["Location"].endswith(f"/jogar/{mid}?s=p1")
+    r = cliente.post("/privado/entrar", data={"csrf": tok, "codigo": "ZZZZZZ"})
+    assert r.status_code == 302 and "/jogar/" not in r.headers["Location"]          # código errado não entra

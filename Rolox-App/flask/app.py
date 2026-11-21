@@ -689,6 +689,32 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
         flash(f"🏷️ Categoria: {CATEGORIAS[cat]}", "ok")
         return redirect(url_for("jogo_pagina", mapa_id=mapa_id))
 
+    @app.post("/jogos/<mapa_id>/privado")
+    @logado
+    def jogo_privado_criar(mapa_id: str):
+        m = _mapa_ou_404(mapa_id)
+        if not m.get("gameid") or not m.get("caminho_aprovado"):
+            abort(404)
+        perfil = g.api.meu_perfil()
+        r = g.api.criar_servidor_privado(m["gameid"], perfil.get("jogo_mod") == m["gameid"])
+        e = g.api.entrar(r["server_uid"])
+        if e.get("resultado") not in ("entrou", "ja_esta"):
+            flash("Não deu para entrar no servidor privado.", "erro")
+            return redirect(url_for("jogo_pagina", mapa_id=mapa_id))
+        flash(f"🔐 Servidor privado criado! Código: {r['codigo']} — mande para os amigos.", "ok")
+        return redirect(url_for("jogar", mapa_id=mapa_id, s=r["server_uid"]))
+
+    @app.post("/privado/entrar")
+    @logado
+    def privado_entrar():
+        r = g.api.usar_codigo_privado(request.form.get("codigo", ""))
+        m = g.api.mapa_do_jogo(r.get("gameid") or "")
+        e = g.api.entrar(r["server_uid"])
+        if not m or e.get("resultado") not in ("entrou", "ja_esta"):
+            flash("Não deu para entrar (servidor cheio ou fechado).", "erro")
+            return redirect(url_for("jogos"))
+        return redirect(url_for("jogar", mapa_id=m["id"], s=r["server_uid"]))
+
     @app.get("/ranking")
     @logado
     def ranking():
@@ -800,6 +826,7 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
         """Junta a galera num servidor com vaga (ou cria). O banco garante: quem usa hack/mod neste
         jogo só entra em servidor hack, e servidor hack só aceita quem usa hack/mod."""
         livres = [x for x in g.api.servidores() if x["gameid"] == m["gameid"] and x["status"] == "aberto"
+                  and not x.get("privado")
                   and x["is_hack_server"] == hack and x["humanos"] < x["capacidade"]]
         if livres:
             uid = max(livres, key=lambda x: x["humanos"])["server_uid"]
@@ -874,8 +901,14 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
         except ErroRolox:
             curti = False
         hack = bool(s and s.get("is_hack_server"))
+        codigo_privado = None
+        if s and s.get("privado"):
+            try:
+                codigo_privado = g.api.codigo_do_meu_privado(s["server_uid"])
+            except ErroRolox:
+                pass
         return render_template("jogar.html", m=m, s=s, teste=teste, eu=perfil.get("username", "Jogador"), curti=curti,
-                               hack=hack, dono_jogo=dono_jogo, criador_jogo=criador_jogo and not dono_jogo,
+                               hack=hack, dono_jogo=dono_jogo, codigo_privado=codigo_privado, criador_jogo=criador_jogo and not dono_jogo,
                                midias_base=g.api.url_midias(),
                                avatar=avatar, passe=passe,
                                host=bool(s) and s["host_id"] == g.api.user_id,

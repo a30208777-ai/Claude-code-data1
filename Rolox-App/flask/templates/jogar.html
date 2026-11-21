@@ -61,7 +61,7 @@
   {% else %}
   <a class="btn-jogo" href="{{ url_for('dono') if eh_dono else url_for('jogos') }}" aria-label="Voltar">✕</a>
   {% endif %}
-  <strong class="nome-jogo">{{ m.nome }}{% if teste %}<span class="etiqueta neutra">TESTE</span>{% endif %}{% if hack %}<span class="etiqueta hack">🤖 HACK</span>{% endif %}{% if dono_jogo or criador_jogo %}<button class="btn-jogo botao-dono" id="abrirDono" aria-label="{{ 'Painel do dono' if dono_jogo else 'Painel do criador do jogo' }}" aria-expanded="false" title="{{ 'Painel do dono' if dono_jogo else 'Painel do criador do jogo' }}">👑💎</button>{% endif %}</strong>
+  <strong class="nome-jogo">{{ m.nome }}{% if teste %}<span class="etiqueta neutra">TESTE</span>{% endif %}{% if hack %}<span class="etiqueta hack">🤖 HACK</span>{% endif %}{% if codigo_privado %}<span class="etiqueta neutra" title="Código do servidor privado">🔐 {{ codigo_privado }}</span>{% endif %}{% if dono_jogo or criador_jogo %}<button class="btn-jogo botao-dono" id="abrirDono" aria-label="{{ 'Painel do dono' if dono_jogo else 'Painel do criador do jogo' }}" aria-expanded="false" title="{{ 'Painel do dono' if dono_jogo else 'Painel do criador do jogo' }}">👑💎</button>{% endif %}</strong>
   {% if hack %}<button class="btn-jogo botao-executor" id="abrirExecutor" aria-label="Executor de scripts" aria-expanded="false" title="Executor de scripts">🤖</button>{% endif %}
   <button class="btn-jogo so-celular" id="abrirMais" aria-label="Mais opções" aria-expanded="false">⋯</button>
   <div class="mais-jogo" id="maisJogo">

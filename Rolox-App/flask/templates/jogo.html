@@ -40,6 +40,9 @@
   </form>
   <button class="btn contorno" type="button" id="compartilhar" aria-label="Compartilhar">🔗</button>
 </div>
+<form method="post" action="{{ url_for('jogo_privado_criar', mapa_id=m.id) }}">
+  <input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn contorno pequeno">🔐 Criar servidor privado</button>
+</form>
 <p class="nota"><a href="{{ url_for('hacks') }}#mapa-{{ m.id }}">🤖 Jogar com hacks</a>{% if jogando_hack %} · {{ jogando_hack }} no modo hack agora{% endif %}</p>
 {% else %}
 <p class="nota">Este jogo ainda não foi aprovado pelo dono (só você vê esta página).</p>

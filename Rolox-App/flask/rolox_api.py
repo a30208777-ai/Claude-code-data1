@@ -378,6 +378,16 @@ class RoloxAPI:
     def definir_categoria(self, mapa_id: str, categoria: str) -> dict:
         return self._req("POST", "/rest/v1/rpc/definir_categoria", json={"p_mapa": mapa_id, "p_categoria": categoria}) or {}
 
+    # ------------------------------------------------ 🔐 servidor privado
+    def criar_servidor_privado(self, gameid: str, hack: bool = False) -> dict:
+        return self._req("POST", "/rest/v1/rpc/criar_servidor_privado", json={"p_gameid": gameid, "p_hack": hack}) or {}
+
+    def usar_codigo_privado(self, codigo: str) -> dict:
+        return self._req("POST", "/rest/v1/rpc/usar_codigo_privado", json={"p_codigo": str(codigo or "")[:12]}) or {}
+
+    def codigo_do_meu_privado(self, server_uid: str) -> Optional[str]:
+        return self._req("POST", "/rest/v1/rpc/codigo_do_meu_privado", json={"p_server": server_uid})
+
     def nome_de(self, user_id: str) -> Optional[str]:
         """Nome de usuário de alguém (perfis são visíveis para quem está logado)."""
         linhas = self._req("GET", "/rest/v1/perfis", params={"select": "username", "id": f"eq.{user_id}"}) or []
@@ -573,7 +583,7 @@ class RoloxAPI:
     # ------------------------------------------------------- servidores
     def servidores(self) -> list[dict]:
         linhas = self._req("GET", "/rest/v1/servidores_ativos", params={
-            "select": "server_uid,gameid,host_id,capacidade,is_hack_server,status,"
+            "select": "server_uid,gameid,host_id,capacidade,is_hack_server,status,privado,"
                       "users_dos_servidores(count),bots_dos_servidores(count)",
             "status": "neq.encerrando", "order": "criado_em.desc", "limit": "100"})
         for s in linhas:
