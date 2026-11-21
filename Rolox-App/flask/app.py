@@ -472,6 +472,13 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
     def politica():
         return render_template("politica.html")
 
+    @app.post("/perfil/bio")
+    @logado
+    def perfil_bio():
+        r = g.api.definir_bio(request.form.get("bio", ""))
+        flash("✍️ \"Sobre mim\" salvo!" if r.get("bio") else "✍️ \"Sobre mim\" apagado.", "ok")
+        return redirect(url_for("perfil") + "#sobre-mim")
+
     @app.get("/avatar.svg")
     def avatar_svg():
         """Prévia ao vivo do editor de avatar."""

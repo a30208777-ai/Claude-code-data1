@@ -174,7 +174,8 @@ class SupabaseFalso:
             if json["p_username"] == "alice":
                 return Resp(200, {"username": "alice", "avatar": {}, "is_parceiro": self.perfil.get("is_parceiro", False),
                                   "parceiro_desde": None, "criado_em": "2026-11-16T00:00:00Z",
-                                  "redes": self.perfil.get("redes", {}) if self.perfil.get("is_parceiro") else {}})
+                                  "redes": self.perfil.get("redes", {}) if self.perfil.get("is_parceiro") else {},
+                                  "bio": self.perfil.get("bio", "")})
             return Resp(200, None)
         if p == "/rest/v1/rpc/parceiros_entre":
             return Resp(200, [n for n in json["p_nomes"] if n in getattr(self, "lista_parceiros", set())])
@@ -263,6 +264,10 @@ class SupabaseFalso:
             c["usado_por"] = "alice"
             self.perfil.update(is_parceiro=True, parceiro_desde="2026-11-20T16:00:00Z")
             return Resp(200, {"parceiro": True, "apelido": c["apelido"]})
+        if p == "/rest/v1/rpc/definir_bio":
+            t = " ".join(json["p_texto"].split())[:140].replace("idiota", "******")
+            self.perfil["bio"] = t
+            return Resp(200, {"bio": t})
         if p in ("/rest/v1/rpc/minhas_missoes", "/rest/v1/rpc/resgatar_missao"):
             self.missoes_feitas = getattr(self, "missoes_feitas", set())
             self.resgatadas = getattr(self, "resgatadas", set())
@@ -1677,3 +1682,20 @@ def test_missoes_diarias(cliente, sb):
     assert sb.perfil["tickets"] == antes + 5                       # não resgata duas vezes
     cliente.post("/missoes/jogar/resgatar")                        # sem CSRF
     assert sb.perfil["tickets"] == antes + 5
+
+
+def test_sobre_mim_no_perfil(cliente, sb):
+    entrar(cliente)
+    tok = csrf(cliente)
+    assert 'id="sobre-mim"' in html(cliente.get("/perfil"))
+    r = cliente.post("/perfil/bio", data={"csrf": tok, "bio": "  Faço obbys   <b>legais</b>  "})
+    assert r.headers["Location"].endswith("/perfil#sobre-mim") and sb.perfil["bio"] == "Faço obbys <b>legais</b>"
+    t = html(cliente.get("/perfil"))
+    assert 'value="Faço obbys &lt;b&gt;legais&lt;/b&gt;"' in t                  # nunca vira HTML
+    cliente.post("/perfil/bio", data={"csrf": tok, "bio": "x" * 500})
+    assert len(sb.perfil["bio"]) == 140
+    cliente.post("/perfil/bio", data={"bio": "sem csrf"})
+    assert len(sb.perfil["bio"]) == 140
+    cliente.post("/perfil/bio", data={"csrf": tok, "bio": "Sou o <i>melhor</i>"})
+    t = html(cliente.get("/jogador/alice"))
+    assert "“Sou o &lt;i&gt;melhor&lt;/i&gt;”" in t

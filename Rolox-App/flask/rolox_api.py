@@ -263,7 +263,7 @@ class RoloxAPI:
         linhas = self._req("GET", "/rest/v1/perfis", params={
             "id": f"eq.{self.user_id}",
             "select": "id,username,email,idioma,jogo_mod,aceitou_localizacao,banido,"
-                      "is_adm,tickets,tickets_ultimo_ganho,avatar,is_parceiro,parceiro_desde,redes,app_status,app_verificado_em"})
+                      "is_adm,tickets,tickets_ultimo_ganho,avatar,is_parceiro,parceiro_desde,redes,app_status,app_verificado_em,bio"})
         if not linhas:
             raise ErroRolox("perfil_nao_encontrado")
         return linhas[0]
@@ -359,6 +359,10 @@ class RoloxAPI:
 
     def resgatar_missao(self, codigo: str) -> dict:
         return self._req("POST", "/rest/v1/rpc/resgatar_missao", json={"p_codigo": str(codigo)[:20]}) or {}
+
+    def definir_bio(self, texto: str) -> dict:
+        """✍️ 'Sobre mim' (o banco passa pelo filtro de palavras e corta em 140 letras)."""
+        return self._req("POST", "/rest/v1/rpc/definir_bio", json={"p_texto": str(texto or "")[:300]}) or {}
 
     def nome_de(self, user_id: str) -> Optional[str]:
         """Nome de usuário de alguém (perfis são visíveis para quem está logado)."""

@@ -6,6 +6,7 @@
   <div class="cresce">
     <h1>{{ p.username }}{{ selo(p.is_parceiro) }}{{ selo_app(p.app) }}</h1>
     {% if p.is_parceiro %}<p class="parceiro-tag">🤝 Parceiro do ROLOX{% if p.parceiro_desde %} desde {{ p.parceiro_desde|data }}{% endif %}</p>{% endif %}
+    {% if p.bio %}<p class="bio">“{{ p.bio }}”</p>{% endif %}
     <p class="muted">No ROLOX desde {{ p.criado_em|data }}</p>
   </div>
 </div>
