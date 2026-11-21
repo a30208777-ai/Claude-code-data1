@@ -51,8 +51,10 @@ export function ligarAjustes(jogo, render, { botao, painel, camadaNomes, contado
   };
   const qual = el("select", {}, ...Object.entries(QUALIDADES).map(([k, v]) => el("option", { value: k, textContent: v, selected: a.qualidade === k })));
   qual.addEventListener("change", () => { a.qualidade = qual.value; mudou(); });
+  const tempoHoje = el("span", { className: "tempo-hoje", textContent: "—" });
   painel.replaceChildren(el("b", { textContent: "⚙️ Ajustes" }),
-    linha("Qualidade", qual), linha("🔊 Som", marca("som")), linha("🏷️ Nomes dos jogadores", marca("nomes")), linha("📈 Mostrar FPS", marca("fps")));
+    linha("Qualidade", qual), linha("🔊 Som", marca("som")), linha("🏷️ Nomes dos jogadores", marca("nomes")), linha("📈 Mostrar FPS", marca("fps")),
+    el("div", { className: "ajuste" }, el("span", { textContent: "⏱️ Jogado hoje" }), tempoHoje));
   function mudou() { salvarAjustes(a); aplicarAjustes(jogo, render, a, { camadaNomes, contador }); }
   botao.addEventListener("click", () => { painel.hidden = !painel.hidden; botao.setAttribute("aria-expanded", String(!painel.hidden)); });
   aplicarAjustes(jogo, render, a, { camadaNomes, contador });
@@ -64,5 +66,5 @@ export function ligarAjustes(jogo, render, { botao, painel, camadaNomes, contado
     const agora = performance.now();
     if (agora - desde >= 1000) { contador.textContent = `${Math.round((quadros * 1000) / (agora - desde))} FPS`; quadros = 0; desde = agora; }
   } });
-  return { get ajustes() { return a; } };
+  return { get ajustes() { return a; }, mostrarTempo: (t) => { tempoHoje.textContent = t; } };
 }

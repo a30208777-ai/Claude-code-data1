@@ -355,3 +355,4 @@ body.flash-foto::after { content: ""; position: fixed; inset: 0; z-index: 20; ba
 .painel-ajustes label.ajuste select { width: auto; max-width: 60%; margin: 0; }
 
 .bio { margin: 4px 0; font-style: italic; }
+.tempo-hoje { font-weight: 700; color: #b9f6ca; }
