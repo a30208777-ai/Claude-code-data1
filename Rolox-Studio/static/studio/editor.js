@@ -213,8 +213,44 @@ canvas.addEventListener("pointerup", (e) => {
   if (movimento > 6 || gizmo?.dragging) return;
   const r = canvas.getBoundingClientRect();
   const alvo = render.pegar(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+  if (pincel.ativo) {                                     // 🎨 pincel: pinta em vez de selecionar
+    if (alvo instanceof BasePart && !alvo._temporaria) pintar(alvo);
+    return;
+  }
   selecionar(alvo && !alvo._temporaria ? alvo : null);
 });
+
+// ----------------------------------------------------------- 🎨 pincel
+const pincel = { ativo: false, cor: "#ff7043", material: "Plastico", pintadas: 0 };
+function pintar(p) {
+  p.Color = Color3.fromHex(pincel.cor);
+  if (pincel.material) p.Material = pincel.material;
+  pincel.pintadas++;
+  mudou();
+  if (estado.sel === p) desenharProps();
+}
+function paletaPincel() {
+  let caixa = document.getElementById("paletaPincel");
+  if (!caixa) {
+    const cor = el("input", { type: "color", value: pincel.cor, "aria-label": "Cor do pincel",
+      oninput: (e) => { pincel.cor = e.target.value; } });
+    const mat = el("select", { "aria-label": "Material do pincel", onchange: (e) => { pincel.material = e.target.value; } },
+      MATERIAIS.map((m) => el("option", { value: m, selected: m === pincel.material }, NOMES_MATERIAIS[m] || m)));
+    caixa = el("div", { id: "paletaPincel", class: "paleta-pincel", hidden: true },
+      el("b", {}, "🎨 Pincel"), cor, mat,
+      el("span", { class: "vazio" }, "Toque nas peças para pintar"),
+      el("button", { class: "destaque", onclick: () => ligarPincel(false) }, "✓ Pronto"));
+    canvas.parentElement.append(caixa);
+  }
+  return caixa;
+}
+function ligarPincel(sim) {
+  pincel.ativo = sim;
+  paletaPincel().hidden = !sim;
+  document.querySelector('[data-acao="pincel"]')?.classList.toggle("ativo", sim);
+  if (sim) { selecionar(null); saida("🎨 Pincel ligado: toque nas peças para pintar.", "sistema"); }
+  else if (pincel.pintadas) { saida(`🎨 ${pincel.pintadas} peça(s) pintada(s).`, "sistema"); pincel.pintadas = 0; }
+}
 
 function loop() {
   if (estado.jogo) estado.jogo.passo();
@@ -568,6 +604,7 @@ const acoes = {
       }, el("b", {}, t.nome), el("span", { class: "vazio" }, t.descricao))))], [{ texto: "Cancelar", valor: false }]);
     void tipo;
   },
+  pincel() { ligarPincel(!pincel.ativo); },
   part() { novaParte("Part"); },
   bola() { novaParte("Part", "Ball"); },
   cilindro() { novaParte("Part", "Cylinder"); },
