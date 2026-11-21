@@ -143,12 +143,17 @@ def _num(v, padrao=0.0) -> float:
     return max(-LIMITE_COORD, min(LIMITE_COORD, f))
 
 
+# gestos (emotes) que aparecem no balão em cima da cabeça: só estes, nada que o jogador escreva
+EMOTES = {"acenar", "dancar", "comemorar", "rir", "triste", "bravo", "coracao", "pensar"}
+
+
 def limpar_estado(d: dict) -> dict:
     """Só números finitos e limitados; nada que o jogador mande vira HTML ou código."""
     p = d.get("p") if isinstance(d.get("p"), list) else []
     p = (p + [0, 0, 0])[:3]
+    em = d.get("em")
     return {"p": [round(_num(x), 3) for x in p], "r": round(_num(d.get("r")) % (2 * math.pi), 3),
-            "m": bool(d.get("m")), "v": bool(d.get("v", True))}
+            "m": bool(d.get("m")), "v": bool(d.get("v", True)), "em": em if isinstance(em, str) and em in EMOTES else None}
 
 
 class Salas:
@@ -254,7 +259,7 @@ class Salas:
                     mundo.append({"k": k, "x": 1} if it.get("x") else
                                  {"k": k, **({"c": it["c"], "p": it.get("p", "w")} if it.get("c") else {}),
                                   "props": it.get("props", {})})
-            outros = [{"id": k, **{c: v.get(c) for c in ("n", "a", "p", "r", "m", "v", "pc", "dn")}}
+            outros = [{"id": k, **{c: v.get(c) for c in ("n", "a", "p", "r", "m", "v", "pc", "dn", "em")}}
                       for k, v in jog.items() if k != eu]
             avisos = dados.setdefault("avisos", {}).pop(eu, [])
             return {"jogadores": outros, "anfitriao": anfitriao, "eu": eu, "mundo": mundo, "mv": mv,

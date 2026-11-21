@@ -5,6 +5,7 @@
 // presos no lugar para a física (Anchored) e movidos suavemente entre as
 // atualizações (interpolação), com o nome em cima da cabeça.
 
+import { EMOTES } from "./emotes.js";
 import * as THREE from "three";
 import { criarPersonagem } from "./fisica.js";
 import { Player, Vector3 } from "./motor.js";
@@ -62,7 +63,8 @@ export class Multijogador {
     if (!raiz) return null;
     const p = raiz.Position, m = this.jogo.local.humanoid.MoveDirection;
     const estado = { passe: this.passe, p: [p.X, p.Y, p.Z], r: raiz._rotY || 0,
-                     m: !!m && m.Magnitude > 0.05, v: this.jogo.local.humanoid.Health > 0, mv: this.mv };
+                     m: !!m && m.Magnitude > 0.05, v: this.jogo.local.humanoid.Health > 0, mv: this.mv,
+                     em: this.jogo.gestos?.atual() || null };
     const mundo = this.mundoRede?.colher();
     if (mundo) estado.mundo = mundo;
     if (this.saidaRede.length) estado.eventos = this.saidaRede.splice(0, 20);
@@ -138,6 +140,8 @@ export class Multijogador {
       o.alvo = new Vector3(j.p[0], j.p[1], j.p[2]);
       o.giro = j.r;
       o.vivo = j.v !== false;
+      const em = EMOTES[j.em] || "";                    // gesto 😀: balão em cima do nome (só emojis da lista)
+      if ((o.nome.dataset.em || "") !== em) { if (em) o.nome.dataset.em = em; else delete o.nome.dataset.em; }
     }
     for (const id of [...this.outros.keys()]) if (!vistos.has(id)) this._remover(id);
     this.aoMudar(this.outros.size);

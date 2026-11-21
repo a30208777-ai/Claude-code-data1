@@ -322,3 +322,17 @@ body > .tela-rolox { position: fixed; }
 body.flash-foto::after { content: ""; position: fixed; inset: 0; z-index: 20; background: #fff; pointer-events: none;
   animation: flashFoto .35s ease-out forwards; }
 @keyframes flashFoto { from { opacity: .85; } to { opacity: 0; } }
+
+/* 😀 gestos */
+.painel-gestos { position: fixed; z-index: 6; top: max(64px, calc(env(safe-area-inset-top) + 56px)); right: 10px;
+  display: grid; grid-template-columns: repeat(4, 48px); gap: 6px; padding: 8px; border-radius: 14px; background: #120c22e6; }
+.painel-gestos[hidden] { display: none !important; }
+.painel-gestos .gesto { width: 48px; height: 48px; border: 0; border-radius: 12px; background: #ffffff1a; font-size: 1.6rem; cursor: pointer; }
+.painel-gestos .gesto:active { transform: scale(.92); }
+.balao-gesto { position: fixed; z-index: 4; left: 50%; top: 34%; transform: translate(-50%, -50%) scale(.6); font-size: 2.6rem;
+  opacity: 0; pointer-events: none; filter: drop-shadow(0 3px 6px #0006); }
+.balao-gesto.mostra { animation: balaoEntra .35s ease-out forwards; }
+.balao-gesto.some { animation: balaoSai .4s ease-in forwards; }
+@keyframes balaoEntra { to { opacity: 1; transform: translate(-50%, -60%) scale(1); } }
+@keyframes balaoSai { from { opacity: 1; transform: translate(-50%, -60%) scale(1); } to { opacity: 0; transform: translate(-50%, -90%) scale(.8); } }
+.nome-jogador[data-em]::before { content: attr(data-em); display: block; text-align: center; font-size: 1.8em; line-height: 1.1; }

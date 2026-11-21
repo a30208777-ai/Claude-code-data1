@@ -17,7 +17,7 @@ def test_cada_um_ve_os_outros_e_nao_a_si(tmp_path):
     salas = mj.Salas(tmp_path)
     assert salas.atualizar(passe("u1", "ana"), {"p": [1, 2, 3], "r": 1, "m": True}, agora=100) == []
     outros = salas.atualizar(passe("u2", "bia"), {"p": [5, 0, 5]}, agora=100.1)
-    assert outros == [{"id": "u1", "n": "ana", "a": {"camisa": "#1e88e5"}, "p": [1.0, 2.0, 3.0], "r": 1.0, "m": True, "v": True, "pc": False, "dn": False}]
+    assert outros == [{"id": "u1", "n": "ana", "a": {"camisa": "#1e88e5"}, "p": [1.0, 2.0, 3.0], "r": 1.0, "m": True, "v": True, "pc": False, "dn": False, "em": None}]
     assert [j["id"] for j in salas.atualizar(passe("u1"), {"p": [1, 2, 4]}, agora=100.2)] == ["u2"]
 
 
@@ -32,7 +32,7 @@ def test_quem_some_sai_da_sala(tmp_path):
 
 def test_estado_maluco_e_limpo():
     e = mj.limpar_estado({"p": ["<script>", float("nan"), 1e99, 7], "r": "x", "m": "sim", "extra": "lixo"})
-    assert e == {"p": [0.0, 0.0, mj.LIMITE_COORD], "r": 0.0, "m": True, "v": True}
+    assert e == {"p": [0.0, 0.0, mj.LIMITE_COORD], "r": 0.0, "m": True, "v": True, "em": None}
 
 
 def test_passe_assinado(tmp_path):
@@ -127,3 +127,9 @@ def test_sala_vazia_recomeca_o_mundo(tmp_path):
     salas.trocar(ps(A), {"mundo": {"m": [{"k": "w/2", "props": {"Transparency": 1}}]}}, agora=1)
     r = salas.trocar(ps(B), {"mv": 0}, agora=100)        # A sumiu e a sala ficou vazia antes de B
     assert r["anfitriao"] == B and r["mundo"] == []
+
+
+def test_gestos_so_os_da_lista():
+    assert mj.limpar_estado({"em": "dancar"})["em"] == "dancar"
+    assert mj.limpar_estado({"em": "<script>"})["em"] is None
+    assert mj.limpar_estado({"em": ["acenar"]})["em"] is None
