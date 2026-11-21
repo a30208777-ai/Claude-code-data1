@@ -637,6 +637,24 @@ const acoes = {
   localscript() { novoScript("LocalScript"); },
   modulescript() { novoScript("ModuleScript"); },
   pasta() { const f = criar("Folder"); f.Parent = ondeColocar("Folder"); mudou(); selecionar(f); },
+  ajuda() {
+    const dica = (t, d) => el("li", {}, el("b", {}, t), " — ", d);
+    modal([el("p", {}, el("b", {}, "❓ Ajuda do ROLOX Studio")),
+      el("p", { class: "vazio" }, "Atalhos (PC)"),
+      el("ul", { class: "ajuda" },
+        dica("Ctrl+S", "salvar"), dica("Ctrl+Z / Ctrl+Y", "desfazer / refazer"), dica("Ctrl+D", "duplicar"),
+        dica("Ctrl+C / Ctrl+V", "copiar / colar (até em outro projeto)"), dica("Delete", "apagar"),
+        dica("W / R", "mover / mudar tamanho"), dica("F5", "jogar (Esc para parar)")),
+      el("p", { class: "vazio" }, "Dicas"),
+      el("ul", { class: "ajuda" },
+        dica("📦 Prontos", "árvore, casa, porta automática, moeda… com um toque"),
+        dica("🏝️ Gerar mundo", "ilha, montanhas, labirinto ou cidade prontos"),
+        dica("🎨 Pincel", "pinte várias peças tocando nelas"),
+        dica("🚩 Checkpoint", "encostou, renasce ali — sem script"),
+        dica("▶ Daqui", "teste começando em cima da peça selecionada"),
+        dica("Material", "Gelo escorrega, Areia é devagar, Borracha pula alto"),
+        dica("🤖 IA", "peça \"faça um obby com lava\" e ela monta tudo (no site)"))]);
+  },
   copiar() {
     try { const n = copiar(estado.sel); saida(`📋 Copiado: ${estado.sel.Name}${n > 1 ? ` (+${n - 1} dentro)` : ""}. Cole aqui ou em outro projeto.`, "sistema"); }
     catch (e) { modal(e.message); }
