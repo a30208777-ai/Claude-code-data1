@@ -14,9 +14,10 @@ const SUAVIDADE = 12;          // quanto maior, mais rápido alcança a posiçã
 
 export class Multijogador {
   constructor({ jogo, render, passe, csrf, camada, url = "/api/sala", aoMudar = () => {}, mundoRede = null,
-                aoAnfitriao = () => {} }) {
+                aoAnfitriao = () => {}, aoExpulso = null }) {
     this.mundoRede = mundoRede;    // mundo compartilhado (anfitrião roda os Scripts)
     this.aoAnfitriao = aoAnfitriao;
+    this.aoExpulso = aoExpulso;    // (motivo) => void: o dono me tirou do servidor
     this.mv = 0;                   // versão do mundo que eu já tenho
     this.saidaRede = [];           // mensagens da Rede esperando para sair
     this.eu = null;
@@ -80,6 +81,15 @@ export class Multijogador {
       if (!r.ok) throw new Error(String(r.status));
       this.falhas = 0;
       const d = await r.json();
+      if (d.expulso) {                                     // o dono 👑 me tirou deste servidor
+        this.parado = true;
+        this._aplicar([]);
+        if (this.aoExpulso) this.aoExpulso(String(d.expulso));
+        return;
+      }
+      for (const t of Array.isArray(d.avisos) ? d.avisos : []) {
+        try { this.jogo.mundo.game.Tela.Aviso(`👑 ${String(t)}`, 6); } catch { /* sem tela */ }
+      }
       this.eu = d.eu || this.eu;
       this._aplicar(d.jogadores || []);
       this._papel(d.anfitriao);
@@ -141,13 +151,14 @@ export class Multijogador {
     p.raiz._rotY = j.r;
     const nome = document.createElement("div");
     nome.className = "nome-jogador";
-    nome.textContent = j.n + (j.pc ? " 🤝" : "");   // texto puro: nome nunca vira HTML; 🤝 = parceiro
+    nome.textContent = (j.dn ? "👑 " : "") + j.n + (j.pc ? " 🤝" : "");   // texto puro; 👑 = dono, 🤝 = parceiro
+    if (j.dn) nome.classList.add("dono");
     this.camada?.appendChild(nome);
     // vira um Player no jogo (os Scripts do anfitrião enxergam: PlayerAdded, leaderstats, Rede...)
     const players = this.jogo.mundo.game.Players;
     const pl = new Player(j.n); pl._redeId = j.id; pl.Parent = players; pl.Character = p.modelo;
     try { players.PlayerAdded.Fire(pl); } catch { /* script com erro não derruba a rede */ }
-    const o = { modelo: p.modelo, raiz: p.raiz, alvo: p.raiz.Position, giro: j.r, nome, vivo: true, player: pl };
+    const o = { id: j.id, n: j.n, dn: !!j.dn, modelo: p.modelo, raiz: p.raiz, alvo: p.raiz.Position, giro: j.r, nome, vivo: true, player: pl };
     this.outros.set(j.id, o);
     return o;
   }

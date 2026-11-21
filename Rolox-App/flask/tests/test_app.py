@@ -263,6 +263,12 @@ class SupabaseFalso:
             c["usado_por"] = "alice"
             self.perfil.update(is_parceiro=True, parceiro_desde="2026-11-20T16:00:00Z")
             return Resp(200, {"parceiro": True, "apelido": c["apelido"]})
+        if p in ("/rest/v1/rpc/dono_expulsar", "/rest/v1/rpc/dono_banir"):
+            if not self.dono:
+                return Resp(403, {"code": "42501", "message": "apenas o dono"})
+            self.poderes_dono = getattr(self, "poderes_dono", [])
+            self.poderes_dono.append((p.rsplit("/", 1)[1], json))
+            return Resp(200, {"username": "bob"})
         if p in ("/rest/v1/rpc/dono_chaves_app", "/rest/v1/rpc/dono_adicionar_chave_app",
                  "/rest/v1/rpc/dono_revogar_chave_app", "/rest/v1/rpc/verificar_app"):
             import hashlib
@@ -345,7 +351,7 @@ class SupabaseFalso:
         if p == "/rest/v1/rpc/entrar_servidor":
             uid = json["p_server"]
             srv = next((s for s in self.servidores if s["server_uid"] == uid), None)
-            if srv["is_hack_server"] and self.perfil["jogo_mod"] != srv["gameid"]:
+            if not self.dono and srv["is_hack_server"] and self.perfil["jogo_mod"] != srv["gameid"]:   # o dono entra em qualquer um
                 return Resp(200, {"resultado": "servidor_so_para_hack"})
             if len(self.membros[uid]) >= srv["capacidade"]:
                 self.fila.append(uid)
@@ -1494,3 +1500,64 @@ def test_rolox_hacks_servidor_separado_com_executor(cliente, sb):
     assert "Sair do modo hack" in html(cliente.get("/hacks"))
     cliente.post("/hacks/sair-do-modo", data={"csrf": tok})
     assert sb.perfil["jogo_mod"] is None
+
+
+def test_painel_do_dono_no_jogo_kick_ban_e_anuncio(cliente, sb, tmp_path, monkeypatch):
+    import re
+    import discord_log
+    import multijogador
+    monkeypatch.setattr(discord_log, "registrar_sync", lambda *a, **k: True)
+    monkeypatch.setenv("ROLOX_PASTA_SALAS", str(tmp_path))          # sala limpa (nada de execuções antigas)
+    entrar(cliente)
+    tok = csrf(cliente)
+    mid = enviar_mapa(cliente).get_json()["id"]
+    sb.dono = True
+    cliente.post(f"/dono/{mid}/aprovar", data={"csrf": tok})
+    r = cliente.post(f"/jogos/{mid}/jogar", data={"csrf": tok})
+    t = html(cliente.get(r.headers["Location"].replace("http://localhost", "")))
+    assert 'id="abrirDono"' in t and "👑💎" in t and 'id="painelDono"' in t and "dono.js" in t
+    assert "executor.js" in t and 'id="abrirExecutor"' not in t          # o dono tem executor (pelo painel) até no servidor normal
+    passe = json.loads(re.search(r'passe: ("[^"]+")', t).group(1))
+    sala = multijogador.Passes(cliente.application.config["SECRET_KEY"]).ler(passe)["s"]
+    outro = multijogador.Salas()
+    bob = {"s": sala, "u": "u7", "n": "bob", "a": {}}
+    outro.trocar(bob, {"p": [0, 2, 0]})
+    eu = cliente.post("/api/sala", json={"passe": passe, "p": [1, 2, 1]}, headers={"X-CSRF": tok}).get_json()
+    assert any(j["id"] == "u7" for j in eu["jogadores"])
+    assert outro.trocar(bob, {"p": [0, 2, 0]})["jogadores"][0]["dn"] is True       # os outros veem a 👑
+    # anúncio para todos
+    r = cliente.post("/api/dono/jogo/anunciar", json={"passe": passe, "texto": "Evento às 20h!"}, headers={"X-CSRF": tok})
+    assert r.get_json()["viram"] == 2
+    assert outro.trocar(bob, {"p": [0, 2, 0]})["avisos"] == ["Evento às 20h!"]
+    # kick: sai da sala e não volta
+    r = cliente.post("/api/dono/jogo/expulsar", json={"passe": passe, "alvo": "u7", "motivo": "flood"}, headers={"X-CSRF": tok})
+    assert r.status_code == 200 and sb.poderes_dono[-1] == ("dono_expulsar", {"p_server": sala, "p_user": "u7"})
+    volta = outro.trocar(bob, {"p": [0, 2, 0]})
+    assert "expulso" in volta and "flood" in volta["expulso"]
+    assert cliente.post("/api/dono/jogo/banir", json={"passe": passe, "alvo": "u7"}, headers={"X-CSRF": tok}).status_code == 404
+    # ban de quem está na sala
+    carla = {"s": sala, "u": "u8", "n": "carla", "a": {}}
+    outro.trocar(carla, {"p": [0, 2, 0]})
+    r = cliente.post("/api/dono/jogo/banir", json={"passe": passe, "alvo": "u8", "motivo": "hack"}, headers={"X-CSRF": tok})
+    assert r.status_code == 200 and sb.poderes_dono[-1] == ("dono_banir", {"p_user": "u8", "p_motivo": "hack"})
+    assert "banida" in outro.trocar(carla, {"p": [0, 2, 0]})["expulso"]
+    # quem não é o dono não pode
+    sb.dono = False
+    r = cliente.post("/api/dono/jogo/anunciar", json={"passe": passe, "texto": "oi"}, headers={"X-CSRF": tok})
+    assert r.status_code == 403
+    t = html(cliente.get(f"/jogar/{mid}?s={sala}"))
+    assert 'id="abrirDono"' not in t and "dono.js" not in t
+
+
+def test_dono_usa_os_2_apps_sem_ficar_preso_no_modo_hack(cliente, sb):
+    entrar(cliente)
+    tok = csrf(cliente)
+    mid = enviar_mapa(cliente).get_json()["id"]
+    sb.dono = True
+    cliente.post(f"/dono/{mid}/aprovar", data={"csrf": tok})
+    r = cliente.post(f"/hacks/{mid}/jogar", data={"csrf": tok})
+    assert sb.perfil.get("jogo_mod") is None                     # o dono não entra no "modo hack"
+    hack = [s for s in sb.servidores if s.get("is_hack_server")]
+    assert hack and f"s={hack[-1]['server_uid']}" in r.headers["Location"]
+    t = html(cliente.get(r.headers["Location"].replace("http://localhost", "")))
+    assert 'id="abrirExecutor"' in t and 'id="abrirDono"' in t   # servidor hack: 🤖 no topo + 👑💎

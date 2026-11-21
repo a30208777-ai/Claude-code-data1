@@ -17,7 +17,7 @@ def test_cada_um_ve_os_outros_e_nao_a_si(tmp_path):
     salas = mj.Salas(tmp_path)
     assert salas.atualizar(passe("u1", "ana"), {"p": [1, 2, 3], "r": 1, "m": True}, agora=100) == []
     outros = salas.atualizar(passe("u2", "bia"), {"p": [5, 0, 5]}, agora=100.1)
-    assert outros == [{"id": "u1", "n": "ana", "a": {"camisa": "#1e88e5"}, "p": [1.0, 2.0, 3.0], "r": 1.0, "m": True, "v": True, "pc": False}]
+    assert outros == [{"id": "u1", "n": "ana", "a": {"camisa": "#1e88e5"}, "p": [1.0, 2.0, 3.0], "r": 1.0, "m": True, "v": True, "pc": False, "dn": False}]
     assert [j["id"] for j in salas.atualizar(passe("u1"), {"p": [1, 2, 4]}, agora=100.2)] == ["u2"]
 
 

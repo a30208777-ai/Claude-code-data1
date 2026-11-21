@@ -288,3 +288,22 @@ body > .tela-rolox { position: fixed; }
 .exec-linha.sistema { color: #ffb74d; }
 .hacks-topo { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
 .botao-hack { background: #ff6d00; }
+
+/* Painel do dono 👑💎 */
+.botao-dono { margin-left: 6px; min-width: 52px; background: linear-gradient(135deg, #ffd54f, #00e5ff); color: #1a1033; vertical-align: middle; }
+.painel-dono { left: 10px; right: auto; border-color: #ffd54f99; }
+.painel-dono .exec-topo b { color: #ffd54f; }
+.dono-sub { font-size: .8rem; font-weight: 700; color: #ffd54f; margin-top: 4px; }
+.dono-texto { flex: 1; min-width: 0; padding: 7px 9px; border-radius: 8px; border: 1px solid #ffffff33; background: #07050e; color: #eee; }
+.dono-jogadores { display: grid; gap: 6px; }
+.dono-jogador { display: flex; align-items: center; gap: 6px; padding: 6px 8px; border-radius: 10px; background: #ffffff10; }
+.dono-nome { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dono-acao { border: 0; border-radius: 8px; padding: 6px 8px; background: #ffffff1f; color: #fff; cursor: pointer; font: inherit; font-size: .8rem; }
+.dono-acao.perigo { background: #c62828; }
+.dono-poderes { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 6px; }
+.dono-poder { border: 1px solid #ffd54f55; border-radius: 10px; padding: 8px 6px; background: #ffd54f14; color: #fff; cursor: pointer; font: inherit; font-size: .82rem; }
+.dono-poder:active { transform: scale(.97); }
+.nome-jogador.dono { color: #ffd54f; font-weight: 700; }
+.expulso { position: fixed; inset: 0; z-index: 9; display: grid; place-items: center; padding: 24px; text-align: center;
+  background: #0e0a1ce8; color: #fff; font-size: 1.2rem; font-weight: 700; }
+.painel-executor input.dono-texto { background: #07050e; color: #eee; border: 1px solid #ffffff33; }

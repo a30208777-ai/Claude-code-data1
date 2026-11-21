@@ -44,7 +44,8 @@
   })();
 </script>
 
-{% if hack %}<section id="executor" class="painel-executor" hidden aria-label="Executor de scripts"></section>{% endif %}
+{% if hack or dono_jogo %}<section id="executor" class="painel-executor" hidden aria-label="Executor de scripts"></section>{% endif %}
+{% if dono_jogo %}<section id="painelDono" class="painel-executor painel-dono" hidden aria-label="Painel do dono"></section>{% endif %}
 <header class="barra-jogo">
   {% if s %}
   <form method="post" action="{{ url_for('sair_servidor', uid=s.server_uid) }}">
@@ -55,7 +56,7 @@
   {% else %}
   <a class="btn-jogo" href="{{ url_for('dono') if eh_dono else url_for('jogos') }}" aria-label="Voltar">✕</a>
   {% endif %}
-  <strong class="nome-jogo">{{ m.nome }}{% if teste %}<span class="etiqueta neutra">TESTE</span>{% endif %}{% if hack %}<span class="etiqueta hack">🤖 HACK</span>{% endif %}</strong>
+  <strong class="nome-jogo">{{ m.nome }}{% if teste %}<span class="etiqueta neutra">TESTE</span>{% endif %}{% if hack %}<span class="etiqueta hack">🤖 HACK</span>{% endif %}{% if dono_jogo %}<button class="btn-jogo botao-dono" id="abrirDono" aria-label="Painel do dono" aria-expanded="false" title="Painel do dono">👑💎</button>{% endif %}</strong>
   {% if hack %}<button class="btn-jogo botao-executor" id="abrirExecutor" aria-label="Executor de scripts" aria-expanded="false" title="Executor de scripts">🤖</button>{% endif %}
   <button class="btn-jogo so-celular" id="abrirMais" aria-label="Mais opções" aria-expanded="false">⋯</button>
   <div class="mais-jogo" id="maisJogo">
@@ -149,7 +150,8 @@
 
   const toque = matchMedia("(pointer: coarse)").matches || "ontouchstart" in window;
   const carregando = document.getElementById("carregando");
-  let executor = null;                 // 🤖 só em servidor hack
+  let executor = null;                 // 🤖 em servidor hack (e para o dono em qualquer servidor)
+  let mj = null;
   const saida = (texto, tipo, nome) => { executor?.saida(texto, tipo, nome); if (tipo === "erro") console.warn(texto); };
   document.getElementById("dica").textContent = toque
     ? "Joystick para andar · ⤒ pula · arraste a tela para girar · pinça para zoom"
@@ -163,23 +165,38 @@
       cofre: {% if teste or hack %}null{% else %}{ url: {{ url_for('cofre_ler', mapa_id=m.id)|tojson }}, csrf: CSRF }{% endif %},
     });
     carregando.remove();
-    {% if hack %}
+    {% if hack or dono_jogo %}
     const { ligarExecutor } = await import("/static/studio/executor.js");
-    executor = ligarExecutor(jogo, { botao: document.getElementById("abrirExecutor"), painel: document.getElementById("executor") });
+    // botão 🤖: no servidor hack fica no topo; o dono abre pelo painel 👑💎 em qualquer servidor
+    const botaoExec = document.getElementById("abrirExecutor") || document.createElement("button");
+    executor = ligarExecutor(jogo, { botao: botaoExec, painel: document.getElementById("executor") });
     {% endif %}
     jogo.extras.push(new Placar({
       jogo, caixa: document.getElementById("placar"),
       enviar: {% if teste or hack %}null{% else %}(estatistica, valor) => api({{ url_for('placar_enviar', mapa_id=m.id)|tojson }}, {estatistica, valor}){% endif %},
     }));
     {% if passe %}
-    const mj = new Multijogador({
+    mj = new Multijogador({
       jogo, render: jogo.render, passe: {{ passe|tojson }}, csrf: CSRF, camada: document.getElementById("nomes"),
       aoMudar: (n) => { document.getElementById("online").textContent = "👥 " + (n + 1); },
       mundoRede: jogo.mundoRede,
       aoAnfitriao: () => { const o = document.getElementById("online"); o.classList.add("anfitriao"); o.title = "Você é o anfitrião: os Scripts do jogo rodam no seu aparelho"; },
+      aoExpulso: (motivo) => {
+        const d = document.createElement("div"); d.className = "expulso"; d.setAttribute("role", "alert");
+        d.textContent = motivo + " Voltando para Jogos...";
+        document.body.append(d);
+        setTimeout(() => { location.href = {{ url_for('jogos')|tojson }}; }, 4000);
+      },
     });
     jogo.extras.push(mj);
     mj.iniciar();
+    {% endif %}
+    {% if dono_jogo %}
+    const { ligarPainelDono } = await import("/static/studio/dono.js");
+    ligarPainelDono({ jogo, mj, executor, csrf: CSRF, passe: {{ passe|tojson }},
+                      botao: document.getElementById("abrirDono"), painel: document.getElementById("painelDono"),
+                      abrirExecutor: () => { document.getElementById("painelDono").hidden = true;
+                                             document.getElementById("executor").hidden = false; } });
     {% endif %}
     if (toque) {
       document.getElementById("toque").hidden = false;

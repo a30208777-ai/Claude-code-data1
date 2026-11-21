@@ -684,8 +684,10 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
         if not m.get("gameid") or not m.get("caminho_aprovado"):
             flash("Esse jogo ainda não foi aprovado pelo dono.", "erro")
             return redirect(url_for("hacks"))
-        if carregar_perfil().get("jogo_mod") != m["gameid"]:
+        perfil = carregar_perfil()
+        if not session.get("dono") and perfil.get("jogo_mod") != m["gameid"]:
             g.api.atualizar_perfil(jogo_mod=m["gameid"])        # o banco tira você dos servidores normais desse jogo
+        # o dono usa os 2 apps normalmente: entra no servidor hack sem sair dos normais
         return _entrar_servidor(m, hack=True, voltar="hacks")
 
     @app.post("/hacks/sair-do-modo")
@@ -720,15 +722,16 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
         if not teste and not m.get("caminho_aprovado"):
             abort(404)
         avatar = avatar_mod.normalizar(perfil.get("avatar"))
+        dono_jogo = bool(session.get("dono"))           # carregar_perfil acabou de conferir no banco
         passe = passes.criar(s["server_uid"], g.api.user_id, perfil.get("username", "Jogador"), avatar,
-                             parceiro=bool(perfil.get("is_parceiro"))) if s else None
+                             parceiro=bool(perfil.get("is_parceiro")), dono=dono_jogo) if s else None
         try:
             curti = mapa_id in g.api.minhas_curtidas()
         except ErroRolox:
             curti = False
         hack = bool(s and s.get("is_hack_server"))
         return render_template("jogar.html", m=m, s=s, teste=teste, eu=perfil.get("username", "Jogador"), curti=curti,
-                               hack=hack,
+                               hack=hack, dono_jogo=dono_jogo,
                                midias_base=g.api.url_midias(),
                                avatar=avatar, passe=passe,
                                host=bool(s) and s["host_id"] == g.api.user_id,
@@ -748,6 +751,36 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
         passe = _passe_meu()
         estado = request.get_json(silent=True) or {}
         return jsonify(salas.trocar(passe, estado))
+
+    # Poderes do dono no jogo (botão 👑💎): expulsar, banir e anunciar. O banco confere que é o dono.
+    @app.post("/api/dono/jogo/<acao>")
+    @logado
+    def dono_no_jogo(acao: str):
+        passe = _passe_meu()
+        if acao not in ("expulsar", "banir", "anunciar"):
+            abort(404)
+        if not g.api.eh_dono():
+            return jsonify({"erro": "so_dono", "mensagem": "Só o dono pode fazer isso."}), 403
+        d = request.get_json(silent=True) or {}
+        sala = passe["s"]
+        if acao == "anunciar":
+            n = salas.anunciar(sala, str(d.get("texto", "")))
+            return jsonify({"ok": True, "viram": n})
+        alvo = str(d.get("alvo", ""))
+        nomes = salas.jogadores(sala)
+        if alvo not in nomes:
+            return jsonify({"erro": "nao_esta", "mensagem": "Esse jogador não está mais no servidor."}), 404
+        motivo = str(d.get("motivo", "")).strip()[:200]
+        if acao == "expulsar":
+            g.api.dono_expulsar(sala, alvo)
+            salas.expulsar(sala, alvo, "👑 Você foi expulso do servidor pelo dono." + (f" Motivo: {motivo}" if motivo else ""))
+            return jsonify({"ok": True, "nome": nomes[alvo]})
+        r = g.api.dono_banir(alvo, motivo or "banido pelo dono no jogo")     # o banco nunca bane o dono
+        salas.expulsar(sala, alvo, "🔨 Sua conta foi banida pelo dono." + (f" Motivo: {motivo}" if motivo else ""),
+                       segundos=7 * 86400)
+        discord_log.registrar_sync("ban", r.get("username") or nomes[alvo], motivo or "banido pelo dono no jogo",
+                                   f"{quem_sou()} (dono)", "Jogo ROLOX")
+        return jsonify({"ok": True, "nome": nomes[alvo]})
 
     @app.post("/api/sala/sair")
     @logado

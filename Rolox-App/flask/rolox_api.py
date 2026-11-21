@@ -417,6 +417,13 @@ class RoloxAPI:
     def dono_revogar_parceria(self, chave_id: int) -> None:
         self._req("POST", "/rest/v1/rpc/dono_revogar_parceria", json={"p_id": chave_id})
 
+    # ------------------------------------------------- poderes do dono 👑💎
+    def dono_expulsar(self, server_uid: str, user_id: str) -> dict:
+        return self._req("POST", "/rest/v1/rpc/dono_expulsar", json={"p_server": server_uid, "p_user": user_id}) or {}
+
+    def dono_banir(self, user_id: str, motivo: str = "") -> dict:
+        return self._req("POST", "/rest/v1/rpc/dono_banir", json={"p_user": user_id, "p_motivo": (motivo or "")[:200]}) or {}
+
     # ------------------------------------------------- app oficial (✅ / ❌)
     def dono_chaves_app(self) -> dict:
         return self._req("POST", "/rest/v1/rpc/dono_chaves_app", json={}) or {}

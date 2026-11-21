@@ -122,8 +122,8 @@ class Passes:
         self.s = URLSafeTimedSerializer(segredo, salt="rolox-sala")
         self.validade = validade_s
 
-    def criar(self, sala: str, user_id: str, nome: str, avatar: dict, parceiro: bool = False) -> str:
-        return self.s.dumps({"s": sala, "u": user_id, "n": nome[:32], "a": avatar, "pc": bool(parceiro)})
+    def criar(self, sala: str, user_id: str, nome: str, avatar: dict, parceiro: bool = False, dono: bool = False) -> str:
+        return self.s.dumps({"s": sala, "u": user_id, "n": nome[:32], "a": avatar, "pc": bool(parceiro), "dn": bool(dono)})
 
     def ler(self, passe: str) -> Optional[dict]:
         try:
@@ -206,8 +206,15 @@ class Salas:
                 dados["caixas"].pop(k, None)
             if not jog:                                       # sala vazia: o mundo começa de novo
                 dados.update({"mundo": {}, "v": 0, "caixas": {}})
+            fora = dados.setdefault("fora", {})
+            for k in [k for k, ate in fora.items() if ate <= agora]:
+                fora.pop(k)
+            if eu in fora:                                    # expulso pelo dono: não volta para esta sala
+                jog.pop(eu, None)
+                return {"expulso": dados.get("motivos", {}).get(eu) or "Você foi expulso do servidor pelo dono.",
+                        "jogadores": [], "anfitriao": None, "eu": eu, "mundo": [], "mv": 0, "eventos": []}
             if eu in jog or len(jog) < MAX_JOGADORES:
-                jog[eu] = {"n": passe["n"], "a": passe.get("a") or {}, "pc": bool(passe.get("pc")),
+                jog[eu] = {"n": passe["n"], "a": passe.get("a") or {}, "pc": bool(passe.get("pc")), "dn": bool(passe.get("dn")),
                            **limpar_estado(estado), "t": agora, "e": jog.get(eu, {}).get("e", agora)}
             anfitriao = min(jog, key=lambda k: (jog[k]["e"], k)) if jog else None
 
@@ -247,11 +254,46 @@ class Salas:
                     mundo.append({"k": k, "x": 1} if it.get("x") else
                                  {"k": k, **({"c": it["c"], "p": it.get("p", "w")} if it.get("c") else {}),
                                   "props": it.get("props", {})})
-            outros = [{"id": k, **{c: v.get(c) for c in ("n", "a", "p", "r", "m", "v", "pc")}}
+            outros = [{"id": k, **{c: v.get(c) for c in ("n", "a", "p", "r", "m", "v", "pc", "dn")}}
                       for k, v in jog.items() if k != eu]
+            avisos = dados.setdefault("avisos", {}).pop(eu, [])
             return {"jogadores": outros, "anfitriao": anfitriao, "eu": eu, "mundo": mundo, "mv": mv,
-                    "eventos": eventos}
+                    "eventos": eventos, "avisos": avisos}
         return self._com_trava(passe["s"], mudar)
+
+    # -------------------------------------------------------------- dono 👑💎
+    def jogadores(self, sala: str) -> dict:
+        """{user_id: nome} de quem está na sala agora."""
+        def ver(dados):
+            jog = dados.get("j") if isinstance(dados.get("j"), dict) else {}
+            return {k: v.get("n", "?") for k, v in jog.items()}
+        return self._com_trava(sala, ver)
+
+    def expulsar(self, sala: str, user_id: str, motivo: str = "", segundos: int = 600,
+                 agora: Optional[float] = None) -> None:
+        """Tira da sala e não deixa voltar por `segundos` (a pessoa vê o motivo e volta para Jogos)."""
+        agora = agora if agora is not None else time.time()
+        def mudar(dados):
+            if not isinstance(dados.get("j"), dict):
+                dados.update({"j": {}, "mundo": {}, "v": 0, "caixas": {}})
+            dados["j"].pop(user_id, None)
+            dados.setdefault("caixas", {}).pop(user_id, None)
+            dados.setdefault("fora", {})[user_id] = agora + segundos
+            dados.setdefault("motivos", {})[user_id] = (motivo or "Você foi expulso do servidor pelo dono.")[:200]
+        self._com_trava(sala, mudar)
+
+    def anunciar(self, sala: str, texto: str) -> int:
+        """Aviso do dono para todo mundo da sala (aparece no meio da tela). Devolve quantos vão ver."""
+        texto = str(texto or "").strip()[:200]
+        def mudar(dados):
+            jog = dados.get("j") if isinstance(dados.get("j"), dict) else {}
+            caixas = dados.setdefault("avisos", {})
+            for k in jog:
+                lista = caixas.setdefault(k, [])
+                if len(lista) < 5:
+                    lista.append(texto)
+            return len(jog)
+        return self._com_trava(sala, mudar) if texto else 0
 
     def sair(self, passe: dict) -> None:
         def mudar(dados):
