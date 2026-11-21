@@ -30,11 +30,10 @@ dark_color = "#140a33"
 [tool.flet.app]
 path = "src"
 module = "main"
-exclude = ["res_android"]
 
 [tool.flet.android]
 adaptive_icon_background = "#26105c"
-res_dir = "res_android"
+res_dir = "res_android"             # relativo à raiz do projeto (ao lado do pyproject.toml)
 
 # roloxatualizador://  -> é assim que o ROLOX descobre que o Atualizador está instalado
 [tool.flet.android.deep_linking]

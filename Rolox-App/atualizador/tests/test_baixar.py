@@ -101,7 +101,7 @@ def test_configuracao_android_valida():
     assert a["permission"]["android.permission.REQUEST_INSTALL_PACKAGES"] is True
     prov = a["provider"]["androidx.core.content.FileProvider"]
     assert prov["authorities"] == android.AUTORIDADE
-    xml = (raiz / "src" / a["res_dir"] / "xml" / "arquivos_rolox.xml").read_text()
+    xml = (raiz / a["res_dir"] / "xml" / "arquivos_rolox.xml").read_text()   # o flet build procura na raiz
     assert prov["meta_data"]["android.support.FILE_PROVIDER_PATHS"]["resource"] == "@xml/arquivos_rolox"
     assert 'cache-path name="rolox" path="rolox/"' in xml
     for f in ("icon.png", "splash.png", "logo_nome.png"):
