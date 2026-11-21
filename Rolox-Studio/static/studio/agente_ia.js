@@ -10,7 +10,7 @@ import { Color3, Vector3, criar, materialValido } from "./motor.js";
 
 export const MAX_ACOES = 60;
 const LIMITE = 2000;                                       // coordenadas/tamanhos
-const CLASSES_PECA = new Set(["Part", "SpawnLocation"]);
+const CLASSES_PECA = new Set(["Part", "SpawnLocation", "Checkpoint"]);
 const CLASSES_OUTRAS = new Set(["Model", "Folder", "IntValue", "NumberValue"]);
 const CLASSES_SCRIPT = new Set(["Script", "LocalScript", "ModuleScript"]);
 const FORMAS = new Set(["Block", "Ball", "Cylinder"]);

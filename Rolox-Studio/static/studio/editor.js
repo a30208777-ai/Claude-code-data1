@@ -265,7 +265,7 @@ requestAnimationFrame(loop);
 
 // ---------------------------------------------------------------- explorer
 const ICONES = {
-  Workspace: "🌍", Part: "▫️", SpawnLocation: "🟩", MeshPart: "🧊", Model: "📦", Folder: "📁",
+  Workspace: "🌍", Part: "▫️", SpawnLocation: "🟩", Checkpoint: "🚩", MeshPart: "🧊", Model: "📦", Folder: "📁",
   Script: "🐍", LocalScript: "📜", ModuleScript: "🧩", ServerScriptService: "🖥️", ReplicatedStorage: "🗄️",
   StarterPlayer: "🧍", StarterPlayerScripts: "📂", Rede: "📡", Cofre: "🔐", Tela: "🖥️", Sons: "🔊", Emblemas: "🏅", Internet: "🌐", Ceu: "🌤️", Animar: "🎞️", Efeitos: "✨", Som: "🎵", TelaVideo: "🎬", IntValue: "🔢", NumberValue: "🔢",
 };
@@ -609,6 +609,7 @@ const acoes = {
   bola() { novaParte("Part", "Ball"); },
   cilindro() { novaParte("Part", "Cylinder"); },
   spawn() { novaParte("SpawnLocation"); },
+  checkpoint() { novaParte("Checkpoint"); },
   script() { novoScript("Script"); },
   localscript() { novoScript("LocalScript"); },
   modulescript() { novoScript("ModuleScript"); },

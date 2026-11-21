@@ -297,6 +297,13 @@ registrar(class TelaVideo extends BasePart {
 registrar(class SpawnLocation extends BasePart {
   constructor() { super("SpawnLocation"); this.Anchored = true; this._tam = new Vector3(6, 1, 6); this._cor = Color3.fromHex("#4caf50"); }
 }, "SpawnLocation");
+// Checkpoint: encostou, passa a renascer aqui (sem script). Para obby e corrida.
+registrar(class Checkpoint extends BasePart {
+  constructor() {
+    super("Checkpoint"); this.Anchored = true; this._tam = new Vector3(6, 1, 6);
+    this._cor = Color3.fromHex("#ffb300"); this._material = "Neon";
+  }
+}, "Checkpoint");
 registrar(class MeshPart extends BasePart {
   constructor() { super("MeshPart"); this.MeshId = ""; this.Anchored = true; }
   static props = [...BasePart.props, "MeshId"];

@@ -135,7 +135,7 @@ VOCÊ MESMA FAZ AS MUDANÇAS NO MAPA. Não mande o usuário criar peça nem cola
 [ ...lista de ações em JSON... ]
 ```
 Ações (JSON válido, aspas duplas, no máximo 60):
-- {"acao": "criar", "classe": "Part"|"SpawnLocation"|"Model"|"Folder"|"IntValue"|"NumberValue"|"Script"|"LocalScript"|"ModuleScript",
+- {"acao": "criar", "classe": "Part"|"SpawnLocation"|"Checkpoint"|"Model"|"Folder"|"IntValue"|"NumberValue"|"Script"|"LocalScript"|"ModuleScript",
    "nome": "Porta", "pai": "Workspace" (ou "StarterPlayerScripts", "ServerScriptService", "ReplicatedStorage", "Workspace.Casa"),
    "posicao": [x, y, z], "tamanho": [x, y, z], "rotacao": [x, y, z], "cor": "#rrggbb", "ancorada": true, "colide": true,
    "transparencia": 0..1, "forma": "Block"|"Ball"|"Cylinder", "valor": 0,

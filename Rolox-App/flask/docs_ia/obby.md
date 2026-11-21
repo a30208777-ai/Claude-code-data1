@@ -19,6 +19,8 @@ Lava = Part vermelha/laranja que zera a vida. Chegada = Part verde que dá vitó
 Quem morre renasce no SpawnLocation depois de 2 s.
 
 ## Checkpoint (renascer no último ponto)
+JEITO FÁCIL: crie uma peça da classe "Checkpoint" ({"acao":"criar","classe":"Checkpoint","nome":"Check1",...}).
+Encostou, o jogador passa a renascer nela — não precisa de script. O script abaixo só se quiser algo diferente.
 ```lua
 local jogador = game.Players.LocalPlayer
 local ultimo = nil

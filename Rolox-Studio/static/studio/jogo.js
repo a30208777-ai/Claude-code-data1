@@ -1,7 +1,7 @@
 // Rolox Studio — modo Jogar (teste do jogo dentro do Studio).
 // Copia o mundo do editor, cria os personagens, roda os scripts e a física.
 
-import { carregarMundo, salvarMundo, Player, BaseScript } from "./motor.js";
+import { carregarMundo, salvarMundo, Player, BaseScript, Vector3 } from "./motor.js";
 import { Fisica, criarPersonagem, pontoDeNascimento } from "./fisica.js";
 import { ExecutorLua, ExecutorPython, carregarPython, criarApi } from "./scripts.js";
 import { CameraJogador } from "./camera.js";
@@ -33,6 +33,7 @@ export class Jogo {
     const local = new Player(this.nomeJogador); local.Parent = players;
     players.LocalPlayer = local;
     this.local = this._spawn(local, 0);
+    this._ligarCheckpoints();
     this.cam.posicionarAtras(this.local.raiz.Position);
     this.cam.ligar(this.render.renderer.domElement);
     players.PlayerAdded.Fire(local);
@@ -61,6 +62,24 @@ export class Jogo {
     for (const s of this._scriptsServidor || []) this._rodarScript(s);
     this.saida("👑 Você virou o anfitrião: os Scripts do jogo rodam no seu aparelho.", "sistema");
     return true;
+  }
+
+  /** Renasce no último 🚩 Checkpoint que encostou (se ainda existe) ou no SpawnLocation. */
+  _ondeRenascer(p) {
+    const cp = p._checkpoint;
+    if (cp && !cp._destruida && cp.IsDescendantOf(this.mundo.workspace)) return cp.Position.add(new Vector3(0, cp.Size.Y / 2 + 3, 0));
+    return pontoDeNascimento(this.mundo, 0);
+  }
+
+  _ligarCheckpoints() {
+    for (const cp of this.mundo.partes().filter((x) => x.ClassName === "Checkpoint")) {
+      cp.Touched.Connect((outro) => {
+        const eu = this.local;
+        if (!eu || outro !== eu.raiz || eu._checkpoint === cp || eu.humanoid.Health <= 0) return;
+        eu._checkpoint = cp;
+        try { this.mundo.game.Tela.Aviso("🚩 Checkpoint!", 2); this.mundo.game.Sons.Tocar("moeda"); } catch { /* sem tela */ }
+      });
+    }
   }
 
   _spawn(player, indice) {
@@ -131,7 +150,7 @@ export class Jogo {
         p._renascendo = true;
         setTimeout(() => {
           if (!this.rodando) return;
-          h.Health = h.MaxHealth; p.raiz.Position = pontoDeNascimento(this.mundo, 0);
+          h.Health = h.MaxHealth; p.raiz.Position = this._ondeRenascer(p);
           p.raiz.Velocity = p.raiz.Velocity.mul(0); p._renascendo = false;
         }, 2000);
       }
