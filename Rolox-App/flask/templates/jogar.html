@@ -63,6 +63,7 @@
   {% if not teste %}<button class="btn-jogo" id="curtir" data-curti="{{ '1' if curti else '0' }}"
     aria-label="Curtir este jogo">{{ '❤️' if curti else '🤍' }}</button>{% endif %}
   <button class="btn-jogo" id="girarTela" hidden aria-label="Deitar a tela">🔄</button>
+  <button class="btn-jogo" id="tirarFoto" aria-label="Tirar foto do jogo" title="Foto do jogo">📸</button>
   {% if not teste %}<button class="btn-jogo" id="abrirDenuncia" aria-label="Denunciar">🚩</button>{% endif %}
   </div>
   <button class="btn-jogo" id="abrirRanking" aria-label="Ranking do jogo">🏆</button>
@@ -165,6 +166,14 @@
       cofre: {% if teste or hack %}null{% else %}{ url: {{ url_for('cofre_ler', mapa_id=m.id)|tojson }}, csrf: CSRF }{% endif %},
     });
     carregando.remove();
+    {
+      const { tirarFoto } = await import("/static/studio/foto.js");
+      document.getElementById("tirarFoto").addEventListener("click", () => {
+        document.body.classList.add("flash-foto");
+        setTimeout(() => document.body.classList.remove("flash-foto"), 350);
+        tirarFoto(jogo.render, {{ m.nome|tojson }}, { avisar: (t) => aviso(t, "ok") });
+      });
+    }
     {% if hack or dono_jogo or criador_jogo %}
     const { ligarExecutor } = await import("/static/studio/executor.js");
     // botão 🤖: no servidor hack fica no topo; o dono abre pelo painel 👑💎 em qualquer servidor

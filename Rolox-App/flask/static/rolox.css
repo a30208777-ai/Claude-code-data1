@@ -317,3 +317,8 @@ body > .tela-rolox { position: fixed; }
 .jogo-numeros b { font-size: 1.3rem; }
 .jogo-numeros span { font-size: .72rem; color: var(--suave); }
 .cartao.recorde.meu { outline: 2px solid var(--primaria); }
+
+/* 📸 foto do jogo: um clarão rápido */
+body.flash-foto::after { content: ""; position: fixed; inset: 0; z-index: 20; background: #fff; pointer-events: none;
+  animation: flashFoto .35s ease-out forwards; }
+@keyframes flashFoto { from { opacity: .85; } to { opacity: 0; } }
