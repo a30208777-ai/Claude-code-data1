@@ -238,7 +238,7 @@ class RoloxAPI:
             params={"id": f"eq.{self.user_id}",
                     "select": "id,username,email,idioma,jogo_mod,aceitou_localizacao,banido,"
                               "is_adm,tickets,tickets_ultimo_ganho,avatar,is_parceiro,parceiro_desde,redes,"
-                              "app_status,app_verificado_em"},
+                              "app_status,app_verificado_em,bio"},
         )
         if not linhas:
             raise ErroRolox("perfil_nao_encontrado")
@@ -331,6 +331,10 @@ class RoloxAPI:
     async def definir_redes(self, redes: dict) -> dict:
         limpo = {k: str(v or "").strip()[:200] for k, v in (redes or {}).items() if k in REDES_SOCIAIS}
         return await self._req("POST", "/rest/v1/rpc/definir_redes", json={"p_redes": limpo})
+
+    async def definir_bio(self, texto: str) -> dict:
+        """✍️ 'Sobre mim' (o banco filtra palavras e corta em 140 letras)."""
+        return await self._req("POST", "/rest/v1/rpc/definir_bio", json={"p_texto": str(texto or "")[:300]}) or {}
 
     async def minhas_missoes(self) -> list:
         """🎯 As 3 missões de hoje (o banco confere se foram cumpridas)."""

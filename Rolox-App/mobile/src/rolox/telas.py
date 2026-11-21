@@ -932,8 +932,13 @@ class RoloxApp:
                     seletor("Calça", "calca", avatar_mod.CORES)]),
         ], spacing=10)
 
+        bio = ft.TextField(label="✍️ Sobre mim (aparece no seu perfil)", value=p.get("bio") or "", max_length=140)
+
         async def salvar(_):
             async def acao():
+                if (bio.value or "") != (self.perfil.get("bio") or ""):
+                    r = await self.api.definir_bio(bio.value or "")
+                    bio.value = r.get("bio", bio.value)
                 novo_mod = jogo_mod.value or None
                 self.perfil = await self.api.atualizar_perfil(
                     idioma=idioma.value, jogo_mod=novo_mod,
@@ -955,6 +960,7 @@ class RoloxApp:
                 previa,
                 editor,
                 ft.Divider(),
+                bio,
                 ft.Text("Configurações (config)", size=16),
                 idioma,
                 jogo_mod,

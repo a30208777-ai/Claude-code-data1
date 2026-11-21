@@ -456,3 +456,13 @@ def test_missoes_diarias():
     assert rodar(api.minhas_missoes())[0]["codigo"] == "jogar"
     assert rodar(api.resgatar_missao("jogar")) == {"ganhou": 5, "tickets": 15}
     assert chamadas[-1] == ("/rest/v1/rpc/resgatar_missao", {"p_codigo": "jogar"})
+
+
+def test_definir_bio():
+    chamadas = []
+    def h(req):
+        chamadas.append((req.url.path, json.loads(req.content)))
+        return resposta(200, {"bio": "Faço obbys"})
+    api = logada(h)
+    assert rodar(api.definir_bio("Faço obbys")) == {"bio": "Faço obbys"}
+    assert chamadas[-1] == ("/rest/v1/rpc/definir_bio", {"p_texto": "Faço obbys"})
