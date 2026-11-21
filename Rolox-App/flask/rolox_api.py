@@ -331,7 +331,8 @@ class RoloxAPI:
 
     def mapas_publicados(self, ordem: str = "novos") -> list[dict]:
         """ordem: "novos" (aprovados por último) ou "populares" (mais visitados, depois mais curtidos)."""
-        order = "visitas.desc,curtidas.desc,aprovado_em.desc" if ordem == "populares" else "aprovado_em.desc"
+        order = {"populares": "visitas.desc,curtidas.desc,aprovado_em.desc",
+                 "curtidos": "curtidas.desc,visitas.desc,aprovado_em.desc"}.get(ordem, "aprovado_em.desc")
         return self._req("GET", "/rest/v1/mapas", params={
             "select": self.CAMPOS_MAPA, "caminho_aprovado": "not.is.null", "order": order,
             "limit": "100"}) or []

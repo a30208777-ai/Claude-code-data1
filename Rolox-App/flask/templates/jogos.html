@@ -9,8 +9,26 @@
 </div>
 <div class="abas-ordem">
   <a href="{{ url_for('jogos') }}" class="{{ 'ativo' if ordem == 'populares' }}">🔥 Mais jogados</a>
+  <a href="{{ url_for('jogos', ordem='curtidos') }}" class="{{ 'ativo' if ordem == 'curtidos' }}">❤ Mais curtidos</a>
   <a href="{{ url_for('jogos', ordem='novos') }}" class="{{ 'ativo' if ordem == 'novos' }}">🆕 Novos</a>
 </div>
+<input type="search" id="filtroJogos" class="filtro-jogos" placeholder="🔎 Filtrar jogos pelo nome" aria-label="Filtrar jogos pelo nome">
+<p class="muted" id="semJogos" hidden><i>Nenhum jogo com esse nome.</i></p>
+<script>
+  // filtra na hora, sem recarregar (sem acento e sem diferença de maiúsculas)
+  (() => {
+    const tira = (t) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    document.getElementById("filtroJogos").addEventListener("input", (e) => {
+      const q = tira(e.target.value.trim());
+      let n = 0;
+      for (const c of document.querySelectorAll(".cartao[id^='mapa-']")) {
+        const ok = !q || tira(c.querySelector(".titulo")?.textContent || "").includes(q);
+        c.hidden = !ok; n += ok;
+      }
+      document.getElementById("semJogos").hidden = n > 0;
+    });
+  })();
+</script>
 <p class="nota">Mapas feitos pela comunidade no ROLOX Studio e aprovados pelo dono. Toque em Jogar: você entra
   num servidor com a galera e com chat.</p>
 
@@ -25,7 +43,7 @@
     <form method="post" action="{{ url_for('jogo_curtir', mapa_id=m.id) }}">
       <input type="hidden" name="csrf" value="{{ csrf }}">
       <input type="hidden" name="curtir" value="{{ '0' if m.id in curti else '1' }}">
-      <input type="hidden" name="ordem" value="{{ 'novos' if ordem == 'novos' else '' }}">
+      <input type="hidden" name="ordem" value="{{ ordem if ordem != 'populares' else '' }}">
       <button class="btn texto curtir" aria-label="{{ 'Descurtir' if m.id in curti else 'Curtir' }}">{{ '❤️' if m.id in curti else '🤍' }}</button>
     </form>
     <form method="post" action="{{ url_for('jogar_entrar', mapa_id=m.id) }}">

@@ -1720,3 +1720,13 @@ def test_jogador_mostra_jogos_criados(cliente, sb):
     sb.mapas[mid]["visitas"] = 9
     t = html(cliente.get("/jogador/alice"))
     assert "🎮 Jogos criados (1)" in t and "👁 9 visitas" in t and f'href="/jogos/{mid}"' in t
+
+
+def test_jogos_mais_curtidos_e_filtro(cliente, sb):
+    entrar(cliente)
+    t = html(cliente.get("/jogos?ordem=curtidos"))
+    assert "❤ Mais curtidos" in t and 'id="filtroJogos"' in t
+    assert any(c[2].get("order", "").startswith("curtidas.desc") for c in sb.chamadas if c[1] == "/rest/v1/mapas")
+    sb.chamadas.clear()
+    assert cliente.get("/jogos?ordem=<script>").status_code == 200          # ordem estranha: volta para populares
+    assert any(c[2].get("order", "").startswith("visitas.desc") for c in sb.chamadas if c[1] == "/rest/v1/mapas")

@@ -363,3 +363,6 @@ body.flash-foto::after { content: ""; position: fixed; inset: 0; z-index: 20; ba
   text-align: center; box-shadow: 0 8px 24px #0008; animation: tela-surge .25s ease-out; }
 .tela-pergunta p { margin: 0 0 12px; font-size: 1.1rem; font-weight: 700; }
 .tela-opcoes { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+
+.filtro-jogos { width: 100%; box-sizing: border-box; margin: 6px 0 10px; }
+.cartao[hidden] { display: none !important; }

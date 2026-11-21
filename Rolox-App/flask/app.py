@@ -615,7 +615,7 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
     @logado
     def jogos():
         carregar_perfil()
-        ordem = "novos" if request.args.get("ordem") == "novos" else "populares"
+        ordem = request.args.get("ordem") if request.args.get("ordem") in ("novos", "curtidos") else "populares"
         try:
             curti = g.api.minhas_curtidas()
         except ErroRolox:
