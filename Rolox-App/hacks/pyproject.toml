@@ -1,0 +1,40 @@
+[project]
+name = "rolox-hacks"
+version = "1.0.0"
+description = "ROLOX Hacks: servidores de hack/mod do ROLOX, com executor de scripts"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "flet==1.1.2",
+  "flet-webview==1.1.2",   # o jogo (site do ROLOX, área /hacks) abre dentro do app
+]
+
+[dependency-groups]
+dev = [
+  "pytest>=8",
+]
+
+[tool.flet]
+org = "com.rolox"
+product = "ROLOX Hacks"
+company = "Rolox"
+copyright = "Rolox"
+bundle_id = "com.rolox.hacks"
+
+[tool.flet.splash]
+color = "#1c0a1e"
+dark_color = "#120612"
+
+[tool.flet.app]
+path = "src"
+module = "main"
+
+[tool.flet.android]
+adaptive_icon_background = "#1c0a1e"
+
+[tool.flet.android.permission]
+"android.permission.INTERNET" = true
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

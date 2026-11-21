@@ -330,9 +330,10 @@ class SupabaseFalso:
                                   for s in self.servidores])
             if metodo == "PATCH":
                 return Resp(204)
-            novo = dict(json, server_uid="s9", status="aberto")
+            uid = "s9" if "s9" not in self.membros else f"s9{len(self.servidores)}"
+            novo = dict(json, server_uid=uid, status="aberto")
             self.servidores.append(novo)
-            self.membros["s9"] = []
+            self.membros[uid] = []
             return Resp(201, [novo])
         if p == "/rest/v1/users_dos_servidores":
             s = self.onde()
@@ -1461,3 +1462,35 @@ def test_termos_e_politica_publicos_e_linkados(cliente):
     assert "Política de Uso do ROLOX" in p and "LGPD" in p and "a senha que a pessoa tentou, cifrada" in p
     assert "✅" in p and "❌" in p and "discord.gg/6NZ5Ftq3p" in p
     assert "/termos" in html(cliente.get("/cadastro")) and "/politica" in html(cliente.get("/login"))
+
+
+def test_rolox_hacks_servidor_separado_com_executor(cliente, sb):
+    entrar(cliente)
+    mid = enviar_mapa(cliente).get_json()["id"]
+    sb.dono = True
+    tok = csrf(cliente)
+    cliente.post(f"/dono/{mid}/aprovar", data={"csrf": tok})
+    sb.dono = False
+    gameid = sb.mapas[mid]["gameid"]
+    t = html(cliente.get("/hacks"))
+    assert "Servidores de hack e mod" in t and f"/hacks/{mid}/jogar" in t and "/hacks" in html(cliente.get("/jogos"))
+    # servidor normal do jogo: no ROLOX normal não tem executor
+    r = cliente.post(f"/jogos/{mid}/jogar", data={"csrf": tok})
+    normal = html(cliente.get(r.headers["Location"].replace("http://localhost", "")))
+    assert "abrirExecutor" not in normal and "executor.js" not in normal
+    # modo hack: liga o jogo_mod e cria um servidor HACK (o banco separa dos normais)
+    r = cliente.post(f"/hacks/{mid}/jogar", data={"csrf": tok})
+    assert sb.perfil["jogo_mod"] == gameid
+    hack = [s for s in sb.servidores if s["gameid"] == gameid and s["is_hack_server"]]
+    assert hack and f"s={hack[-1]['server_uid']}" in r.headers["Location"]
+    t = html(cliente.get(r.headers["Location"].replace("http://localhost", "")))
+    assert 'id="abrirExecutor"' in t and "executor.js" in t and "🤖 HACK" in t
+    assert "emblemas: null" in t and "cofre: null" in t and "enviar: null" in t
+    # recorde, Cofre e emblema não valem no modo hack (o servidor recusa mesmo que o script tente)
+    for url, corpo in ((f"/api/placar/{mid}", {"valor": 999}), (f"/api/cofre/{mid}", {"dados": {"m": 1}}),
+                       (f"/api/emblemas/{mid}", {"codigo": "x"})):
+        r = cliente.post(url, json=corpo, headers={"X-CSRF": tok})
+        assert r.status_code == 403 and r.get_json()["erro"] == "modo_hack", url
+    assert "Sair do modo hack" in html(cliente.get("/hacks"))
+    cliente.post("/hacks/sair-do-modo", data={"csrf": tok})
+    assert sb.perfil["jogo_mod"] is None

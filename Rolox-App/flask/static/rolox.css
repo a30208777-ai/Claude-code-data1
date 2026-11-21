@@ -266,3 +266,25 @@ body > .tela-rolox { position: fixed; }
 .documento li { margin: 6px 0; }
 .rodape-links { text-align: center; font-size: .85rem; margin-top: 24px; }
 .rodape-links a { color: var(--suave); }
+
+/* ROLOX Hacks: executor 🤖 */
+.etiqueta.hack { background: #ff6d00; color: #fff; margin-left: 6px; }
+.botao-executor { background: #ff6d00cc; }
+.painel-executor { position: fixed; z-index: 6; top: max(64px, calc(env(safe-area-inset-top) + 56px)); right: 10px;
+  width: min(420px, calc(100vw - 20px)); max-height: calc(100vh - 90px); overflow: auto; display: grid; gap: 8px;
+  padding: 12px; border-radius: 14px; background: #120c22ee; color: #eee; border: 1px solid #ff6d0088;
+  box-shadow: 0 8px 30px #0009; backdrop-filter: blur(6px); }
+.painel-executor[hidden] { display: none !important; }
+.exec-topo { display: flex; align-items: center; gap: 8px; }
+.exec-topo b { color: #ffb74d; }
+.exec-nota { flex: 1; font-size: .75rem; color: #b9b0d8; }
+.exec-prontos { padding: 6px; border-radius: 8px; background: #1e1636; color: #eee; border: 1px solid #ffffff33; }
+.exec-codigo { width: 100%; box-sizing: border-box; font: .85rem/1.4 ui-monospace, "JetBrains Mono", monospace; color: #c5f6c5;
+  background: #07050e; border: 1px solid #ffffff2a; border-radius: 8px; padding: 8px; resize: vertical; tab-size: 2; }
+.exec-botoes { display: flex; gap: 8px; }
+.exec-log { max-height: 140px; overflow: auto; font: .78rem/1.35 ui-monospace, monospace; background: #00000055; border-radius: 8px; padding: 6px; }
+.exec-log:empty::before { content: "A saída do print() aparece aqui."; color: #8d86a8; }
+.exec-linha.erro { color: #ff8a80; }
+.exec-linha.sistema { color: #ffb74d; }
+.hacks-topo { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.botao-hack { background: #ff6d00; }

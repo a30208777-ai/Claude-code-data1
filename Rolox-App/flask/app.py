@@ -617,6 +617,8 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
     @app.post("/api/placar/<mapa_id>")
     @logado
     def placar_enviar(mapa_id: str):
+        if (b := _bloqueio_hack(mapa_id)) is not None:
+            return b
         d = request.get_json(silent=True) or {}
         try:
             valor = float(d.get("valor"))
@@ -649,18 +651,56 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
             g.api.visitar_mapa(mapa_id)           # conta 1 visita por jogador por dia
         except ErroRolox:
             pass
-        hack = perfil.get("jogo_mod") == m["gameid"]
+        return _entrar_servidor(m, hack=perfil.get("jogo_mod") == m["gameid"])
+
+    def _entrar_servidor(m: dict, hack: bool, voltar: str = "jogos"):
+        """Junta a galera num servidor com vaga (ou cria). O banco garante: quem usa hack/mod neste
+        jogo só entra em servidor hack, e servidor hack só aceita quem usa hack/mod."""
         livres = [x for x in g.api.servidores() if x["gameid"] == m["gameid"] and x["status"] == "aberto"
                   and x["is_hack_server"] == hack and x["humanos"] < x["capacidade"]]
         if livres:
-            uid = max(livres, key=lambda x: x["humanos"])["server_uid"]     # junta a galera
+            uid = max(livres, key=lambda x: x["humanos"])["server_uid"]
         else:
             uid = g.api.criar_servidor(m["gameid"], 10, hack)["server_uid"]
         r = g.api.entrar(uid)
         if r["resultado"] == "fila":
             flash(f"Servidor cheio. Você está na fila, posição {r['posicao']}.", "ok")
-            return redirect(url_for("jogos"))
-        return redirect(url_for("jogar", mapa_id=mapa_id, s=uid))
+            return redirect(url_for(voltar))
+        return redirect(url_for("jogar", mapa_id=m["id"], s=uid))
+
+    # ---------------------------------------------------------- ROLOX Hacks
+    # Servidores de hack/mod: separados dos jogadores do ROLOX (o banco não mistura) e com o
+    # executor 🤖 de scripts. No modo hack não vale recorde, Cofre nem emblema.
+    @app.get("/hacks")
+    @logado
+    def hacks():
+        perfil = carregar_perfil()
+        return render_template("hacks.html", publicados=g.api.mapas_publicados("populares"), perfil=perfil, aba="hacks")
+
+    @app.post("/hacks/<mapa_id>/jogar")
+    @logado
+    def hacks_jogar(mapa_id: str):
+        m = _mapa_ou_404(mapa_id)
+        if not m.get("gameid") or not m.get("caminho_aprovado"):
+            flash("Esse jogo ainda não foi aprovado pelo dono.", "erro")
+            return redirect(url_for("hacks"))
+        if carregar_perfil().get("jogo_mod") != m["gameid"]:
+            g.api.atualizar_perfil(jogo_mod=m["gameid"])        # o banco tira você dos servidores normais desse jogo
+        return _entrar_servidor(m, hack=True, voltar="hacks")
+
+    @app.post("/hacks/sair-do-modo")
+    @logado
+    def hacks_sair_do_modo():
+        g.api.atualizar_perfil(jogo_mod=None)
+        flash("Você saiu do modo hack. Agora joga nos servidores normais do ROLOX.", "ok")
+        return redirect(url_for("jogos"))
+
+    def _bloqueio_hack(mapa_id: str):
+        """No modo hack não vale recorde, Cofre nem emblema (senão o hack vira trapaça no ROLOX normal)."""
+        m = _mapa_ou_404(mapa_id)
+        if m.get("gameid") and g.api.meu_perfil().get("jogo_mod") == m["gameid"]:
+            return jsonify({"erro": "modo_hack", "mensagem": "No modo hack não vale recorde, Cofre nem emblema."}), 403
+        return None
 
     @app.get("/jogar/<mapa_id>")
     @logado
@@ -686,7 +726,9 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
             curti = mapa_id in g.api.minhas_curtidas()
         except ErroRolox:
             curti = False
+        hack = bool(s and s.get("is_hack_server"))
         return render_template("jogar.html", m=m, s=s, teste=teste, eu=perfil.get("username", "Jogador"), curti=curti,
+                               hack=hack,
                                midias_base=g.api.url_midias(),
                                avatar=avatar, passe=passe,
                                host=bool(s) and s["host_id"] == g.api.user_id,
@@ -725,6 +767,8 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
     def cofre_salvar(mapa_id: str):
         if len(request.get_data(cache=True)) > 64 * 1024:
             abort(413)
+        if (b := _bloqueio_hack(mapa_id)) is not None:
+            return b
         dados = (request.get_json(silent=True) or {}).get("dados")
         if not isinstance(dados, dict) or len(dados) > 50:
             abort(400)
@@ -741,6 +785,8 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
     @app.post("/api/emblemas/<mapa_id>")
     @logado
     def emblema_ganhar(mapa_id: str):
+        if (b := _bloqueio_hack(mapa_id)) is not None:
+            return b
         d = request.get_json(silent=True) or {}
         return jsonify(g.api.dar_emblema(mapa_id, str(d.get("codigo", ""))[:30], str(d.get("nome", "")),
                                          str(d.get("emoji", "🏅"))))

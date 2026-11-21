@@ -44,6 +44,7 @@
   })();
 </script>
 
+{% if hack %}<section id="executor" class="painel-executor" hidden aria-label="Executor de scripts"></section>{% endif %}
 <header class="barra-jogo">
   {% if s %}
   <form method="post" action="{{ url_for('sair_servidor', uid=s.server_uid) }}">
@@ -54,7 +55,8 @@
   {% else %}
   <a class="btn-jogo" href="{{ url_for('dono') if eh_dono else url_for('jogos') }}" aria-label="Voltar">✕</a>
   {% endif %}
-  <strong class="nome-jogo">{{ m.nome }}{% if teste %}<span class="etiqueta neutra">TESTE</span>{% endif %}</strong>
+  <strong class="nome-jogo">{{ m.nome }}{% if teste %}<span class="etiqueta neutra">TESTE</span>{% endif %}{% if hack %}<span class="etiqueta hack">🤖 HACK</span>{% endif %}</strong>
+  {% if hack %}<button class="btn-jogo botao-executor" id="abrirExecutor" aria-label="Executor de scripts" aria-expanded="false" title="Executor de scripts">🤖</button>{% endif %}
   <button class="btn-jogo so-celular" id="abrirMais" aria-label="Mais opções" aria-expanded="false">⋯</button>
   <div class="mais-jogo" id="maisJogo">
   {% if not teste %}<button class="btn-jogo" id="curtir" data-curti="{{ '1' if curti else '0' }}"
@@ -147,7 +149,8 @@
 
   const toque = matchMedia("(pointer: coarse)").matches || "ontouchstart" in window;
   const carregando = document.getElementById("carregando");
-  const saida = (texto, tipo) => { if (tipo === "erro") console.warn(texto); };
+  let executor = null;                 // 🤖 só em servidor hack
+  const saida = (texto, tipo, nome) => { executor?.saida(texto, tipo, nome); if (tipo === "erro") console.warn(texto); };
   document.getElementById("dica").textContent = toque
     ? "Joystick para andar · ⤒ pula · arraste a tela para girar · pinça para zoom"
     : "WASD anda · espaço pula · arraste ou Q/E gira · roda do mouse ou I/O zoom";
@@ -156,13 +159,17 @@
     const jogo = window.roloxJogo = await jogarMapa({
       canvas: document.getElementById("tela"), urlMapa: {{ url_mapa|tojson }},
       nomeJogador: {{ eu|tojson }}, avatar: {{ avatar|tojson }}, saida, multijogador: {{ 'true' if passe else 'false' }},
-      emblemas: {% if teste %}null{% else %}{ url: {{ url_for('emblemas_meus', mapa_id=m.id)|tojson }}, csrf: CSRF }{% endif %},
-      cofre: {% if teste %}null{% else %}{ url: {{ url_for('cofre_ler', mapa_id=m.id)|tojson }}, csrf: CSRF }{% endif %},
+      emblemas: {% if teste or hack %}null{% else %}{ url: {{ url_for('emblemas_meus', mapa_id=m.id)|tojson }}, csrf: CSRF }{% endif %},
+      cofre: {% if teste or hack %}null{% else %}{ url: {{ url_for('cofre_ler', mapa_id=m.id)|tojson }}, csrf: CSRF }{% endif %},
     });
     carregando.remove();
+    {% if hack %}
+    const { ligarExecutor } = await import("/static/studio/executor.js");
+    executor = ligarExecutor(jogo, { botao: document.getElementById("abrirExecutor"), painel: document.getElementById("executor") });
+    {% endif %}
     jogo.extras.push(new Placar({
       jogo, caixa: document.getElementById("placar"),
-      enviar: {% if teste %}null{% else %}(estatistica, valor) => api({{ url_for('placar_enviar', mapa_id=m.id)|tojson }}, {estatistica, valor}){% endif %},
+      enviar: {% if teste or hack %}null{% else %}(estatistica, valor) => api({{ url_for('placar_enviar', mapa_id=m.id)|tojson }}, {estatistica, valor}){% endif %},
     }));
     {% if passe %}
     const mj = new Multijogador({

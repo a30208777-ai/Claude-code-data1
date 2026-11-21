@@ -1,6 +1,7 @@
 # Compila os apps Android (Python + Flet):
 #   - ROLOX                 (Rolox-App/mobile)      -> artefato rolox-apk
 #   - Atualizador do ROLOX  (Rolox-App/atualizador) -> artefato atualizador-apk
+#   - ROLOX Hacks           (Rolox-App/hacks)       -> artefato rolox-hacks-apk
 # O ROLOX só abre com o Atualizador instalado (Rolox-App/mobile/src/rolox/protecao.py).
 #
 # Quando roda:
@@ -23,6 +24,7 @@ on:
     paths:
       - "Rolox-App/mobile/**"
       - "Rolox-App/atualizador/**"
+      - "Rolox-App/hacks/**"
       - ".github/workflows/apk.yml"
   workflow_dispatch:
 
@@ -56,6 +58,9 @@ jobs:
           - nome: Atualizador-ROLOX
             pasta: Rolox-App/atualizador
             artefato: atualizador-apk
+          - nome: ROLOX-Hacks
+            pasta: Rolox-App/hacks
+            artefato: rolox-hacks-apk
     defaults:
       run:
         working-directory: ${{ matrix.pasta }}

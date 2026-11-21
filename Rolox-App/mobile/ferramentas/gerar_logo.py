@@ -19,6 +19,7 @@ RAIZ = Path(__file__).resolve().parents[1]
 ASSETS = RAIZ / "src" / "assets"
 SITE = RAIZ.parent / "flask" / "static"
 ATUALIZADOR = RAIZ.parent / "atualizador" / "src" / "assets"     # o Atualizador usa a mesma logo
+HACKS = RAIZ.parent / "hacks" / "src" / "assets"                 # ROLOX Hacks: a logo com o robô
 FONTE = next((p for p in ("/usr/share/fonts/opentype/inter/InterDisplay-Black.otf",
                           "/usr/share/fonts/opentype/inter/Inter-Black.otf") if Path(p).exists()), None)
 ESCALA = 4
@@ -104,32 +105,56 @@ def marca(n: int) -> Image.Image:
     return img.resize((n, n), Image.LANCZOS)
 
 
-def icone(n: int = 1024) -> Image.Image:
-    """Ícone do app: fundo em degradê (sangra até a borda) + símbolo."""
+def robo(n: int) -> Image.Image:
+    """Selo do ROLOX Hacks: carinha de robô num círculo laranja (desenhada, sem emoji)."""
     N = n * ESCALA
-    fundo = degrade(N, ROXO_ESCURO, (74, 20, 140), (13, 71, 161)).convert("RGBA")
+    img = Image.new("RGBA", (N, N), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    d.ellipse((0, 0, N - 1, N - 1), fill=(255, 109, 0), outline=(255, 255, 255), width=int(N * 0.06))
+    cab = (N * 0.24, N * 0.33, N * 0.76, N * 0.74)
+    d.rounded_rectangle(cab, radius=N * 0.1, fill=(255, 255, 255))
+    d.line((N * 0.5, N * 0.33, N * 0.5, N * 0.2), fill=(255, 255, 255), width=int(N * 0.05))
+    d.ellipse((N * 0.44, N * 0.13, N * 0.56, N * 0.25), fill=(255, 255, 255))
+    for x in (0.38, 0.62):
+        d.ellipse((N * (x - 0.07), N * 0.45, N * (x + 0.07), N * 0.59), fill=(38, 12, 92))
+    d.rounded_rectangle((N * 0.38, N * 0.63, N * 0.62, N * 0.68), radius=N * 0.02, fill=(38, 12, 92))
+    return img.resize((n, n), Image.LANCZOS)
+
+
+def icone(n: int = 1024, hacks: bool = False) -> Image.Image:
+    """Ícone do app: fundo em degradê (sangra até a borda) + símbolo. `hacks`: versão do ROLOX Hacks."""
+    N = n * ESCALA
+    cores = ((20, 8, 30), (70, 20, 60), (191, 54, 12)) if hacks else (ROXO_ESCURO, (74, 20, 140), (13, 71, 161))
+    fundo = degrade(N, *cores).convert("RGBA")
     # luz suave atrás do símbolo
     luz = Image.new("L", (N, N), 0)
     ImageDraw.Draw(luz).ellipse((N * 0.12, N * 0.1, N * 0.88, N * 0.86), fill=110)
-    fundo.paste((124, 77, 255), (0, 0), luz.filter(ImageFilter.GaussianBlur(N * 0.12)))
+    fundo.paste((255, 109, 0) if hacks else (124, 77, 255), (0, 0), luz.filter(ImageFilter.GaussianBlur(N * 0.12)))
     fundo = fundo.resize((n, n), Image.LANCZOS)
     m = marca(int(n * 0.84))                      # margem para o recorte redondo do Android
     fundo.alpha_composite(m, ((n - m.width) // 2, (n - m.height) // 2))
+    if hacks:
+        r = robo(int(n * 0.3))
+        fundo.alpha_composite(r, (int(n * 0.6), int(n * 0.6)))
     return fundo.convert("RGB")
 
 
-def logo_com_nome(altura: int = 220) -> Image.Image:
-    """Símbolo + 'ROLOX' (para telas e para o site)."""
+def logo_com_nome(altura: int = 220, nome: str = "ROLOX", hacks: bool = False) -> Image.Image:
+    """Símbolo + 'ROLOX' (para telas e para o site). `hacks`: 'ROLOX HACKS' em laranja."""
     m = marca(altura)
+    if hacks:
+        r = robo(int(altura * 0.42))
+        m.alpha_composite(r, (altura - r.width, altura - r.height))
     f = ImageFont.truetype(FONTE, int(altura * 0.5)) if FONTE else ImageFont.load_default()
     medir = ImageDraw.Draw(Image.new("L", (1, 1)))
-    x0, y0, x1, y1 = medir.textbbox((0, 0), "ROLOX", font=f)
+    x0, y0, x1, y1 = medir.textbbox((0, 0), nome, font=f)
     larg = altura + int(altura * 0.12) + (x1 - x0) + 8
     img = Image.new("RGBA", (larg, altura), (0, 0, 0, 0))
     img.alpha_composite(m, (0, 0))
     texto = Image.new("L", img.size, 0)
-    ImageDraw.Draw(texto).text((altura + int(altura * 0.12) - x0, (altura - (y1 - y0)) / 2 - y0), "ROLOX", font=f, fill=255)
-    cor = degrade(max(img.size), (124, 77, 255), (98, 50, 230), (0, 176, 255)).crop((0, 0, *img.size))
+    ImageDraw.Draw(texto).text((altura + int(altura * 0.12) - x0, (altura - (y1 - y0)) / 2 - y0), nome, font=f, fill=255)
+    cores = ((255, 171, 64), (255, 109, 0), (221, 44, 0)) if hacks else ((124, 77, 255), (98, 50, 230), (0, 176, 255))
+    cor = degrade(max(img.size), *cores).crop((0, 0, *img.size))
     img.paste(cor, (0, 0), texto)
     return img
 
@@ -147,6 +172,12 @@ def main() -> None:
         icone(1024).save(ATUALIZADOR / "icon.png", optimize=True)
         marca(1024).save(ATUALIZADOR / "splash.png", optimize=True)
         logo_com_nome(220).save(ATUALIZADOR / "logo_nome.png", optimize=True)
+    if HACKS.parent.is_dir():
+        HACKS.mkdir(exist_ok=True)
+        icone(1024, hacks=True).save(HACKS / "icon.png", optimize=True)
+        logo_com_nome(220, "ROLOX HACKS", hacks=True).save(HACKS / "logo_nome.png", optimize=True)
+        im = marca(1024); r = robo(330); im.alpha_composite(r, (1024 - 330 - 60, 1024 - 330 - 60))
+        im.save(HACKS / "splash.png", optimize=True)
     if SITE.is_dir():
         logo_com_nome(120).save(SITE / "logo_nome.png", optimize=True)
         marca(256).save(SITE / "logo.png", optimize=True)

@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block titulo %}ROLOX Hacks{% endblock %}
+{% block conteudo %}
+<div class="hacks-topo">
+  <img src="{{ url_for('static', filename='logo_hacks.png') }}" alt="ROLOX Hacks" height="44" style="width:auto">
+</div>
+<h1>🤖 Servidores de hack e mod</h1>
+<p class="nota">Aqui você joga em <b>servidores de hack/mod</b>, separados dos jogadores do ROLOX: quem está no modo hack de um
+  jogo só encontra outras pessoas no modo hack. No jogo, toque em <b>🤖</b> lá em cima para abrir o <b>executor</b> e rodar
+  scripts (Lua) do seu jeito — tem scripts prontos para começar.</p>
+<p class="nota">No modo hack <b>não vale recorde, Cofre nem emblema</b>. Respeite a <a href="{{ url_for('politica') }}">Política de Uso</a>:
+  nada de atacar o site ou a conta dos outros.</p>
+
+{% if perfil.jogo_mod %}
+<div class="cartao">
+  <span class="icone">🤖</span>
+  <div class="info"><div class="titulo">Você está no modo hack de um jogo</div>
+    <div class="detalhe">Nesse jogo você só entra em servidores hack. Saia do modo para voltar aos servidores normais.</div></div>
+  <form method="post" action="{{ url_for('hacks_sair_do_modo') }}">
+    <input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn pequeno contorno">Sair do modo hack</button>
+  </form>
+</div>
+{% endif %}
+
+<h2>Jogos</h2>
+{% for m in publicados %}
+  <div class="cartao" id="mapa-{{ m.id }}">
+    <span class="icone">{{ '🤖' if perfil.jogo_mod and perfil.jogo_mod == m.gameid else '🕹️' }}</span>
+    <div class="info">
+      <div class="titulo">{{ m.nome }}{% if perfil.jogo_mod and perfil.jogo_mod == m.gameid %}<span class="etiqueta hack">MODO HACK</span>{% endif %}</div>
+      {% if m.descricao %}<div class="detalhe">{{ m.descricao }}</div>{% endif %}
+    </div>
+    <form method="post" action="{{ url_for('hacks_jogar', mapa_id=m.id) }}">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <button class="btn pequeno botao-hack">🤖 Jogar com hacks</button>
+    </form>
+  </div>
+{% else %}
+  <p class="muted"><i>Nenhum jogo aprovado ainda.</i></p>
+{% endfor %}
+{% endblock %}
