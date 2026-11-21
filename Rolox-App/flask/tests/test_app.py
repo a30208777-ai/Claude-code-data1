@@ -1765,3 +1765,15 @@ def test_pagina_do_jogo_mostra_amigos_jogando(cliente, sb):
                  {"username": "carla", "tipo": "amigo", "online": True, "server_uid": "s1"}]
     t = html(cliente.get(f"/jogos/{mid}"))
     assert "👥 Amigos jogando agora" in t and "bob" in t and "/amigos/entrar/s5" in t and "carla" not in t
+
+
+def test_jogo_aleatorio(cliente, sb):
+    entrar(cliente)
+    tok = csrf(cliente)
+    r = cliente.post("/jogos/aleatorio", data={"csrf": tok})
+    assert r.headers["Location"].endswith("/jogos")
+    mid = enviar_mapa(cliente).get_json()["id"]
+    sb.dono = True
+    cliente.post(f"/dono/{mid}/aprovar", data={"csrf": tok})
+    r = cliente.post("/jogos/aleatorio", data={"csrf": tok})
+    assert f"/jogar/{mid}?s=" in r.headers["Location"] and "🎲 Jogo aleatório" in html(cliente.get("/jogos"))

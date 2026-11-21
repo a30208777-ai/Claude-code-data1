@@ -12,6 +12,9 @@
   <a href="{{ url_for('jogos', ordem='curtidos') }}" class="{{ 'ativo' if ordem == 'curtidos' }}">❤ Mais curtidos</a>
   <a href="{{ url_for('jogos', ordem='novos') }}" class="{{ 'ativo' if ordem == 'novos' }}">🆕 Novos</a>
 </div>
+<form method="post" action="{{ url_for('jogo_aleatorio') }}" class="linha">
+  <input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn contorno pequeno">🎲 Jogo aleatório</button>
+</form>
 <input type="search" id="filtroJogos" class="filtro-jogos" placeholder="🔎 Filtrar jogos pelo nome" aria-label="Filtrar jogos pelo nome">
 <p class="muted" id="semJogos" hidden><i>Nenhum jogo com esse nome.</i></p>
 <script>

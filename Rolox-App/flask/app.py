@@ -638,6 +638,20 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
         return render_template("jogos.html", publicados=g.api.mapas_publicados(ordem), meus=g.api.meus_mapas(),
                                curti=curti, ordem=ordem, aba="jogos")
 
+    @app.post("/jogos/aleatorio")
+    @logado
+    def jogo_aleatorio():
+        """🎲 Sorteia um jogo aprovado e entra nele."""
+        import random
+        lista = [m for m in g.api.mapas_publicados("novos") if m.get("gameid")]
+        if not lista:
+            flash("Ainda não tem jogo aprovado para sortear.", "erro")
+            return redirect(url_for("jogos"))
+        m = random.choice(lista)
+        flash(f"🎲 Sorteado: {m['nome']}!", "ok")
+        perfil = g.api.meu_perfil()
+        return _entrar_servidor(m, hack=perfil.get("jogo_mod") == m["gameid"])
+
     @app.get("/ranking")
     @logado
     def ranking():
