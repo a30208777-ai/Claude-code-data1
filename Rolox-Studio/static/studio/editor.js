@@ -12,6 +12,7 @@ import { PCtoCelular, ehCelular, LIMITES } from "./pctocelular.js";
 import { carregarPython } from "./scripts.js";
 import { MODELOS } from "./modelos.js";
 import { TIPOS_MUNDO, gerarMundo } from "./gerador.js";
+import { PRONTOS, colocarPronto } from "./prontos.js";
 import { extrairAcoes, aplicarAcoes, resumoCena } from "./agente_ia.js";
 import { ligarTela, ligarSons, ligarInternet } from "./tela_jogo.js";
 import { ligarMidias } from "./midia_jogo.js";
@@ -124,6 +125,19 @@ async function perguntar(texto, padrao = "") {
   const ok = await modal([texto, campo], [{ texto: "Cancelar", valor: false }, { texto: "OK", valor: true, destaque: true }]);
   return ok ? campo.value.trim() : null;
 }
+
+// peças prontas: o botão do modal avisa qual foi escolhida
+let ultimoPronto = null;
+document.getElementById("modal")?.addEventListener("pronto", (e) => {
+  if (estado.mundo.contarPartes() + 6 > LIMITE_PARTES) { modal(`Limite de ${LIMITE_PARTES} peças no Studio.`); return; }
+  const frente = posicaoNaFrente();
+  // vários seguidos no mesmo lugar: cada um vai 14 para o lado (não nasce um dentro do outro)
+  const mesmo = ultimoPronto && ultimoPronto.x === frente.X && ultimoPronto.z === frente.Z;
+  ultimoPronto = { x: frente.X, z: frente.Z, n: mesmo ? ultimoPronto.n + 1 : 0 };
+  const m = colocarPronto(estado.mundo, e.detail, new Vector3(frente.X + ultimoPronto.n * 14, 0, frente.Z));
+  mudou(); selecionar(m);
+  saida(`📦 ${PRONTOS[e.detail].nome} colocado.`, "sistema");
+});
 
 // gerador de mundo: o botão do modal avisa qual tipo foi escolhido
 document.getElementById("modal")?.addEventListener("escolheu", (e) => {
@@ -605,6 +619,14 @@ const acoes = {
     void tipo;
   },
   pincel() { ligarPincel(!pincel.ativo); },
+  async prontos() {
+    const escolha = await modal([el("p", {}, el("b", {}, "📦 Peças prontas")),
+      el("p", { class: "vazio" }, "Aparece na sua frente. As que têm comportamento já vêm com o script."),
+      el("div", { class: "lista prontos" }, Object.entries(PRONTOS).map(([k, x]) => el("button", {
+        class: "modelo", onclick: () => { $("#modal").hidden = true; $("#modal").dispatchEvent(new CustomEvent("pronto", { detail: k })); },
+      }, el("b", {}, x.nome))))], [{ texto: "Cancelar", valor: false }]);
+    void escolha;
+  },
   part() { novaParte("Part"); },
   bola() { novaParte("Part", "Ball"); },
   cilindro() { novaParte("Part", "Cylinder"); },
