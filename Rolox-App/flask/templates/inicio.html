@@ -13,6 +13,23 @@
   </div>
 </div>
 
+<h2 id="missoes">🎯 Missões de hoje</h2>
+{% for x in missoes %}
+  <div class="cartao missao{{ ' feita' if x.feita }}">
+    <span class="icone">{{ x.emoji }}</span>
+    <div class="info"><div class="titulo">{{ x.titulo }}</div>
+      <div class="detalhe">🎟️ +{{ x.recompensa }} tickets{% if x.resgatada %} · ✅ resgatada{% elif x.feita %} · pronta para resgatar!{% endif %}</div></div>
+    {% if x.feita and not x.resgatada %}
+    <form method="post" action="{{ url_for('missao_resgatar', codigo=x.codigo) }}">
+      <input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn pequeno">Resgatar</button>
+    </form>
+    {% endif %}
+  </div>
+{% else %}
+  <p class="muted"><i>Sem missões agora.</i></p>
+{% endfor %}
+<p class="nota">Missões novas todo dia. Cumpra e toque em Resgatar.</p>
+
 <div class="linha">
   <h2 class="cresce">👥 Amigos online</h2>
   <a class="btn texto" href="{{ url_for('amigos') }}">Ver amigos</a>

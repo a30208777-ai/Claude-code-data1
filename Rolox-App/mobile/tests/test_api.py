@@ -442,3 +442,17 @@ def test_verificar_app_manda_chave_e_versao():
     api = logada(h)
     assert rodar(api.verificar_app("  ttjZz!chave ", "0.25.0")) == "oficial"
     assert chamadas[-1] == ("/rest/v1/rpc/verificar_app", {"p_chave": "ttjZz!chave", "p_versao": "0.25.0"})
+
+
+def test_missoes_diarias():
+    chamadas = []
+    def h(req):
+        chamadas.append((req.url.path, json.loads(req.content)))
+        if req.url.path.endswith("minhas_missoes"):
+            return resposta(200, [{"codigo": "jogar", "emoji": "🎮", "titulo": "Jogue um jogo", "recompensa": 5,
+                                   "feita": True, "resgatada": False}])
+        return resposta(200, {"ganhou": 5, "tickets": 15})
+    api = logada(h)
+    assert rodar(api.minhas_missoes())[0]["codigo"] == "jogar"
+    assert rodar(api.resgatar_missao("jogar")) == {"ganhou": 5, "tickets": 15}
+    assert chamadas[-1] == ("/rest/v1/rpc/resgatar_missao", {"p_codigo": "jogar"})

@@ -353,6 +353,13 @@ class RoloxAPI:
             "select": "user_id,username,estatistica,valor,atualizado_em", "mapa_id": f"eq.{mapa_id}",
             "order": "valor.desc,atualizado_em.asc", "limit": str(limite)}) or []
 
+    # -------------------------------------------------- 🎯 missões diárias
+    def minhas_missoes(self) -> list[dict]:
+        return self._req("POST", "/rest/v1/rpc/minhas_missoes", json={}) or []
+
+    def resgatar_missao(self, codigo: str) -> dict:
+        return self._req("POST", "/rest/v1/rpc/resgatar_missao", json={"p_codigo": str(codigo)[:20]}) or {}
+
     def nome_de(self, user_id: str) -> Optional[str]:
         """Nome de usuário de alguém (perfis são visíveis para quem está logado)."""
         linhas = self._req("GET", "/rest/v1/perfis", params={"select": "username", "id": f"eq.{user_id}"}) or []

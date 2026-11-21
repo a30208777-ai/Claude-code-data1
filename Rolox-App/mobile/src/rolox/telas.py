@@ -116,6 +116,41 @@ class RoloxApp:
             except Exception:
                 pass
 
+    # ===================================================== 🎯 missões diárias
+    def caixa_missoes(self) -> ft.Control:
+        coluna = ft.Column([ft.Text("🎯 Missões de hoje", size=18, weight=ft.FontWeight.BOLD),
+                            ft.Text("Carregando...", size=12, italic=True)], spacing=4)
+
+        async def carregar():
+            try:
+                missoes = await self.api.minhas_missoes()
+            except ErroRolox:
+                missoes = []
+            itens = []
+            for m in missoes:
+                async def resgatar(_, codigo=m["codigo"]):
+                    async def acao():
+                        r = await self.api.resgatar_missao(codigo)
+                        if "tickets" in r:
+                            self.perfil["tickets"] = r["tickets"]
+                        self.aviso(f"🎯 Missão cumprida! +{r.get('ganhou', 0)} tickets.")
+                        await carregar()
+                    await self.executar(acao)
+                estado = "✅ resgatada" if m.get("resgatada") else ("pronta!" if m.get("feita") else "")
+                itens.append(ft.ListTile(
+                    leading=ft.Text(m.get("emoji", "🎯"), size=22), dense=True,
+                    title=ft.Text(m.get("titulo", "")),
+                    subtitle=ft.Text(f"🎟️ +{m.get('recompensa', 0)} tickets" + (f" · {estado}" if estado else ""), size=12),
+                    trailing=ft.FilledButton("Resgatar", on_click=resgatar)
+                    if m.get("feita") and not m.get("resgatada") else None))
+            coluna.controls[1:] = itens or [ft.Text("Sem missões agora.", size=12, italic=True)]
+            try:
+                coluna.update()
+            except Exception:
+                pass
+        self.page.run_task(carregar)
+        return coluna
+
     # ================================================= atualização e app oficial
     async def conferir_app(self) -> None:
         """Lê o Vision-apk-link.json: pede para atualizar se tem versão nova e manda a chave do app oficial."""
@@ -661,6 +696,7 @@ class RoloxApp:
                     ], spacing=4, expand=True),
                 ], vertical_alignment=ft.CrossAxisAlignment.START),
                 ft.Row([busca, ft.IconButton(ft.Icons.SEARCH, tooltip="Buscar", on_click=buscar)]),
+                self.caixa_missoes(),
                 ft.Divider(),
                 ft.Row([ft.Icon(ft.Icons.PEOPLE), ft.Text("Amigos", size=18, expand=True),
                         ft.TextButton("Abrir no site", on_click=lambda _: self.page.run_task(self.abrir_site, None, "amigos"))]),

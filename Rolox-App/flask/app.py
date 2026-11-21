@@ -327,8 +327,19 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
                 a["parceiro"] = a["username"] in selo
         except ErroRolox:
             amigos = []
-        return render_template("inicio.html", perfil=carregar_perfil(), onde=onde,
+        try:
+            missoes = g.api.minhas_missoes()
+        except ErroRolox:
+            missoes = []
+        return render_template("inicio.html", perfil=carregar_perfil(), onde=onde, missoes=missoes,
                                alertas=g.api.alertas(), amigos_online=amigos, aba="inicio")
+
+    @app.post("/missoes/<codigo>/resgatar")
+    @logado
+    def missao_resgatar(codigo: str):
+        r = g.api.resgatar_missao(codigo)                 # o banco confere se foi cumprida
+        flash(f"🎯 Missão cumprida! +{r.get('ganhou', 0)} tickets.", "ok")
+        return redirect(url_for("inicio") + "#missoes")
 
     @app.get("/api/status")
     @logado

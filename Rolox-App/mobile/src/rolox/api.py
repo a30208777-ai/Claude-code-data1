@@ -332,6 +332,13 @@ class RoloxAPI:
         limpo = {k: str(v or "").strip()[:200] for k, v in (redes or {}).items() if k in REDES_SOCIAIS}
         return await self._req("POST", "/rest/v1/rpc/definir_redes", json={"p_redes": limpo})
 
+    async def minhas_missoes(self) -> list:
+        """🎯 As 3 missões de hoje (o banco confere se foram cumpridas)."""
+        return await self._req("POST", "/rest/v1/rpc/minhas_missoes", json={}) or []
+
+    async def resgatar_missao(self, codigo: str) -> dict:
+        return await self._req("POST", "/rest/v1/rpc/resgatar_missao", json={"p_codigo": str(codigo)[:20]}) or {}
+
     async def verificar_app(self, chave: str, versao: str) -> str:
         """Manda a chave do app oficial (proctetion). Devolve 'oficial', 'modificado' ou 'sem_chave_cadastrada'."""
         r = await self._req("POST", "/rest/v1/rpc/verificar_app",

@@ -263,6 +263,24 @@ class SupabaseFalso:
             c["usado_por"] = "alice"
             self.perfil.update(is_parceiro=True, parceiro_desde="2026-11-20T16:00:00Z")
             return Resp(200, {"parceiro": True, "apelido": c["apelido"]})
+        if p in ("/rest/v1/rpc/minhas_missoes", "/rest/v1/rpc/resgatar_missao"):
+            self.missoes_feitas = getattr(self, "missoes_feitas", set())
+            self.resgatadas = getattr(self, "resgatadas", set())
+            hoje = [("jogar", "🎮", "Jogue um jogo", 5), ("curtir", "❤️", "Curta um jogo", 5), ("recorde", "🏆", "Faça um recorde", 10)]
+            if p.endswith("minhas_missoes"):
+                return Resp(200, [{"codigo": c, "emoji": e, "titulo": t, "recompensa": r,
+                                   "feita": c in self.missoes_feitas, "resgatada": c in self.resgatadas} for c, e, t, r in hoje])
+            c = json["p_codigo"]
+            premio = next((r for cc, _, _, r in hoje if cc == c), None)
+            if premio is None:
+                return Resp(400, {"code": "P0001", "message": "essa missão não é de hoje"})
+            if c not in self.missoes_feitas:
+                return Resp(400, {"code": "P0001", "message": "missão ainda não cumprida"})
+            if c in self.resgatadas:
+                return Resp(400, {"code": "P0001", "message": "você já resgatou essa missão hoje"})
+            self.resgatadas.add(c)
+            self.perfil["tickets"] += premio
+            return Resp(200, {"ganhou": premio, "tickets": self.perfil["tickets"]})
         if p in ("/rest/v1/rpc/dono_expulsar", "/rest/v1/rpc/dono_banir"):
             if not self.dono:
                 return Resp(403, {"code": "42501", "message": "apenas o dono"})
@@ -1639,3 +1657,23 @@ def test_ranking_de_criadores_e_jogos(cliente, sb):
     t = html(cliente.get("/ranking"))
     assert "🥇" in t and 'href="/jogador/alice"' in t and "<b>16</b>" in t and "1 jogo" in t
     assert f'href="/jogos/{mid}"' in t and "/ranking" in html(cliente.get("/jogos"))
+
+
+def test_missoes_diarias(cliente, sb):
+    entrar(cliente)
+    tok = csrf(cliente)
+    t = html(cliente.get("/inicio"))
+    assert "🎯 Missões de hoje" in t and "Jogue um jogo" in t and ">Resgatar<" not in t
+    cliente.post("/missoes/jogar/resgatar", data={"csrf": tok}, headers={"Referer": "http://localhost/inicio"})
+    assert "ainda não cumprida" in html(cliente.get("/inicio"))
+    sb.missoes_feitas = {"jogar"}
+    antes = sb.perfil["tickets"]
+    assert ">Resgatar<" in html(cliente.get("/inicio"))
+    r = cliente.post("/missoes/jogar/resgatar", data={"csrf": tok})
+    assert r.headers["Location"].endswith("/inicio#missoes") and sb.perfil["tickets"] == antes + 5
+    t = html(cliente.get("/inicio"))
+    assert "+5 tickets" in t and "✅ resgatada" in t
+    cliente.post("/missoes/jogar/resgatar", data={"csrf": tok})
+    assert sb.perfil["tickets"] == antes + 5                       # não resgata duas vezes
+    cliente.post("/missoes/jogar/resgatar")                        # sem CSRF
+    assert sb.perfil["tickets"] == antes + 5
