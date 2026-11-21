@@ -1480,7 +1480,8 @@ def test_rolox_hacks_servidor_separado_com_executor(cliente, sb):
     gameid = sb.mapas[mid]["gameid"]
     t = html(cliente.get("/hacks"))
     assert "Servidores de hack e mod" in t and f"/hacks/{mid}/jogar" in t and "/hacks" in html(cliente.get("/jogos"))
-    # servidor normal do jogo: no ROLOX normal não tem executor
+    # servidor normal do jogo (de outra pessoa): no ROLOX normal não tem executor
+    sb.mapas[mid]["autor_id"] = "u9"
     r = cliente.post(f"/jogos/{mid}/jogar", data={"csrf": tok})
     normal = html(cliente.get(r.headers["Location"].replace("http://localhost", "")))
     assert "abrirExecutor" not in normal and "executor.js" not in normal
@@ -1541,8 +1542,9 @@ def test_painel_do_dono_no_jogo_kick_ban_e_anuncio(cliente, sb, tmp_path, monkey
     r = cliente.post("/api/dono/jogo/banir", json={"passe": passe, "alvo": "u8", "motivo": "hack"}, headers={"X-CSRF": tok})
     assert r.status_code == 200 and sb.poderes_dono[-1] == ("dono_banir", {"p_user": "u8", "p_motivo": "hack"})
     assert "banida" in outro.trocar(carla, {"p": [0, 2, 0]})["expulso"]
-    # quem não é o dono não pode
+    # quem não é o dono nem o criador do mapa não pode
     sb.dono = False
+    sb.mapas[mid]["autor_id"] = "u9"
     r = cliente.post("/api/dono/jogo/anunciar", json={"passe": passe, "texto": "oi"}, headers={"X-CSRF": tok})
     assert r.status_code == 403
     t = html(cliente.get(f"/jogar/{mid}?s={sala}"))
@@ -1561,3 +1563,43 @@ def test_dono_usa_os_2_apps_sem_ficar_preso_no_modo_hack(cliente, sb):
     assert hack and f"s={hack[-1]['server_uid']}" in r.headers["Location"]
     t = html(cliente.get(r.headers["Location"].replace("http://localhost", "")))
     assert 'id="abrirExecutor"' in t and 'id="abrirDono"' in t   # servidor hack: 🤖 no topo + 👑💎
+
+
+def test_criador_do_mapa_tem_o_painel_no_proprio_jogo(cliente, sb, tmp_path, monkeypatch):
+    import re
+    import multijogador
+    monkeypatch.setenv("ROLOX_PASTA_SALAS", str(tmp_path))
+    entrar(cliente)
+    tok = csrf(cliente)
+    mid = enviar_mapa(cliente).get_json()["id"]          # alice (u1) é a criadora
+    sb.dono = True
+    cliente.post(f"/dono/{mid}/aprovar", data={"csrf": tok})
+    sb.dono = False
+    r = cliente.post(f"/jogos/{mid}/jogar", data={"csrf": tok})
+    t = html(cliente.get(r.headers["Location"].replace("http://localhost", "")))
+    assert 'id="abrirDono"' in t and "Painel do criador" in t and "podeBanir: false" in t
+    passe = json.loads(re.search(r'passe: ("[^"]+")', t).group(1))
+    sala = multijogador.Passes(cliente.application.config["SECRET_KEY"]).ler(passe)["s"]
+    outro = multijogador.Salas()
+    bob = {"s": sala, "u": "u7", "n": "bob", "a": {}}
+    dono = {"s": sala, "u": "u2", "n": "chefe", "a": {}, "dn": True}
+    outro.trocar(bob, {"p": [0, 2, 0]}); outro.trocar(dono, {"p": [0, 2, 0]})
+    cliente.post("/api/sala", json={"passe": passe, "p": [1, 2, 1]}, headers={"X-CSRF": tok})
+    # kick no próprio jogo: funciona (só na sala; o banco é coisa do dono)
+    r = cliente.post("/api/dono/jogo/expulsar", json={"passe": passe, "alvo": "u7"}, headers={"X-CSRF": tok})
+    assert r.status_code == 200 and not getattr(sb, "poderes_dono", [])
+    assert "criador do jogo" in outro.trocar(bob, {"p": [0, 2, 0]})["expulso"]
+    # o dono do ROLOX ninguém expulsa; banir é só do dono
+    r = cliente.post("/api/dono/jogo/expulsar", json={"passe": passe, "alvo": "u2"}, headers={"X-CSRF": tok})
+    assert r.status_code == 403 and "dono do ROLOX" in r.get_json()["mensagem"]
+    r = cliente.post("/api/dono/jogo/banir", json={"passe": passe, "alvo": "u2"}, headers={"X-CSRF": tok})
+    assert r.status_code == 403
+    assert cliente.post("/api/dono/jogo/anunciar", json={"passe": passe, "texto": "Bem-vindos ao meu jogo!"},
+                        headers={"X-CSRF": tok}).get_json()["ok"]
+    # em jogo de outra pessoa: sem painel e sem poder
+    sb.mapas[mid]["autor_id"] = "u9"
+    sb.mapas[mid]["gameid"] = "outro-jogo"
+    t = html(cliente.get(f"/jogar/{mid}?s={sala}"))
+    assert 'id="abrirDono"' not in t
+    r = cliente.post("/api/dono/jogo/anunciar", json={"passe": passe, "texto": "oi"}, headers={"X-CSRF": tok})
+    assert r.status_code == 403

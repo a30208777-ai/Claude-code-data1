@@ -723,6 +723,7 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
             abort(404)
         avatar = avatar_mod.normalizar(perfil.get("avatar"))
         dono_jogo = bool(session.get("dono"))           # carregar_perfil acabou de conferir no banco
+        criador_jogo = m.get("autor_id") == g.api.user_id  # o criador do mapa também tem o painel no jogo dele
         passe = passes.criar(s["server_uid"], g.api.user_id, perfil.get("username", "Jogador"), avatar,
                              parceiro=bool(perfil.get("is_parceiro")), dono=dono_jogo) if s else None
         try:
@@ -731,7 +732,7 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
             curti = False
         hack = bool(s and s.get("is_hack_server"))
         return render_template("jogar.html", m=m, s=s, teste=teste, eu=perfil.get("username", "Jogador"), curti=curti,
-                               hack=hack, dono_jogo=dono_jogo,
+                               hack=hack, dono_jogo=dono_jogo, criador_jogo=criador_jogo and not dono_jogo,
                                midias_base=g.api.url_midias(),
                                avatar=avatar, passe=passe,
                                host=bool(s) and s["host_id"] == g.api.user_id,
@@ -759,10 +760,15 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
         passe = _passe_meu()
         if acao not in ("expulsar", "banir", "anunciar"):
             abort(404)
-        if not g.api.eh_dono():
-            return jsonify({"erro": "so_dono", "mensagem": "Só o dono pode fazer isso."}), 403
-        d = request.get_json(silent=True) or {}
         sala = passe["s"]
+        eh_dono = g.api.eh_dono()
+        if not eh_dono:
+            # criador do mapa: kick e anúncio só nos servidores do PRÓPRIO jogo (banir a conta é só do dono)
+            srv = g.api.servidor(sala) or {}
+            meus = {x.get("gameid") for x in g.api.meus_mapas() if x.get("gameid")}
+            if acao == "banir" or not srv.get("gameid") or srv["gameid"] not in meus:
+                return jsonify({"erro": "so_dono", "mensagem": "Só o dono do ROLOX pode fazer isso."}), 403
+        d = request.get_json(silent=True) or {}
         if acao == "anunciar":
             n = salas.anunciar(sala, str(d.get("texto", "")))
             return jsonify({"ok": True, "viram": n})
@@ -772,8 +778,12 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
             return jsonify({"erro": "nao_esta", "mensagem": "Esse jogador não está mais no servidor."}), 404
         motivo = str(d.get("motivo", "")).strip()[:200]
         if acao == "expulsar":
-            g.api.dono_expulsar(sala, alvo)
-            salas.expulsar(sala, alvo, "👑 Você foi expulso do servidor pelo dono." + (f" Motivo: {motivo}" if motivo else ""))
+            if salas.eh_dono_na_sala(sala, alvo):
+                return jsonify({"erro": "intocavel", "mensagem": "Ninguém pode expulsar o dono do ROLOX."}), 403
+            if eh_dono:
+                g.api.dono_expulsar(sala, alvo)             # tira também do servidor no banco
+            quem = "pelo dono" if eh_dono else "pelo criador do jogo"
+            salas.expulsar(sala, alvo, f"👑 Você foi expulso do servidor {quem}." + (f" Motivo: {motivo}" if motivo else ""))
             return jsonify({"ok": True, "nome": nomes[alvo]})
         r = g.api.dono_banir(alvo, motivo or "banido pelo dono no jogo")     # o banco nunca bane o dono
         salas.expulsar(sala, alvo, "🔨 Sua conta foi banida pelo dono." + (f" Motivo: {motivo}" if motivo else ""),

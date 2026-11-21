@@ -269,6 +269,13 @@ class Salas:
             return {k: v.get("n", "?") for k, v in jog.items()}
         return self._com_trava(sala, ver)
 
+    def eh_dono_na_sala(self, sala: str, user_id: str) -> bool:
+        """A 👑 vem do passe assinado pelo site: o dono do ROLOX não pode ser expulso."""
+        def ver(dados):
+            jog = dados.get("j") if isinstance(dados.get("j"), dict) else {}
+            return bool(jog.get(user_id, {}).get("dn"))
+        return self._com_trava(sala, ver)
+
     def expulsar(self, sala: str, user_id: str, motivo: str = "", segundos: int = 600,
                  agora: Optional[float] = None) -> None:
         """Tira da sala e não deixa voltar por `segundos` (a pessoa vê o motivo e volta para Jogos)."""

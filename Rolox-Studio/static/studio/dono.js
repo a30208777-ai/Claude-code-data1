@@ -34,7 +34,7 @@ const el = (tag, props = {}, ...filhos) => { const e = Object.assign(document.cr
  * @param passe, csrf    para falar com o site
  */
 export function ligarPainelDono({ jogo, botao, painel, mj = null, executor, abrirExecutor, passe = null, csrf = "",
-                                  url = "/api/dono/jogo" }) {
+                                  url = "/api/dono/jogo", podeBanir = true, titulo = "👑💎 Painel do dono" }) {
   const aviso = (texto) => { try { jogo.mundo.game.Tela.Aviso(texto, 3); } catch { /* sem tela */ } };
   const pedir = async (acao, corpo) => {
     const r = await fetch(`${url}/${acao}`, { method: "POST", headers: { "Content-Type": "application/json", "X-CSRF": csrf },
@@ -45,7 +45,7 @@ export function ligarPainelDono({ jogo, botao, painel, mj = null, executor, abri
   };
 
   const lista = el("div", { className: "dono-jogadores" });
-  const motivo = el("input", { type: "text", maxLength: 200, placeholder: "Motivo do kick/ban (opcional)", className: "dono-texto" });
+  const motivo = el("input", { type: "text", maxLength: 200, placeholder: podeBanir ? "Motivo do kick/ban (opcional)" : "Motivo do kick (opcional)", className: "dono-texto" });
   motivo.addEventListener("keydown", (e) => e.stopPropagation());
   const titulo = el("div", { className: "dono-sub" });
   const poderes = el("div", { className: "dono-poderes" },
@@ -58,7 +58,7 @@ export function ligarPainelDono({ jogo, botao, painel, mj = null, executor, abri
   const anunciar = el("button", { type: "button", className: "btn pequeno", textContent: "📢 Anunciar" });
   const fechar = el("button", { type: "button", className: "btn-jogo pequeno", textContent: "✕", ariaLabel: "Fechar painel do dono" });
   painel.replaceChildren(
-    el("div", { className: "exec-topo" }, el("b", { textContent: "👑💎 Painel do dono" }), el("span", { className: "exec-nota", textContent: "só você vê" }), fechar),
+    el("div", { className: "exec-topo" }, el("b", { textContent: titulo }), el("span", { className: "exec-nota", textContent: "só você vê" }), fechar),
     titulo, motivo, lista,
     el("div", { className: "dono-sub", textContent: "Poderes" }), poderes,
     el("div", { className: "dono-sub", textContent: "Anúncio" }), el("div", { className: "exec-botoes" }, texto, anunciar));
@@ -85,11 +85,12 @@ export function ligarPainelDono({ jogo, botao, painel, mj = null, executor, abri
         const raiz = jogo.local?.raiz;
         if (raiz) { raiz.Position = o.raiz.Position.add(new Vector3(3, 2, 0)); raiz.Velocity = new Vector3(); }
       } }),
-      ...(o.dn ? [] : [
+      ...(o.dn ? [] : [                                   // o dono do ROLOX ninguém expulsa nem bane
         el("button", { type: "button", className: "dono-acao", textContent: "👢 Kick", onclick: async () => {
           try { await pedir("expulsar", { alvo: o.id, motivo: motivo.value.trim() }); aviso(`👢 ${o.n} foi expulso`); motivo.value = ""; }
           catch (e) { aviso(`❌ ${e.message}`); }
         } }),
+        ...(!podeBanir ? [] : [
         el("button", { type: "button", className: "dono-acao perigo", textContent: "🔨 Ban", onclick: async (ev) => {
           const b = ev.currentTarget;
           if (b.dataset.certeza !== "1") {                // 2 toques: banir não tem volta pelo jogo
@@ -100,6 +101,7 @@ export function ligarPainelDono({ jogo, botao, painel, mj = null, executor, abri
           try { await pedir("banir", { alvo: o.id, motivo: motivo.value.trim() }); aviso(`🔨 ${o.n} foi banido`); motivo.value = ""; }
           catch (e) { aviso(`❌ ${e.message}`); }
         } }),
+        ]),
       ]))));
   };
 
