@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block titulo %}Ranking · Rolox{% endblock %}
+{% block conteudo %}
+<p><a class="btn texto" href="{{ url_for('jogos') }}">‹ Jogos</a></p>
+<h1>🏅 Ranking do ROLOX</h1>
+<p class="nota">Pontos de criador = visitas + 3 × curtidas, somando todos os jogos aprovados.</p>
+
+<h2>🧱 Melhores criadores</h2>
+{% for c in criadores %}
+  <div class="cartao">
+    <span class="icone">{{ ['🥇','🥈','🥉'][loop.index0] if loop.index0 < 3 else loop.index }}</span>
+    <div class="info">
+      <div class="titulo"><a href="{{ url_for('jogador', nome=c.nome) }}">{{ c.nome }}</a></div>
+      <div class="detalhe">{{ c.jogos }} {{ 'jogo' if c.jogos == 1 else 'jogos' }} · 👁 {{ c.visitas }} · ❤ {{ c.curtidas }}</div>
+    </div>
+    <b>{{ c.pontos }}</b>
+  </div>
+{% else %}
+  <p class="muted"><i>Ainda não tem jogos aprovados. Crie o primeiro no Studio!</i></p>
+{% endfor %}
+
+<h2>🔥 Jogos mais jogados</h2>
+{% for m in jogos %}
+  <div class="cartao">
+    <span class="icone">{{ loop.index }}</span>
+    <div class="info">
+      <div class="titulo"><a href="{{ url_for('jogo_pagina', mapa_id=m.id) }}">{{ m.nome }}</a></div>
+      <div class="detalhe">👁 {{ m.visitas or 0 }} · ❤ {{ m.curtidas or 0 }}</div>
+    </div>
+  </div>
+{% endfor %}
+{% endblock %}

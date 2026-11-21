@@ -603,6 +603,27 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
         return render_template("jogos.html", publicados=g.api.mapas_publicados(ordem), meus=g.api.meus_mapas(),
                                curti=curti, ordem=ordem, aba="jogos")
 
+    @app.get("/ranking")
+    @logado
+    def ranking():
+        """🏅 Criadores com mais sucesso (visitas e curtidas somadas dos jogos aprovados) e jogos mais jogados."""
+        carregar_perfil()
+        jogos_ = g.api.mapas_publicados("populares")
+        criadores: dict = {}
+        for m in jogos_:
+            c = criadores.setdefault(m["autor_id"], {"visitas": 0, "curtidas": 0, "jogos": 0})
+            c["visitas"] += m.get("visitas") or 0
+            c["curtidas"] += m.get("curtidas") or 0
+            c["jogos"] += 1
+        try:
+            nomes = g.api.nomes_de(list(criadores))
+        except ErroRolox:
+            nomes = {}
+        lista = sorted(({"nome": nomes.get(k), **v, "pontos": v["visitas"] + 3 * v["curtidas"]}
+                        for k, v in criadores.items() if nomes.get(k)),
+                       key=lambda x: (-x["pontos"], x["nome"]))[:20]
+        return render_template("ranking.html", criadores=lista, jogos=jogos_[:10], aba="jogos")
+
     @app.get("/jogos/<mapa_id>")
     @logado
     def jogo_pagina(mapa_id: str):

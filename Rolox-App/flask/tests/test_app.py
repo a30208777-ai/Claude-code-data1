@@ -1625,3 +1625,16 @@ def test_pagina_do_jogo(cliente, sb):
     sb.mapas[mid]["caminho_aprovado"] = None
     sb.mapas[mid]["autor_id"] = "u9"
     assert cliente.get(f"/jogos/{mid}").status_code == 404           # não aprovado e não é meu
+
+
+def test_ranking_de_criadores_e_jogos(cliente, sb):
+    entrar(cliente)
+    tok = csrf(cliente)
+    assert "Ainda não tem jogos aprovados" in html(cliente.get("/ranking"))
+    mid = enviar_mapa(cliente).get_json()["id"]
+    sb.dono = True
+    cliente.post(f"/dono/{mid}/aprovar", data={"csrf": tok})
+    sb.mapas[mid].update(visitas=10, curtidas=2)
+    t = html(cliente.get("/ranking"))
+    assert "🥇" in t and 'href="/jogador/alice"' in t and "<b>16</b>" in t and "1 jogo" in t
+    assert f'href="/jogos/{mid}"' in t and "/ranking" in html(cliente.get("/jogos"))

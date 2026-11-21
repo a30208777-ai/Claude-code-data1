@@ -358,6 +358,14 @@ class RoloxAPI:
         linhas = self._req("GET", "/rest/v1/perfis", params={"select": "username", "id": f"eq.{user_id}"}) or []
         return linhas[0]["username"] if linhas else None
 
+    def nomes_de(self, ids: list) -> dict:
+        """{user_id: username} de vários de uma vez."""
+        ids = [i for i in dict.fromkeys(ids) if i][:100]
+        if not ids:
+            return {}
+        linhas = self._req("GET", "/rest/v1/perfis", params={"select": "id,username", "id": f"in.({','.join(ids)})"}) or []
+        return {x["id"]: x["username"] for x in linhas}
+
     def mapa_do_jogo(self, gameid: str) -> Optional[dict]:
         linhas = self._req("GET", "/rest/v1/mapas", params={"select": "id,nome", "gameid": f"eq.{gameid}", "limit": "1"})
         return linhas[0] if linhas else None
