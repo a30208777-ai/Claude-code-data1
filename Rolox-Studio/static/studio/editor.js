@@ -11,6 +11,7 @@ import { importarNoMundo } from "./importar_obj.js";
 import { PCtoCelular, ehCelular, LIMITES } from "./pctocelular.js";
 import { carregarPython } from "./scripts.js";
 import { MODELOS } from "./modelos.js";
+import { TIPOS_MUNDO, gerarMundo } from "./gerador.js";
 import { extrairAcoes, aplicarAcoes, resumoCena } from "./agente_ia.js";
 import { ligarTela, ligarSons, ligarInternet } from "./tela_jogo.js";
 import { ligarMidias } from "./midia_jogo.js";
@@ -123,6 +124,22 @@ async function perguntar(texto, padrao = "") {
   const ok = await modal([texto, campo], [{ texto: "Cancelar", valor: false }, { texto: "OK", valor: true, destaque: true }]);
   return ok ? campo.value.trim() : null;
 }
+
+// gerador de mundo: o botão do modal avisa qual tipo foi escolhido
+document.getElementById("modal")?.addEventListener("escolheu", (e) => {
+  const antes = estado.mundo.contarPartes();
+  const pasta = gerarMundo(estado.mundo, e.detail);
+  const novas = estado.mundo.contarPartes() - antes;
+  if (estado.mundo.contarPartes() > LIMITE_PARTES) {
+    pasta.Destroy();
+    modal(`Esse mundo tem ${novas} peças e passaria do limite de ${LIMITE_PARTES} do Studio ${PESADO ? "PC" : "leve"}. Apague algumas peças antes.`);
+    return;
+  }
+  mudou();
+  selecionar(pasta);
+  if (orbita) { orbita.target.set(0, 0, -110); render.camera.position.set(60, 70, -20); orbita.update?.(); }
+  saida(`🏝️ Mundo "${pasta.Name}" gerado: ${novas} peças.`, "sistema");
+});
 
 // ------------------------------------------------------------------- cena
 const canvas = $("#viewport");
@@ -543,6 +560,14 @@ const acoes = {
   },
   importarRolox() { $("#arquivoRolox").click(); },
   importarObj() { $("#arquivoObj").click(); },
+  async gerarMundo() {
+    const tipo = await modal([el("p", {}, el("b", {}, "🏝️ Gerar um mundo pronto")),
+      el("p", { class: "vazio" }, "Vai para uma pasta no Workspace, na frente do spawn. Dá para desfazer (↶)."),
+      el("div", { class: "lista" }, Object.entries(TIPOS_MUNDO).map(([k, t]) => el("button", {
+        class: "modelo", onclick: () => { $("#modal").hidden = true; $("#modal").dispatchEvent(new CustomEvent("escolheu", { detail: k })); },
+      }, el("b", {}, t.nome), el("span", { class: "vazio" }, t.descricao))))], [{ texto: "Cancelar", valor: false }]);
+    void tipo;
+  },
   part() { novaParte("Part"); },
   bola() { novaParte("Part", "Ball"); },
   cilindro() { novaParte("Part", "Cylinder"); },
