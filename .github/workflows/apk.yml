@@ -1,11 +1,14 @@
-# Compila o app ROLOX (Rolox-App/mobile, Python + Flet) em APK para Android.
+# Compila os apps Android (Python + Flet):
+#   - ROLOX                 (Rolox-App/mobile)      -> artefato rolox-apk
+#   - Atualizador do ROLOX  (Rolox-App/atualizador) -> artefato atualizador-apk
+# O ROLOX só abre com o Atualizador instalado (Rolox-App/mobile/src/rolox/protecao.py).
 #
 # Quando roda:
 #   - push no branch claude/rolox-apk que mexa no app ou neste arquivo
 #   - à mão: aba Actions -> "APK do ROLOX" -> Run workflow
 #   - tag apk-v* (ex.: apk-v0.1.0): além do artefato, publica o APK em Releases
 #
-# Onde baixar: Actions -> execução -> Artifacts -> rolox-apk (zip com o .apk)
+# Onde baixar: Actions -> execução -> Artifacts -> rolox-apk / atualizador-apk (zip com o .apk)
 #
 # O `flet build apk --yes` instala sozinho o Flutter certo para o Flet 1.1.2 e o
 # que faltar do Android SDK. O APK sai assinado com chave de debug (instala no
@@ -19,6 +22,7 @@ on:
     tags: ["apk-v*"]
     paths:
       - "Rolox-App/mobile/**"
+      - "Rolox-App/atualizador/**"
       - ".github/workflows/apk.yml"
   workflow_dispatch:
 
@@ -39,12 +43,22 @@ env:
 
 jobs:
   apk:
-    name: Testes + APK
+    name: Testes + APK (${{ matrix.nome }})
     runs-on: ubuntu-latest
     timeout-minutes: 75
+    strategy:
+      fail-fast: false          # se um falhar, o outro APK sai mesmo assim
+      matrix:
+        include:
+          - nome: ROLOX
+            pasta: Rolox-App/mobile
+            artefato: rolox-apk
+          - nome: Atualizador-ROLOX
+            pasta: Rolox-App/atualizador
+            artefato: atualizador-apk
     defaults:
       run:
-        working-directory: Rolox-App/mobile
+        working-directory: ${{ matrix.pasta }}
 
     steps:
       - name: Baixar o código
@@ -55,7 +69,7 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-          cache-dependency-path: Rolox-App/mobile/pyproject.toml
+          cache-dependency-path: ${{ matrix.pasta }}/pyproject.toml
 
       - name: Java 17 (o Flet exige JDK 17 para o Android)
         uses: actions/setup-java@v4
@@ -83,13 +97,15 @@ jobs:
         run: python -m pytest -q
 
       - name: Compilar o APK
+        # a internet do GitHub às vezes falha ao baixar o Python do Android: tenta de novo 1 vez
         run: |
-          flet build apk \
+          compilar() { flet build apk \
             --yes \
             --no-rich-output \
             --verbose \
             --build-number "${{ github.run_number }}" \
-            --build-version "0.1.${{ github.run_number }}"
+            --build-version "0.1.${{ github.run_number }}"; }
+          compilar || { echo "falhou: tentando de novo em 30 s"; sleep 30; compilar; }
 
       - name: Dar nome ao APK
         id: nome
@@ -97,15 +113,15 @@ jobs:
           ls -la build/apk
           apk=$(ls build/apk/*.apk | head -n 1)
           if [ -z "$apk" ]; then echo "nenhum .apk em build/apk" >&2; exit 1; fi
-          destino="build/apk/ROLOX-0.1.${{ github.run_number }}.apk"
+          destino="build/apk/${{ matrix.nome }}-0.1.${{ github.run_number }}.apk"
           mv "$apk" "$destino"
-          echo "apk=Rolox-App/mobile/$destino" >> "$GITHUB_OUTPUT"
+          echo "apk=${{ matrix.pasta }}/$destino" >> "$GITHUB_OUTPUT"
           du -h "$destino"
 
       - name: Enviar o APK (Artifacts)
         uses: actions/upload-artifact@v4
         with:
-          name: rolox-apk
+          name: ${{ matrix.artefato }}
           path: ${{ steps.nome.outputs.apk }}
           if-no-files-found: error
           retention-days: 30

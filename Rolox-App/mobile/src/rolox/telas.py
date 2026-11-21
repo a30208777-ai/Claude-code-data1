@@ -12,6 +12,7 @@ import flet as ft
 from . import avatar as avatar_mod
 from . import config
 from . import curiosidades
+from . import protecao
 from . import discord_log
 from .studio import COMANDO_LIGAR, MODELOS as MODELOS_STUDIO, StudioLocal
 from .api import REDES_SOCIAIS, ErroRolox, RoloxAPI
@@ -66,6 +67,10 @@ class RoloxApp:
         p.theme_mode = ft.ThemeMode.SYSTEM
         p.padding = 0
 
+        if not await protecao.atualizador_instalado(p):
+            await self.tela_pirata()
+            return
+
         inicio = time.monotonic()
         tela = self.tela_carregando("Abrindo o ROLOX...")
 
@@ -109,6 +114,57 @@ class RoloxApp:
                 await self.prefs.set(CHAVE_REFRESH, self.api.sessao.refresh_token)
             except Exception:
                 pass
+
+    # ========================================================= cópia pirata
+    async def tela_pirata(self) -> None:
+        """ROLOX aberto sem o Atualizador do ROLOX: não inicia e manda baixar o app oficial."""
+        usuario = await self._pref_get(protecao.CHAVE_ULTIMO_USUARIO)
+        chave = protecao.chave_contador(usuario)
+        try:
+            vezes = int(await self._pref_get(chave) or 0) + 1
+        except (TypeError, ValueError):
+            vezes = 1
+        try:
+            await self.prefs.set(chave, str(vezes))
+        except Exception:
+            pass
+        titulo, texto, serio = protecao.aviso_para(vezes)
+        cor = ft.Colors.RED_700 if serio else COR_HACK
+
+        async def discord(_):
+            await ft.UrlLauncher().launch_url(protecao.LINK_DISCORD)
+
+        async def baixar(_):
+            await ft.UrlLauncher().launch_url(protecao.LINK_DOWNLOAD)
+
+        async def verificar(_):
+            if await protecao.atualizador_instalado(self.page):
+                await self.iniciar()
+            else:
+                self.aviso("O Atualizador do ROLOX ainda não está neste aparelho.")
+
+        self.mostrar(ft.Container(
+            padding=24, expand=True, alignment=ft.Alignment.CENTER,
+            content=ft.Column([
+                logo(70),
+                ft.Container(height=10),
+                ft.Icon(ft.Icons.GPP_BAD if serio else ft.Icons.WARNING_AMBER_ROUNDED, size=64, color=cor),
+                ft.Text(titulo, size=26 if serio else 24, weight=ft.FontWeight.BOLD, color=cor,
+                        text_align=ft.TextAlign.CENTER),
+                ft.Text(texto, size=17, text_align=ft.TextAlign.CENTER,
+                        weight=ft.FontWeight.BOLD if serio else None),
+                ft.Text("O ROLOX só abre com o app oficial \"Atualizador do ROLOX\" instalado neste aparelho.",
+                        size=13, text_align=ft.TextAlign.CENTER, color=ft.Colors.ON_SURFACE_VARIANT),
+                ft.Container(height=6),
+                ft.FilledButton("Entrar no Discord", icon=ft.Icons.FORUM, on_click=discord, width=260),
+                *([ft.FilledButton("Baixar o Atualizador", icon=ft.Icons.DOWNLOAD, on_click=baixar, width=260)]
+                  if protecao.LINK_DOWNLOAD else []),
+                ft.OutlinedButton("Já instalei — tentar de novo", icon=ft.Icons.REFRESH, on_click=verificar, width=260),
+                ft.Text(f"Aberto sem o Atualizador: {vezes} {'vez' if vezes == 1 else 'vezes'}", size=12,
+                        color=ft.Colors.ON_SURFACE_VARIANT),
+            ], spacing=12, horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+               alignment=ft.MainAxisAlignment.CENTER, tight=True, scroll=ft.ScrollMode.AUTO),
+        ))
 
     # =========================================================== carregando
     def tela_carregando(self, texto: str = "Carregando...") -> int:
@@ -328,6 +384,10 @@ class RoloxApp:
                               antes_de_mostrar: Optional[Callable[[], Awaitable[None]]] = None) -> None:
         self.status_carregando("Carregando seu perfil...")
         self.perfil = await self.api.meu_perfil()
+        try:            # lembra quem usa este aparelho (o aviso de cópia pirata conta por usuário)
+            await self.prefs.set(protecao.CHAVE_ULTIMO_USUARIO, self.perfil.get("username") or "")
+        except Exception:
+            pass
         self.status_carregando("Abrindo o presente do dia...")
         try:
             presente = await self.api.receber_tickets()

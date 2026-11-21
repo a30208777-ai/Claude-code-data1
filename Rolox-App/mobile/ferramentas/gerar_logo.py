@@ -18,6 +18,7 @@ from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont
 RAIZ = Path(__file__).resolve().parents[1]
 ASSETS = RAIZ / "src" / "assets"
 SITE = RAIZ.parent / "flask" / "static"
+ATUALIZADOR = RAIZ.parent / "atualizador" / "src" / "assets"     # o Atualizador usa a mesma logo
 FONTE = next((p for p in ("/usr/share/fonts/opentype/inter/InterDisplay-Black.otf",
                           "/usr/share/fonts/opentype/inter/Inter-Black.otf") if Path(p).exists()), None)
 ESCALA = 4
@@ -141,6 +142,11 @@ def main() -> None:
     marca(1024).save(ASSETS / "splash.png", optimize=True)
     marca(512).save(ASSETS / "logo.png", optimize=True)
     logo_com_nome(220).save(ASSETS / "logo_nome.png", optimize=True)
+    if ATUALIZADOR.parent.is_dir():
+        ATUALIZADOR.mkdir(exist_ok=True)
+        icone(1024).save(ATUALIZADOR / "icon.png", optimize=True)
+        marca(1024).save(ATUALIZADOR / "splash.png", optimize=True)
+        logo_com_nome(220).save(ATUALIZADOR / "logo_nome.png", optimize=True)
     if SITE.is_dir():
         logo_com_nome(120).save(SITE / "logo_nome.png", optimize=True)
         marca(256).save(SITE / "logo.png", optimize=True)

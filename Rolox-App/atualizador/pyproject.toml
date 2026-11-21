@@ -1,0 +1,63 @@
+[project]
+name = "rolox-atualizador"
+version = "1.0.0"
+description = "Atualizador do ROLOX: baixa, atualiza e abre o ROLOX (Android)"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "flet==1.1.2",
+  "httpx",
+  "pyjnius",          # Android: instalar o .apk e criar o atalho (só funciona no celular)
+]
+
+[dependency-groups]
+dev = [
+  "pytest>=8",
+]
+
+[tool.flet]
+org = "com.rolox"
+product = "Atualizador do ROLOX"
+company = "Rolox"
+copyright = "Rolox"
+bundle_id = "com.rolox.atualizador"
+
+# ícone e tela de abertura: a MESMA logo do ROLOX (Rolox-App/mobile/ferramentas/gerar_logo.py)
+[tool.flet.splash]
+color = "#26105c"
+dark_color = "#140a33"
+
+[tool.flet.app]
+path = "src"
+module = "main"
+exclude = ["res_android"]
+
+[tool.flet.android]
+adaptive_icon_background = "#26105c"
+res_dir = "res_android"
+
+# roloxatualizador://  -> é assim que o ROLOX descobre que o Atualizador está instalado
+[tool.flet.android.deep_linking]
+scheme = "roloxatualizador"
+
+[tool.flet.android.permission]
+"android.permission.INTERNET" = true
+"android.permission.REQUEST_INSTALL_PACKAGES" = true   # abrir o instalador com o .apk do ROLOX
+
+# o Atualizador precisa "enxergar" o ROLOX (Android 11+) para saber se está instalado e abrir
+[[tool.flet.android.queries.intent]]
+action = "android.intent.action.VIEW"
+data = { scheme = "rolox" }
+
+# entrega o .apk baixado ao instalador do Android
+[tool.flet.android.provider."androidx.core.content.FileProvider"]
+authorities = "com.rolox.atualizador.arquivos"
+exported = false
+grantUriPermissions = true
+
+[tool.flet.android.provider."androidx.core.content.FileProvider".meta_data]
+"android.support.FILE_PROVIDER_PATHS" = { resource = "@xml/arquivos_rolox" }
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
