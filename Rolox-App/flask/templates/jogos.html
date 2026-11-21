@@ -15,6 +15,10 @@
 <form method="post" action="{{ url_for('jogo_aleatorio') }}" class="linha">
   <input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn contorno pequeno">🎲 Jogo aleatório</button>
 </form>
+<div class="categorias">
+  <a href="{{ url_for('jogos', ordem=ordem if ordem != 'populares' else None) }}" class="{{ 'ativo' if not cat }}">Todas</a>
+  {% for k, v in categorias.items() %}<a href="{{ url_for('jogos', ordem=ordem if ordem != 'populares' else None, cat=k) }}" class="{{ 'ativo' if cat == k }}">{{ v }}</a>{% endfor %}
+</div>
 <input type="search" id="filtroJogos" class="filtro-jogos" placeholder="🔎 Filtrar jogos pelo nome" aria-label="Filtrar jogos pelo nome">
 <p class="muted" id="semJogos" hidden><i>Nenhum jogo com esse nome.</i></p>
 <script>
@@ -41,7 +45,7 @@
     <div class="info">
       <div class="titulo"><a href="{{ url_for('jogo_pagina', mapa_id=m.id) }}">{{ m.nome }}</a></div>
       {% if m.descricao %}<div class="detalhe">{{ m.descricao }}</div>{% endif %}
-      <div class="detalhe">👁 {{ m.visitas or 0 }} · ❤ {{ m.curtidas or 0 }}</div>
+      <div class="detalhe">{{ categorias.get(m.categoria, '') }} · 👁 {{ m.visitas or 0 }} · ❤ {{ m.curtidas or 0 }}</div>
     </div>
     <form method="post" action="{{ url_for('jogo_curtir', mapa_id=m.id) }}">
       <input type="hidden" name="csrf" value="{{ csrf }}">

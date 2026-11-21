@@ -323,7 +323,7 @@ class RoloxAPI:
         return self._storage("GET", f"authenticated/{self.BUCKET}/{caminho}").content
 
     CAMPOS_MAPA = ("id,autor_id,nome,descricao,status,motivo,gameid,caminho_enviado,caminho_aprovado,enviado_em,"
-                   "aprovado_em,curtidas,visitas")
+                   "aprovado_em,curtidas,visitas,categoria")
 
     def mapa(self, mapa_id: str) -> Optional[dict]:
         linhas = self._req("GET", "/rest/v1/mapas", params={"select": self.CAMPOS_MAPA, "id": f"eq.{mapa_id}"})
@@ -374,6 +374,9 @@ class RoloxAPI:
 
     def enviar_mensagem_privada(self, para: str, texto: str) -> dict:
         return self._req("POST", "/rest/v1/rpc/enviar_mensagem_privada", json={"p_para": para, "p_texto": str(texto or "")[:500]}) or {}
+
+    def definir_categoria(self, mapa_id: str, categoria: str) -> dict:
+        return self._req("POST", "/rest/v1/rpc/definir_categoria", json={"p_mapa": mapa_id, "p_categoria": categoria}) or {}
 
     def nome_de(self, user_id: str) -> Optional[str]:
         """Nome de usuário de alguém (perfis são visíveis para quem está logado)."""

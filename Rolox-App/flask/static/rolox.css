@@ -376,3 +376,7 @@ body.flash-foto::after { content: ""; position: fixed; inset: 0; z-index: 20; ba
 .bolha { align-self: flex-start; max-width: 80%; padding: 8px 12px; border-radius: 14px; background: #8882; white-space: pre-wrap; word-break: break-word; }
 .bolha.minha { align-self: flex-end; background: var(--primaria); color: #fff; }
 .bolha small { display: block; font-size: .7rem; opacity: .7; }
+
+.categorias { display: flex; gap: 6px; overflow-x: auto; padding: 4px 0 8px; }
+.categorias a { white-space: nowrap; padding: 6px 10px; border-radius: 16px; background: #8881; text-decoration: none; color: inherit; font-size: .85rem; }
+.categorias a.ativo { background: var(--primaria); color: #fff; }

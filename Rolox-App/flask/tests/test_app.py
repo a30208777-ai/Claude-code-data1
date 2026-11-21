@@ -276,6 +276,12 @@ class SupabaseFalso:
             if nome == "conversa_privada":
                 return Resp(200, [m for m in self.dms if m["com"] == json["p_com"]])
             return Resp(200, [{"username": m["com"], "nao_lidas": 0, "previa": m["texto"]} for m in self.dms[-1:]])
+        if p == "/rest/v1/rpc/definir_categoria":
+            m = self.mapas[json["p_mapa"]]
+            if m["autor_id"] != "u1" and not self.dono:
+                return Resp(403, {"code": "42501", "message": "só o criador muda a categoria"})
+            m["categoria"] = json["p_categoria"]
+            return Resp(200, {"categoria": json["p_categoria"]})
         if p == "/rest/v1/rpc/definir_bio":
             t = " ".join(json["p_texto"].split())[:140].replace("idiota", "******")
             self.perfil["bio"] = t
@@ -1804,3 +1810,20 @@ def test_mensagens_privadas_entre_amigos(cliente, sb):
     assert "bob" in html(cliente.get("/mensagens"))
     cliente.post("/mensagens/estranho", data={"csrf": tok, "texto": "oi"})
     assert not any(m["com"] == "estranho" for m in sb.dms)
+
+
+def test_categorias_dos_jogos(cliente, sb):
+    entrar(cliente)
+    tok = csrf(cliente)
+    mid = enviar_mapa(cliente).get_json()["id"]
+    sb.dono = True
+    cliente.post(f"/dono/{mid}/aprovar", data={"csrf": tok})
+    sb.dono = False
+    assert "Mudar categoria" in html(cliente.get(f"/jogos/{mid}"))
+    cliente.post(f"/jogos/{mid}/categoria", data={"csrf": tok, "categoria": "obby"})
+    assert sb.mapas[mid]["categoria"] == "obby"
+    assert f"mapa-{mid}" in html(cliente.get("/jogos?cat=obby"))
+    assert f"mapa-{mid}" not in html(cliente.get("/jogos?cat=terror"))
+    assert cliente.post(f"/jogos/{mid}/categoria", data={"csrf": tok, "categoria": "xxx"}).status_code == 400
+    sb.mapas[mid]["autor_id"] = "u9"
+    assert "Mudar categoria" not in html(cliente.get(f"/jogos/{mid}"))

@@ -88,6 +88,11 @@ def ip_do_visitante() -> Optional[str]:
         return None
 
 
+CATEGORIAS = {"obby": "🧗 Obby", "corrida": "🏎️ Corrida", "aventura": "🗺️ Aventura", "terror": "👻 Terror",
+              "rpg": "⚔️ RPG", "luta": "🥊 Luta", "simulador": "🏭 Simulador", "quebra_cabeca": "🧩 Quebra-cabeça",
+              "construcao": "🧱 Construção", "outros": "🎲 Outros"}
+
+
 def marca_app(perfil: dict) -> Optional[str]:
     """Mesma regra do banco (selo_app): ✅ vale 7 dias depois da última verificação do app."""
     st = perfil.get("app_status")
@@ -186,7 +191,7 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
                 "desenhar_avatar": lambda a, largura=120: Markup(avatar_mod.svg(a, largura)),
                 "motivos_denuncia": MOTIVOS_DENUNCIA,
                 "selo": lambda parceiro: Markup('<span class="selo" title="Parceiro do ROLOX">🤝</span>') if parceiro else "",
-                "selo_app": selo_app}
+                "selo_app": selo_app, "categorias": CATEGORIAS}
 
     def carregar_perfil() -> dict:
         """Lê o perfil e lembra na sessão se é ADM (só para mostrar a aba;
@@ -635,7 +640,9 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
             curti = g.api.minhas_curtidas()
         except ErroRolox:
             curti = set()
-        return render_template("jogos.html", publicados=g.api.mapas_publicados(ordem), meus=g.api.meus_mapas(),
+        cat = request.args.get("cat") if request.args.get("cat") in CATEGORIAS else None
+        publicados = [m for m in g.api.mapas_publicados(ordem) if not cat or m.get("categoria") == cat]
+        return render_template("jogos.html", publicados=publicados, meus=g.api.meus_mapas(), cat=cat,
                                curti=curti, ordem=ordem, aba="jogos")
 
     @app.post("/jogos/aleatorio")
@@ -670,6 +677,17 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
             return redirect(url_for("mensagens_com", nome=nome) + "#fim")
         carregar_perfil()
         return render_template("conversa.html", com=nome, msgs=g.api.conversa_privada(nome), aba="inicio")
+
+    @app.post("/jogos/<mapa_id>/categoria")
+    @logado
+    def jogo_categoria(mapa_id: str):
+        _mapa_ou_404(mapa_id)
+        cat = request.form.get("categoria", "")
+        if cat not in CATEGORIAS:
+            abort(400)
+        g.api.definir_categoria(mapa_id, cat)              # o banco confere se é o criador
+        flash(f"🏷️ Categoria: {CATEGORIAS[cat]}", "ok")
+        return redirect(url_for("jogo_pagina", mapa_id=mapa_id))
 
     @app.get("/ranking")
     @logado
@@ -721,7 +739,7 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
             amigos_aqui = [a for a in g.api.meus_amigos() if a["tipo"] == "amigo" and a.get("server_uid") in uids]
         except ErroRolox:
             amigos_aqui = []
-        return render_template("jogo.html", m=m, autor=autor, recordes=recordes, curti=curti, amigos_aqui=amigos_aqui,
+        return render_template("jogo.html", m=m, eu_criador=m["autor_id"] == g.api.user_id or session.get("dono"), autor=autor, recordes=recordes, curti=curti, amigos_aqui=amigos_aqui,
                                jogando=sum(x.get("humanos", 0) for x in servs if not x.get("is_hack_server")),
                                jogando_hack=sum(x.get("humanos", 0) for x in servs if x.get("is_hack_server")),
                                servidores=len(servs), eu=perfil.get("username"), aba="jogos")

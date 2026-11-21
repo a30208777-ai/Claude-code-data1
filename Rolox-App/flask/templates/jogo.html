@@ -10,6 +10,14 @@
   </div>
 </div>
 {% if m.descricao %}<p>{{ m.descricao }}</p>{% endif %}
+<p><span class="etiqueta neutra">{{ categorias.get(m.categoria or 'outros') }}</span></p>
+{% if eu_criador %}
+<form method="post" action="{{ url_for('jogo_categoria', mapa_id=m.id) }}" class="linha">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <select name="categoria" class="cresce">{% for k, v in categorias.items() %}<option value="{{ k }}" {{ 'selected' if m.categoria == k }}>{{ v }}</option>{% endfor %}</select>
+  <button class="btn pequeno contorno">Mudar categoria</button>
+</form>
+{% endif %}
 
 <div class="jogo-numeros">
   <div><b>{{ m.visitas or 0 }}</b><span>👁 visitas</span></div>
