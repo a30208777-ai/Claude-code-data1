@@ -35,7 +35,7 @@
   {% for p in jogadores %}
     <a class="cartao" href="{{ url_for('jogador', nome=p.username) }}">
       <div class="avatar-mini">{{ desenhar_avatar(p.avatar, 28) }}</div>
-      <div class="info"><div class="titulo">{{ p.username }}{{ selo(p.is_parceiro) }}</div></div>
+      <div class="info"><div class="titulo">{{ p.username }}{{ selo(p.is_parceiro) }}{{ selo_app(p.app) }}</div></div>
       {{ marca(p.nivel) }}
     </a>
   {% else %}<p class="muted">Nenhum jogador com "{{ q }}".</p>{% endfor %}

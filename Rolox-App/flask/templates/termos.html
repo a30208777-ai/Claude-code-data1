@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block titulo %}Termos de Uso · Rolox{% endblock %}
+{% block conteudo %}
+<article class="documento">
+<div class="logo pequena"><img src="{{ url_for('static', filename='logo_nome.png') }}" alt="ROLOX" width="173" height="60"></div>
+<h1>Termos de Uso do ROLOX</h1>
+<p class="muted">Em vigor desde 21 de novembro de 2026 · Veja também a <a href="{{ url_for('politica') }}">Política de Uso</a>.</p>
+
+<p>Estes Termos explicam as regras para usar o ROLOX: o site, o app ROLOX, o Atualizador do ROLOX e o ROLOX Studio.
+Ao criar uma conta ou usar o ROLOX você concorda com eles. Se não concordar, não use o ROLOX.</p>
+
+<h2>1. O que é o ROLOX</h2>
+<p>O ROLOX é uma plataforma da comunidade para criar e jogar jogos 3D. Ele foi inspirado no ROBLOX, mas
+<b>não tem nenhuma ligação com a Roblox Corporation</b>: é um projeto independente, com nome, código e regras próprios.</p>
+
+<h2>2. Sua conta</h2>
+<ul>
+  <li>Você é responsável pela sua conta e pela sua senha. Não empreste a conta e não use a conta de outra pessoa.</li>
+  <li>O nome de usuário não pode ofender, enganar (fingir ser outra pessoa, o dono ou um ADM) nem ter dados pessoais.</li>
+  <li>Menores de 18 anos devem usar o ROLOX com o conhecimento dos pais ou responsáveis. Menores de 12 anos só podem usar
+      com a autorização deles.</li>
+  <li>Por segurança, 3 senhas erradas bloqueiam o aparelho que errou e o dono da conta é avisado
+      (veja como isso funciona na <a href="{{ url_for('politica') }}#dados">Política de Uso</a>).</li>
+</ul>
+
+<h2>3. App oficial e Atualizador do ROLOX</h2>
+<ul>
+  <li>No Android, o ROLOX só pode ser usado com o <b>app oficial</b>, instalado e atualizado pelo
+      <b>Atualizador do ROLOX</b>. Sem ele, o app não abre.</li>
+  <li>Ao abrir, o app confere a versão e uma chave do app oficial. Quem usa o app oficial ganha ✅ ao lado do nome;
+      quem usa um app <b>modificado ou pirata</b> fica com ❌, visível para todos.</li>
+  <li>Usar, criar ou espalhar versões modificadas, piratas ou com trapaça do ROLOX é proibido e pode levar ao
+      <b>banimento</b>, como os avisos do app dizem.</li>
+</ul>
+
+<h2>4. O que você cria</h2>
+<ul>
+  <li>Os mapas, scripts, sons, vídeos e outras coisas que você cria continuam sendo seus.</li>
+  <li>Ao enviar algo ao ROLOX, você deixa o ROLOX guardar, mostrar e deixar outras pessoas jogarem esse conteúdo
+      dentro da plataforma, enquanto ele estiver publicado.</li>
+  <li>Você só pode enviar o que é seu ou que você tem permissão para usar (músicas, vídeos, imagens e modelos de
+      outras pessoas precisam de autorização).</li>
+  <li>Todo mapa é revisado pelo dono antes de aparecer em Jogos. O ROLOX pode recusar, tirar do ar ou apagar conteúdo
+      que quebre estes Termos ou a Política de Uso.</li>
+</ul>
+
+<h2>5. Tickets, Loja e emblemas</h2>
+<ul>
+  <li>Tickets são ganhos de graça (presente diário) e servem só dentro do ROLOX: na IA do Studio (10 tickets por
+      mensagem) e na Loja.</li>
+  <li>Tickets, itens da Loja e emblemas <b>não valem dinheiro</b>: não podem ser vendidos, comprados com dinheiro
+      fora do ROLOX, trocados por dinheiro nem passados para outra conta.</li>
+  <li>O ROLOX pode corrigir saldos e itens conseguidos por erro, falha ou trapaça.</li>
+</ul>
+
+<h2>6. Parcerias</h2>
+<p>Chaves de parceria são pessoais, valem para uma conta e são dadas pelo dono. O selo 🤝 e as redes sociais no perfil
+podem ser retirados se a parceria for revogada ou se as regras forem quebradas.</p>
+
+<h2>7. Punições</h2>
+<p>Quem quebrar estes Termos ou a Política de Uso pode receber, conforme a gravidade: aviso, perda do chat,
+perda de conteúdo, tickets ou itens, bloqueio do IP ou do aparelho, ou banimento da conta. As punições são registradas
+para a equipe de moderação. Se achar que houve erro, fale com a equipe no Discord.</p>
+
+<h2>8. Funcionamento e limites</h2>
+<ul>
+  <li>O ROLOX é oferecido "como está". Pode ficar fora do ar, ter falhas ou mudar sem aviso.</li>
+  <li>Podemos mudar, pausar ou encerrar funções (inclusive a IA do Studio, a Loja e a internet nos jogos).</li>
+  <li>A IA do Studio pode errar: confira o que ela criou antes de publicar.</li>
+  <li>Pesquisas na internet feitas nos jogos usam fontes externas (Wikipédia e DuckDuckGo) e só devolvem texto.</li>
+</ul>
+
+<h2>9. Mudanças nestes Termos</h2>
+<p>Estes Termos podem mudar. A data no topo mostra a versão atual. Mudanças importantes serão avisadas no ROLOX ou no
+Discord. Continuar usando o ROLOX depois da mudança quer dizer que você concorda com a nova versão.</p>
+
+<h2>10. Contato</h2>
+<p>Dúvidas, pedidos e recursos: <a href="https://discord.gg/6NZ5Ftq3p" target="_blank" rel="noopener">Discord do ROLOX</a>.</p>
+</article>
+{% endblock %}

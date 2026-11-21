@@ -263,7 +263,7 @@ class RoloxAPI:
         linhas = self._req("GET", "/rest/v1/perfis", params={
             "id": f"eq.{self.user_id}",
             "select": "id,username,email,idioma,jogo_mod,aceitou_localizacao,banido,"
-                      "is_adm,tickets,tickets_ultimo_ganho,avatar,is_parceiro,parceiro_desde,redes"})
+                      "is_adm,tickets,tickets_ultimo_ganho,avatar,is_parceiro,parceiro_desde,redes,app_status,app_verificado_em"})
         if not linhas:
             raise ErroRolox("perfil_nao_encontrado")
         return linhas[0]
@@ -416,6 +416,17 @@ class RoloxAPI:
 
     def dono_revogar_parceria(self, chave_id: int) -> None:
         self._req("POST", "/rest/v1/rpc/dono_revogar_parceria", json={"p_id": chave_id})
+
+    # ------------------------------------------------- app oficial (✅ / ❌)
+    def dono_chaves_app(self) -> dict:
+        return self._req("POST", "/rest/v1/rpc/dono_chaves_app", json={}) or {}
+
+    def dono_adicionar_chave_app(self, chave: str, apelido: str) -> dict:
+        return self._req("POST", "/rest/v1/rpc/dono_adicionar_chave_app",
+                         json={"p_chave": (chave or "").strip(), "p_apelido": (apelido or "").strip()})
+
+    def dono_revogar_chave_app(self, chave_id: int) -> None:
+        self._req("POST", "/rest/v1/rpc/dono_revogar_chave_app", json={"p_id": chave_id})
 
     def cofre_ler(self, mapa_id: str) -> dict:
         r = self._req("POST", "/rest/v1/rpc/cofre_ler", json={"p_mapa": mapa_id})

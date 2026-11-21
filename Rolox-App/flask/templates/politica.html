@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block titulo %}Política de Uso · Rolox{% endblock %}
+{% block conteudo %}
+<article class="documento">
+<div class="logo pequena"><img src="{{ url_for('static', filename='logo_nome.png') }}" alt="ROLOX" width="173" height="60"></div>
+<h1>Política de Uso do ROLOX</h1>
+<p class="muted">Em vigor desde 21 de novembro de 2026 · Faz parte dos <a href="{{ url_for('termos') }}">Termos de Uso</a>.</p>
+
+<p>Esta Política diz como se comportar no ROLOX e como cuidamos dos seus dados. Ela vale para o site, o app, o
+Atualizador do ROLOX, o Studio e todos os jogos.</p>
+
+<h2 id="regras">1. Regras da comunidade</h2>
+<p>O ROLOX é para todas as idades. É proibido:</p>
+<ul>
+  <li>Xingar, humilhar, ameaçar ou perseguir outras pessoas; preconceito de qualquer tipo.</li>
+  <li>Conteúdo sexual, violência exagerada, drogas, automutilação ou qualquer coisa imprópria para crianças.</li>
+  <li>Pedir ou divulgar dados pessoais (endereço, telefone, escola, fotos, senhas) — seus ou de outras pessoas.</li>
+  <li>Golpes: pedir senha, prometer tickets "grátis", links falsos, fingir ser o dono, um ADM ou um parceiro.</li>
+  <li>Spam, propaganda sem permissão e flood no chat.</li>
+  <li>Trapaça: hacks, apps modificados ou piratas, bugs usados de propósito, robôs e automação.</li>
+  <li>Tentar invadir contas, atacar o site ou os servidores, ou atrapalhar o jogo dos outros.</li>
+  <li>Enviar conteúdo de outras pessoas sem permissão (músicas, vídeos, imagens, mapas).</li>
+  <li>Usar a IA do Studio ou a internet nos jogos para criar ou buscar conteúdo proibido por esta Política.</li>
+</ul>
+<p>Viu alguém quebrando as regras? Use o botão 🚩 <b>Denunciar</b> no perfil da pessoa ou no jogo.
+Denúncias falsas de propósito também são punidas.</p>
+
+<h2 id="app">2. App oficial (✅ e ❌)</h2>
+<ul>
+  <li>No Android, o ROLOX só abre com o <b>Atualizador do ROLOX</b> instalado. Abrir sem ele mostra um aviso; a partir
+      da 3ª vez o aviso diz que a conta pode ser banida.</li>
+  <li>Ao abrir, o app lê o arquivo de versão publicado pelo ROLOX, avisa quando tem versão nova e manda ao servidor
+      uma chave do app oficial e o número da versão.</li>
+  <li>Com a chave certa você ganha ✅ ao lado do nome (vale 7 dias e renova cada vez que você abre o app).
+      Com chave errada (app modificado) aparece ❌. Quem só usa o site não tem marca.</li>
+</ul>
+
+<h2 id="dados">3. Seus dados (LGPD)</h2>
+<p>Coletamos só o necessário para o ROLOX funcionar e ficar seguro:</p>
+<ul>
+  <li><b>Conta:</b> nome de usuário, senha (guardada de forma protegida pelo nosso provedor de contas) e, se você quiser,
+      e-mail.</li>
+  <li><b>Segurança:</b> o IP de onde você entra. Quando alguém erra a senha da sua conta, guardamos o IP e
+      <b>a senha que a pessoa tentou, cifrada</b>, para mostrar <b>só para você</b> no alerta de segurança.
+      Depois de 3 erros o aparelho ou IP é bloqueado.</li>
+  <li><b>Jogo:</b> avatar, tickets, itens da Loja, emblemas, recordes, amigos, o que você salvou nos jogos (Cofre),
+      mapas e projetos do Studio, sons e vídeos enviados, mensagens do chat (com filtro) e denúncias.</li>
+  <li><b>Onde você está na plataforma</b> (menu, lobby ou qual jogo) — não é GPS. Amigos só veem se você deixar
+      "Mostrar para amigos onde estou jogando".</li>
+  <li><b>App:</b> a versão do app e se ele é o oficial (✅/❌).</li>
+</ul>
+<p><b>Para que usamos:</b> manter sua conta, os jogos e o multijogador funcionando; proteger contas contra invasão;
+moderar (denúncias, punições e banimentos, que são registrados para a equipe); e melhorar o ROLOX.
+<b>Não vendemos seus dados</b> e não usamos para propaganda.</p>
+<p><b>Quem mais recebe dados</b> (só o necessário):</p>
+<ul>
+  <li>Nossos provedores de banco de dados, contas e hospedagem (onde o ROLOX roda).</li>
+  <li>A IA do Studio: as mensagens que você manda para a IA (e um resumo do mapa aberto) vão para serviços de IA de
+      terceiros para gerar a resposta. <b>Não coloque dados pessoais nas mensagens para a IA.</b></li>
+  <li>Pesquisas na internet dentro dos jogos: o termo pesquisado vai para a Wikipédia e o DuckDuckGo (pelo servidor do
+      ROLOX, sem o seu nome).</li>
+  <li>O canal de moderação da equipe no Discord recebe os registros de punições e denúncias.</li>
+</ul>
+<p><b>O que é público:</b> nome de usuário, avatar, emblemas, recordes, jogos publicados, marca do app (✅/❌), selo de
+parceiro e as redes sociais que o parceiro escolher mostrar.</p>
+<p><b>Por quanto tempo:</b> enquanto sua conta existir; registros de segurança e de punições podem ser guardados por
+mais tempo para evitar fraudes e cumprir a lei.</p>
+<p><b>Seus direitos:</b> você pode pedir para ver, corrigir ou apagar seus dados e a sua conta, e tirar o consentimento
+da localização a qualquer momento (em Perfil). Peça pelo
+<a href="https://discord.gg/6NZ5Ftq3p" target="_blank" rel="noopener">Discord do ROLOX</a>.</p>
+
+<h2 id="criancas">4. Crianças e adolescentes</h2>
+<p>Menores de 18 anos devem usar o ROLOX com o conhecimento dos responsáveis, e menores de 12 anos só com a autorização
+deles. Os responsáveis podem pedir para ver ou apagar os dados da criança pelo Discord.</p>
+
+<h2 id="mudancas">5. Mudanças</h2>
+<p>Esta Política pode mudar; a data no topo mostra a versão atual e mudanças importantes serão avisadas.</p>
+</article>
+{% endblock %}

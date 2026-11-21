@@ -4,7 +4,7 @@
 <div class="linha" style="align-items:flex-start">
   <div class="avatar-mini">{{ desenhar_avatar(perfil.avatar, 56) }}</div>
   <div class="cresce">
-    <h1>Olá, {{ perfil.username }}!{{ selo(perfil.is_parceiro) }}</h1>
+    <h1>Olá, {{ perfil.username }}!{{ selo(perfil.is_parceiro) }}{{ selo_app(perfil) }}</h1>
     <p class="muted" id="status">
       {% if onde.fila %}Na fila de espera — posição {{ onde.posicao }}.{% else %}Você está no lobby.{% endif %}
     </p>

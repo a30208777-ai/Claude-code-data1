@@ -88,6 +88,21 @@ def ip_do_visitante() -> Optional[str]:
         return None
 
 
+def marca_app(perfil: dict) -> Optional[str]:
+    """Mesma regra do banco (selo_app): ✅ vale 7 dias depois da última verificação do app."""
+    st = perfil.get("app_status")
+    if st == "modificado":
+        return "modificado"
+    if st == "oficial":
+        try:
+            quando = datetime.fromisoformat(str(perfil.get("app_verificado_em")).replace("Z", "+00:00"))
+            if datetime.now(quando.tzinfo) - quando < timedelta(days=7):
+                return "oficial"
+        except ValueError:
+            pass
+    return None
+
+
 def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
               segredo: Optional[str] = None, studio: Optional[StudioLocal] = None,
               studio_no_navegador: Optional[bool] = None) -> Flask:
@@ -153,6 +168,16 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
 
     app.jinja_env.globals["curiosidades"] = curiosidades.CURIOSIDADES
 
+    def selo_app(valor) -> Markup:
+        """✅ app oficial · ❌ app modificado · nada = ainda não abriu pelo app."""
+        if isinstance(valor, dict):                      # o próprio perfil (vem com status e data)
+            valor = marca_app(valor)
+        if valor == "oficial":
+            return Markup('<span class="selo-app" title="Usa o app oficial do ROLOX">✅</span>')
+        if valor == "modificado":
+            return Markup('<span class="selo-app" title="Usando app modificado (não oficial)">❌</span>')
+        return Markup("")
+
     @app.context_processor
     def globais():
         return {"csrf": session.get("csrf", ""), "logado": "sb" in session,
@@ -160,7 +185,8 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
                 "eh_dono": bool(session.get("dono")) and "sb" in session,
                 "desenhar_avatar": lambda a, largura=120: Markup(avatar_mod.svg(a, largura)),
                 "motivos_denuncia": MOTIVOS_DENUNCIA,
-                "selo": lambda parceiro: Markup('<span class="selo" title="Parceiro do ROLOX">🤝</span>') if parceiro else ""}
+                "selo": lambda parceiro: Markup('<span class="selo" title="Parceiro do ROLOX">🤝</span>') if parceiro else "",
+                "selo_app": selo_app}
 
     def carregar_perfil() -> dict:
         """Lê o perfil e lembra na sessão se é ADM (só para mostrar a aba;
@@ -425,6 +451,15 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
         return render_template("perfil.html", perfil=perfil, jogos=nomes_jogos(), idiomas=IDIOMAS, comprados=comprados,
                                av=avatar_mod, avatar=avatar_mod.normalizar(perfil.get("avatar")),
                                aba="perfil")
+
+    # ------------------------------------------------ termos e política (públicas)
+    @app.get("/termos")
+    def termos():
+        return render_template("termos.html")
+
+    @app.get("/politica")
+    def politica():
+        return render_template("politica.html")
 
     @app.get("/avatar.svg")
     def avatar_svg():
@@ -956,7 +991,28 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
         r = g.api.dono_criar_chave_parceria(request.form.get("apelido", ""))
         # a chave aparece UMA vez (no banco fica só o hash); não vai para flash/cookie
         return render_template("dono.html", analise=g.api.mapas_em_analise(), publicados=g.api.mapas_publicados(),
-                               parcerias=g.api.dono_parcerias(), chave_nova=r, denuncias=denuncias_abertas(), aba="dono")
+                               parcerias=g.api.dono_parcerias(), chave_nova=r, denuncias=denuncias_abertas(),
+                               app_oficial=dados_app_oficial(), aba="dono")
+
+    def dados_app_oficial() -> dict:
+        try:
+            return g.api.dono_chaves_app()
+        except ErroRolox:
+            return {}
+
+    @app.post("/dono/app/chaves")
+    @logado
+    def dono_chave_app_adicionar():
+        r = g.api.dono_adicionar_chave_app(request.form.get("chave", ""), request.form.get("apelido", ""))
+        flash(f"✅ Chave do app cadastrada ({r.get('apelido', '')}). Quem abrir o app oficial fica ✅.", "ok")
+        return redirect(url_for("dono") + "#app-oficial")
+
+    @app.post("/dono/app/chaves/<int:chave_id>/revogar")
+    @logado
+    def dono_chave_app_revogar(chave_id: int):
+        g.api.dono_revogar_chave_app(chave_id)
+        flash("Chave do app revogada. Apps com essa chave passam a ficar ❌.", "ok")
+        return redirect(url_for("dono") + "#app-oficial")
 
     @app.post("/dono/parcerias/<int:chave_id>/revogar")
     @logado
@@ -974,7 +1030,7 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
             abort(403)
         return render_template("dono.html", analise=g.api.mapas_em_analise(),
                                publicados=g.api.mapas_publicados(), parcerias=g.api.dono_parcerias(),
-                               denuncias=denuncias_abertas(), aba="dono")
+                               denuncias=denuncias_abertas(), app_oficial=dados_app_oficial(), aba="dono")
 
     @app.post("/dono/<mapa_id>/<acao>")
     @logado

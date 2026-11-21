@@ -258,3 +258,11 @@ body > .tela-rolox { position: fixed; }
 .emblema { background: var(--cartao); border: 1px solid var(--borda); border-radius: 999px; padding: 4px 10px; font-size: .85rem; }
 .bolinha.grande { width: 34px; height: 34px; }
 .btn:disabled { opacity: .45; cursor: not-allowed; }
+
+.selo-app { margin-left: 4px; font-size: .85em; cursor: help; }
+.documento { line-height: 1.55; }
+.documento h2 { margin-top: 26px; }
+.documento ul { padding-left: 20px; }
+.documento li { margin: 6px 0; }
+.rodape-links { text-align: center; font-size: .85rem; margin-top: 24px; }
+.rodape-links a { color: var(--suave); }

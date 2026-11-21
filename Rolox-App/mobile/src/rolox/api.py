@@ -237,7 +237,8 @@ class RoloxAPI:
             "GET", "/rest/v1/perfis",
             params={"id": f"eq.{self.user_id}",
                     "select": "id,username,email,idioma,jogo_mod,aceitou_localizacao,banido,"
-                              "is_adm,tickets,tickets_ultimo_ganho,avatar,is_parceiro,parceiro_desde,redes"},
+                              "is_adm,tickets,tickets_ultimo_ganho,avatar,is_parceiro,parceiro_desde,redes,"
+                              "app_status,app_verificado_em"},
         )
         if not linhas:
             raise ErroRolox("perfil_nao_encontrado")
@@ -330,6 +331,12 @@ class RoloxAPI:
     async def definir_redes(self, redes: dict) -> dict:
         limpo = {k: str(v or "").strip()[:200] for k, v in (redes or {}).items() if k in REDES_SOCIAIS}
         return await self._req("POST", "/rest/v1/rpc/definir_redes", json={"p_redes": limpo})
+
+    async def verificar_app(self, chave: str, versao: str) -> str:
+        """Manda a chave do app oficial (proctetion). Devolve 'oficial', 'modificado' ou 'sem_chave_cadastrada'."""
+        r = await self._req("POST", "/rest/v1/rpc/verificar_app",
+                            json={"p_chave": (chave or "").strip(), "p_versao": versao})
+        return (r or {}).get("status", "")
 
     async def usar_chave_parceria(self, chave: str) -> dict:
         chave = (chave or "").strip()

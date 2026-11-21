@@ -19,6 +19,8 @@
   <label class="chave"><input type="checkbox" name="localizacao" {{ 'checked' if dados.get('localizacao') }}> Mostrar para amigos onde estou jogando</label>
   <p class="nota">Você pode adicionar um e-mail depois, em Perfil.</p>
   <p class="nota">Seu IP e sua localização na plataforma só são usados para segurança e status online (LGPD).</p>
+  <p class="nota">Ao criar a conta você concorda com os <a href="{{ url_for('termos') }}" target="_blank">Termos de Uso</a>
+    e a <a href="{{ url_for('politica') }}" target="_blank">Política de Uso</a>.</p>
   <button class="btn" type="submit">Cadastrar</button>
   <a class="btn texto" href="{{ url_for('login') }}">Já tenho conta</a>
 </form>

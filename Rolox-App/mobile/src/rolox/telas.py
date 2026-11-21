@@ -11,6 +11,7 @@ import flet as ft
 
 from . import avatar as avatar_mod
 from . import config
+from . import atualizacao
 from . import curiosidades
 from . import protecao
 from . import discord_log
@@ -114,6 +115,51 @@ class RoloxApp:
                 await self.prefs.set(CHAVE_REFRESH, self.api.sessao.refresh_token)
             except Exception:
                 pass
+
+    # ================================================= atualização e app oficial
+    async def conferir_app(self) -> None:
+        """Lê o Vision-apk-link.json: pede para atualizar se tem versão nova e manda a chave do app oficial."""
+        info = await atualizacao.buscar_info()
+        if info is None:
+            return
+        if atualizacao.tem_versao_nova(info.versao):
+            self.dialogo_atualizar(info)
+        if not info.protecao:
+            return
+        try:
+            status = await self.api.verificar_app(info.protecao, atualizacao.VERSAO_APP)
+        except ErroRolox:
+            return
+        if status in ("oficial", "modificado"):
+            self.perfil["app_status"] = status
+            self.perfil["app_verificado_em"] = datetime.now().astimezone().isoformat()
+        if status == "modificado":
+            self.aviso("❌ Este app não é o oficial. Baixe o ROLOX pelo Atualizador do ROLOX.")
+
+    def dialogo_atualizar(self, info: "atualizacao.InfoVersao") -> None:
+        async def atualizar(_):
+            self.page.pop_dialog()
+            try:
+                await ft.UrlLauncher().launch_url(atualizacao.LINK_ATUALIZADOR)
+            except Exception:
+                if info.link:
+                    await ft.UrlLauncher().launch_url(info.link)
+        self.page.show_dialog(ft.AlertDialog(
+            title=ft.Text("Tem versão nova do ROLOX! ⬇️"),
+            content=ft.Text(f"A versão {info.versao} já saiu (a sua é a {atualizacao.VERSAO_APP}). "
+                            "Abra o Atualizador do ROLOX para baixar."),
+            actions=[ft.TextButton("Depois", on_click=lambda _: self.page.pop_dialog()),
+                     ft.FilledButton("Atualizar agora", icon=ft.Icons.SYSTEM_UPDATE, on_click=atualizar)],
+        ))
+
+    def links_legais(self) -> ft.Control:
+        async def abrir(caminho: str):
+            await ft.UrlLauncher().launch_url(f"{config.SITE_URL}/{caminho}")
+        return ft.Row([
+            ft.TextButton("Termos de Uso", on_click=lambda _: self.page.run_task(abrir, "termos")),
+            ft.Text("·"),
+            ft.TextButton("Política de Uso", on_click=lambda _: self.page.run_task(abrir, "politica")),
+        ], alignment=ft.MainAxisAlignment.CENTER, spacing=0, wrap=True)
 
     # ========================================================= cópia pirata
     async def tela_pirata(self) -> None:
@@ -330,6 +376,7 @@ class RoloxApp:
                     ft.TextButton("Criar conta", on_click=lambda _: self.tela_cadastro()),
                     ft.Text("3 senhas erradas bloqueiam o aparelho que errou, "
                             "e o dono da conta é avisado.", size=12, italic=True),
+                    self.links_legais(),
                 ],
                 spacing=14,
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
@@ -363,6 +410,9 @@ class RoloxApp:
                             size=12, italic=True),
                     ft.Text("Seu IP e sua localização na plataforma só são usados para "
                             "segurança e status online (LGPD).", size=12, italic=True),
+                    ft.Text("Ao criar a conta você concorda com os Termos de Uso e a Política de Uso.",
+                            size=12, italic=True),
+                    self.links_legais(),
                     ft.FilledButton("Cadastrar", on_click=cadastrar),
                     ft.TextButton("Já tenho conta", on_click=lambda _: self.tela_login()),
                 ],
@@ -388,6 +438,7 @@ class RoloxApp:
             await self.prefs.set(protecao.CHAVE_ULTIMO_USUARIO, self.perfil.get("username") or "")
         except Exception:
             pass
+        self.page.run_task(self.conferir_app)          # versão nova? app oficial? (sem travar a abertura)
         self.status_carregando("Abrindo o presente do dia...")
         try:
             presente = await self.api.receber_tickets()
@@ -514,7 +565,7 @@ class RoloxApp:
                 r = await self.api.buscar(termo)
                 nivel = {0: "exato", 1: "começa com", 2: "palavra", 3: "contém", 4: "na descrição"}
                 itens = [ft.Text("👤 Jogadores", weight=ft.FontWeight.BOLD)]
-                itens += [ft.ListTile(title=ft.Text(j["username"] + (" 🤝" if j.get("is_parceiro") else "")),
+                itens += [ft.ListTile(title=ft.Text(j["username"] + (" 🤝" if j.get("is_parceiro") else "") + atualizacao.marca_app(j)),
                                       subtitle=ft.Text(nivel.get(j.get("nivel"), ""), size=12), dense=True)
                           for j in r["jogadores"]] or [ft.Text("Nenhum jogador.", italic=True, size=13)]
                 itens.append(ft.Text("🎮 Jogos", weight=ft.FontWeight.BOLD))
@@ -599,7 +650,8 @@ class RoloxApp:
                 ft.Row([
                     desenhar_avatar(self.perfil.get("avatar"), 0.4),
                     ft.Column([
-                        ft.Text(f"Olá, {self.perfil.get('username', '')}!" + (" 🤝" if self.perfil.get("is_parceiro") else ""), size=24,
+                        ft.Text(f"Olá, {self.perfil.get('username', '')}!" + (" 🤝" if self.perfil.get("is_parceiro") else "")
+                                + atualizacao.marca_app(self.perfil), size=24,
                                 weight=ft.FontWeight.BOLD),
                         status,
                         self.linha_tickets(),

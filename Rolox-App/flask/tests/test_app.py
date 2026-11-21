@@ -263,6 +263,38 @@ class SupabaseFalso:
             c["usado_por"] = "alice"
             self.perfil.update(is_parceiro=True, parceiro_desde="2026-11-20T16:00:00Z")
             return Resp(200, {"parceiro": True, "apelido": c["apelido"]})
+        if p in ("/rest/v1/rpc/dono_chaves_app", "/rest/v1/rpc/dono_adicionar_chave_app",
+                 "/rest/v1/rpc/dono_revogar_chave_app", "/rest/v1/rpc/verificar_app"):
+            import hashlib
+            self.chaves_app = getattr(self, "chaves_app", [])
+            nome = p.rsplit("/", 1)[1]
+            if nome == "verificar_app":
+                validas = {c["hash"] for c in self.chaves_app if not c["revogada"]}
+                if not validas:
+                    return Resp(200, {"status": "sem_chave_cadastrada"})
+                st = "oficial" if hashlib.sha256(json["p_chave"].strip().encode()).hexdigest() in validas else "modificado"
+                self.perfil.update(app_status=st, app_verificado_em="2099-01-01T00:00:00Z", app_versao=json.get("p_versao"))
+                return Resp(200, {"status": st})
+            if not self.dono:
+                return Resp(403, {"code": "42501", "message": "apenas o dono"})
+            if nome == "dono_adicionar_chave_app":
+                k = json["p_chave"].strip()
+                if len(k) < 16:
+                    return Resp(400, {"code": "P0001", "message": "a chave precisa ter de 16 a 1000 caracteres"})
+                self.chaves_app.append({"id": len(self.chaves_app) + 1, "hash": hashlib.sha256(k.encode()).hexdigest(),
+                                        "apelido": json["p_apelido"], "final": k[-4:], "criado_em": "2026-11-21T00:00:00Z",
+                                        "revogada": False, "usos": 0})
+                return Resp(200, {"ok": True, "apelido": json["p_apelido"]})
+            if nome == "dono_revogar_chave_app":
+                for c in self.chaves_app:
+                    if c["id"] == json["p_id"]:
+                        c["revogada"] = True
+                return Resp(204)
+            mods = [{"username": self.perfil["username"], "app_versao": self.perfil.get("app_versao"),
+                     "app_verificado_em": "2026-11-21T00:00:00Z"}] if self.perfil.get("app_status") == "modificado" else []
+            return Resp(200, {"chaves": [{k: v for k, v in c.items() if k != "hash"} for c in self.chaves_app],
+                              "oficiais": int(self.perfil.get("app_status") == "oficial"), "modificados": len(mods),
+                              "lista_modificados": mods})
         if p.startswith("/rest/v1/rpc/dono_"):
             if not self.dono:
                 return Resp(403, {"code": "42501", "message": "apenas o dono"})
@@ -1386,3 +1418,46 @@ def test_loja_comprar_e_usar_cor_especial(cliente, sb):
     assert cliente.post("/loja/nada/comprar", data={"csrf": tok}).status_code == 404
     assert cliente.post("/loja/dourado/comprar").status_code in (302, 400, 403)     # sem CSRF
     assert sb.perfil["tickets"] == 30
+
+
+def test_app_oficial_chave_do_dono_e_marcas(cliente, sb):
+    import app as app_mod
+    entrar(cliente)
+    tok = csrf(cliente)
+    chave = "ttjZz!ODDg&uisk::28$!#)3!$!2)4+$!jejx"
+    # sem chave cadastrada: ninguém ganha marca
+    assert "✅" not in html(cliente.get("/perfil")) and "❌" not in html(cliente.get("/perfil"))
+    cliente.post("/dono/app/chaves", data={"csrf": tok, "chave": chave, "apelido": "0.20"})       # não é o dono: o banco recusa
+    assert getattr(sb, "chaves_app", []) == []
+    sb.dono = True
+    t = html(cliente.get("/dono"))
+    assert "✅ App oficial" in t and "Nenhuma chave do app" in t
+    cliente.post("/dono/app/chaves", data={"csrf": tok, "chave": "curta", "apelido": "x"})
+    r = cliente.post("/dono/app/chaves", data={"csrf": tok, "chave": chave, "apelido": "versão 0.20"})
+    assert r.headers["Location"].endswith("/dono#app-oficial")
+    t = html(cliente.get("/dono"))
+    assert "versão 0.20" in t and "VALENDO" in t and chave not in t      # a chave em si não aparece de novo
+    # o app (com a sessão do usuário) manda a chave certa -> ✅; errada -> ❌
+    from rolox_api import RoloxAPI
+    assert sb.request("POST", "https://falso/rest/v1/rpc/verificar_app", json={"p_chave": chave, "p_versao": "0.24.0"},
+                      headers={"Authorization": f"Bearer {sb.token_valido}"}).json()["status"] == "oficial"
+    assert 'title="Usa o app oficial do ROLOX">✅' in html(cliente.get("/perfil"))
+    assert sb.request("POST", "https://falso/rest/v1/rpc/verificar_app", json={"p_chave": "outra", "p_versao": "9"},
+                      headers={"Authorization": f"Bearer {sb.token_valido}"}).json()["status"] == "modificado"
+    assert "app modificado" in html(cliente.get("/inicio"))
+    assert "Quem abriu com app modificado (1)" in html(cliente.get("/dono"))
+    cliente.post("/dono/app/chaves/1/revogar", data={"csrf": tok})
+    assert "REVOGADA" in html(cliente.get("/dono"))
+    # regra dos 7 dias do ✅
+    assert app_mod.marca_app({"app_status": "oficial", "app_verificado_em": "2000-01-01T00:00:00Z"}) is None
+    assert app_mod.marca_app({"app_status": "modificado"}) == "modificado"
+
+
+def test_termos_e_politica_publicos_e_linkados(cliente):
+    t = html(cliente.get("/termos"))
+    assert "Termos de Uso do ROLOX" in t and "não tem nenhuma ligação com a Roblox Corporation" in t
+    assert "banimento" in t and "não valem dinheiro" in t and "/politica" in t
+    p = html(cliente.get("/politica"))
+    assert "Política de Uso do ROLOX" in p and "LGPD" in p and "a senha que a pessoa tentou, cifrada" in p
+    assert "✅" in p and "❌" in p and "discord.gg/6NZ5Ftq3p" in p
+    assert "/termos" in html(cliente.get("/cadastro")) and "/politica" in html(cliente.get("/login"))

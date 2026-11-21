@@ -64,6 +64,46 @@
   <p class="muted"><i>Nenhuma chave de parceria ainda.</i></p>
 {% endfor %}
 
+<h2 id="app-oficial">✅ App oficial</h2>
+<p class="nota">Cole aqui a <b>proctetion</b> do <code>Vision-apk-link.json</code> (repositório Rolox-apk). O app ROLOX lê esse
+  arquivo e manda a chave ao abrir: quem manda a chave certa ganha ✅ ao lado do nome; quem manda errado
+  (app modificado) fica ❌. Ao trocar a proctetion no arquivo, cadastre a nova aqui e revogue a antiga.</p>
+{% if app_oficial %}
+<p><b>✅ {{ app_oficial.oficiais or 0 }}</b> com o app oficial (últimos 7 dias) · <b>❌ {{ app_oficial.modificados or 0 }}</b> com app modificado</p>
+{% endif %}
+<form method="post" action="{{ url_for('dono_chave_app_adicionar') }}" class="pilha">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <textarea name="chave" rows="3" maxlength="1000" placeholder="Cole a proctetion aqui" required autocomplete="off"></textarea>
+  <div class="linha">
+    <input type="text" name="apelido" class="cresce" maxlength="40" placeholder="Nome (ex.: versão 0.20)" required>
+    <button class="btn pequeno">Cadastrar chave</button>
+  </div>
+</form>
+{% for c in (app_oficial.chaves if app_oficial else []) %}
+  <div class="cartao">
+    <div class="info">
+      <div class="titulo">{{ c.apelido }} <span class="muted">…{{ c.final }}</span>
+        {% if c.revogada %}<span class="etiqueta">REVOGADA</span>{% else %}<span class="etiqueta ok">VALENDO</span>{% endif %}</div>
+      <div class="detalhe">cadastrada em {{ c.criado_em|data }} · usada {{ c.usos }} {{ 'vez' if c.usos == 1 else 'vezes' }}</div>
+    </div>
+    {% if not c.revogada %}
+    <form method="post" action="{{ url_for('dono_chave_app_revogar', chave_id=c.id) }}">
+      <input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn pequeno contorno">Revogar</button>
+    </form>
+    {% endif %}
+  </div>
+{% else %}
+  <p class="muted"><i>Nenhuma chave do app cadastrada: por enquanto ninguém ganha ✅ nem ❌.</i></p>
+{% endfor %}
+{% if app_oficial and app_oficial.lista_modificados %}
+  <details><summary>❌ Quem abriu com app modificado ({{ app_oficial.lista_modificados|length }})</summary>
+  {% for u in app_oficial.lista_modificados %}
+    <div class="cartao"><div class="info"><div class="titulo"><a href="{{ url_for('jogador', nome=u.username) }}">{{ u.username }}</a> ❌</div>
+      <div class="detalhe">versão {{ u.app_versao or '?' }} · {{ u.app_verificado_em|data }}</div></div></div>
+  {% endfor %}
+  </details>
+{% endif %}
+
 <h2>No ar ({{ publicados|length }})</h2>
 {% for m in publicados %}
   <div class="cartao">

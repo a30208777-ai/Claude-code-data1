@@ -430,3 +430,13 @@ def test_buscar_no_app():
     assert rodar(logada(h).buscar("e")) == {"jogadores": [], "jogos": []}
     from rolox.api import RoloxAPI
     assert RoloxAPI.link_buscar("boné").endswith("/buscar?q=bon%C3%A9")
+
+
+def test_verificar_app_manda_chave_e_versao():
+    chamadas = []
+    def h(req):
+        chamadas.append((req.url.path, json.loads(req.content)))
+        return resposta(200, {"status": "oficial"})
+    api = logada(h)
+    assert rodar(api.verificar_app("  ttjZz!chave ", "0.24.0")) == "oficial"
+    assert chamadas[-1] == ("/rest/v1/rpc/verificar_app", {"p_chave": "ttjZz!chave", "p_versao": "0.24.0"})

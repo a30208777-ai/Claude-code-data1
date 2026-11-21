@@ -4,7 +4,7 @@
 <div class="linha" style="align-items:flex-start">
   <div class="avatar-mini">{{ desenhar_avatar(p.avatar, 64) }}</div>
   <div class="cresce">
-    <h1>{{ p.username }}{{ selo(p.is_parceiro) }}</h1>
+    <h1>{{ p.username }}{{ selo(p.is_parceiro) }}{{ selo_app(p.app) }}</h1>
     {% if p.is_parceiro %}<p class="parceiro-tag">🤝 Parceiro do ROLOX{% if p.parceiro_desde %} desde {{ p.parceiro_desde|data }}{% endif %}</p>{% endif %}
     <p class="muted">No ROLOX desde {{ p.criado_em|data }}</p>
   </div>
