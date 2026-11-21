@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block titulo %}{{ com }} · Mensagens · Rolox{% endblock %}
+{% block conteudo %}
+<p><a class="btn texto" href="{{ url_for('mensagens') }}">‹ Mensagens</a></p>
+<h1><a href="{{ url_for('jogador', nome=com) }}">{{ com }}</a></h1>
+<div class="conversa-lista">
+{% for m in msgs %}
+  <div class="bolha{{ ' minha' if m.minha }}">{{ m.texto }}<small>{{ m.criado_em|data }}</small></div>
+{% else %}
+  <p class="muted"><i>Mande a primeira mensagem!</i></p>
+{% endfor %}
+</div>
+<form method="post" class="linha" id="fim">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <input type="text" name="texto" maxlength="500" required class="cresce" placeholder="Mensagem" autocomplete="off" autofocus>
+  <button class="btn">Enviar</button>
+</form>
+<script>setTimeout(() => location.reload(), 15000);</script>
+{% endblock %}

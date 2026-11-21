@@ -369,3 +369,10 @@ body.flash-foto::after { content: ""; position: fixed; inset: 0; z-index: 20; ba
 
 .erro-emoji { text-align: center; font-size: 3rem; margin: 0; }
 .erro-titulo { text-align: center; margin: 4px 0; }
+/* 💌 mensagens */
+.cartao.conversa { text-decoration: none; color: inherit; }
+.cartao.nao-lida { border: 2px solid var(--primaria); }
+.conversa-lista { display: flex; flex-direction: column; gap: 6px; margin: 10px 0; }
+.bolha { align-self: flex-start; max-width: 80%; padding: 8px 12px; border-radius: 14px; background: #8882; white-space: pre-wrap; word-break: break-word; }
+.bolha.minha { align-self: flex-end; background: var(--primaria); color: #fff; }
+.bolha small { display: block; font-size: .7rem; opacity: .7; }

@@ -652,6 +652,25 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
         perfil = g.api.meu_perfil()
         return _entrar_servidor(m, hack=perfil.get("jogo_mod") == m["gameid"])
 
+    @app.get("/mensagens")
+    @logado
+    def mensagens():
+        carregar_perfil()
+        try:
+            amigos = sorted(a["username"] for a in g.api.meus_amigos() if a["tipo"] == "amigo")
+        except ErroRolox:
+            amigos = []
+        return render_template("mensagens.html", conversas=g.api.minhas_conversas(), amigos=amigos, aba="inicio")
+
+    @app.route("/mensagens/<nome>", methods=["GET", "POST"])
+    @logado
+    def mensagens_com(nome: str):
+        if request.method == "POST":
+            g.api.enviar_mensagem_privada(nome, request.form.get("texto", ""))
+            return redirect(url_for("mensagens_com", nome=nome) + "#fim")
+        carregar_perfil()
+        return render_template("conversa.html", com=nome, msgs=g.api.conversa_privada(nome), aba="inicio")
+
     @app.get("/ranking")
     @logado
     def ranking():

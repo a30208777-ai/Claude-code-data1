@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block titulo %}Mensagens · Rolox{% endblock %}
+{% block conteudo %}
+<h1>💌 Mensagens</h1>
+<p class="nota">Só entre amigos. Nunca mande senha ou dados pessoais.</p>
+{% for c in conversas %}
+  <a class="cartao conversa{{ ' nao-lida' if c.nao_lidas }}" href="{{ url_for('mensagens_com', nome=c.username) }}">
+    <span class="icone">{{ '🔵' if c.nao_lidas else '💬' }}</span>
+    <div class="info"><div class="titulo">{{ c.username }}{% if c.nao_lidas %} <span class="etiqueta">{{ c.nao_lidas }}</span>{% endif %}</div>
+      <div class="detalhe">{{ c.previa[:60] }}</div></div>
+  </a>
+{% else %}
+  <p class="muted"><i>Nenhuma conversa ainda.</i></p>
+{% endfor %}
+{% if amigos %}
+<h2>Nova conversa</h2>
+<div class="linha botoes">{% for a in amigos %}<a class="btn contorno pequeno" href="{{ url_for('mensagens_com', nome=a) }}">{{ a }}</a>{% endfor %}</div>
+{% endif %}
+{% endblock %}

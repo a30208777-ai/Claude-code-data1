@@ -264,6 +264,18 @@ class SupabaseFalso:
             c["usado_por"] = "alice"
             self.perfil.update(is_parceiro=True, parceiro_desde="2026-11-20T16:00:00Z")
             return Resp(200, {"parceiro": True, "apelido": c["apelido"]})
+        if p in ("/rest/v1/rpc/minhas_conversas", "/rest/v1/rpc/conversa_privada", "/rest/v1/rpc/enviar_mensagem_privada"):
+            self.dms = getattr(self, "dms", [])
+            nome = p.rsplit("/", 1)[1]
+            amigos = {a["username"] for a in self.amigos if a["tipo"] == "amigo"}
+            if nome == "enviar_mensagem_privada":
+                if json["p_para"] not in amigos:
+                    return Resp(400, {"code": "P0001", "message": "só dá para mandar mensagem para amigos"})
+                self.dms.append({"com": json["p_para"], "minha": True, "texto": json["p_texto"], "criado_em": "2026-11-21T00:00:00Z", "id": len(self.dms) + 1})
+                return Resp(200, {"ok": True})
+            if nome == "conversa_privada":
+                return Resp(200, [m for m in self.dms if m["com"] == json["p_com"]])
+            return Resp(200, [{"username": m["com"], "nao_lidas": 0, "previa": m["texto"]} for m in self.dms[-1:]])
         if p == "/rest/v1/rpc/definir_bio":
             t = " ".join(json["p_texto"].split())[:140].replace("idiota", "******")
             self.perfil["bio"] = t
@@ -1777,3 +1789,18 @@ def test_jogo_aleatorio(cliente, sb):
     cliente.post(f"/dono/{mid}/aprovar", data={"csrf": tok})
     r = cliente.post("/jogos/aleatorio", data={"csrf": tok})
     assert f"/jogar/{mid}?s=" in r.headers["Location"] and "🎲 Jogo aleatório" in html(cliente.get("/jogos"))
+
+
+def test_mensagens_privadas_entre_amigos(cliente, sb):
+    entrar(cliente)
+    tok = csrf(cliente)
+    sb.amigos = [{"username": "bob", "tipo": "amigo", "online": False}]
+    t = html(cliente.get("/mensagens"))
+    assert "💌 Mensagens" in t and "Nenhuma conversa" in t and "/mensagens/bob" in t
+    r = cliente.post("/mensagens/bob", data={"csrf": tok, "texto": "oi <b>bob</b>"})
+    assert r.headers["Location"].endswith("/mensagens/bob#fim")
+    t = html(cliente.get("/mensagens/bob"))
+    assert "oi &lt;b&gt;bob&lt;/b&gt;" in t and 'class="bolha minha"' in t
+    assert "bob" in html(cliente.get("/mensagens"))
+    cliente.post("/mensagens/estranho", data={"csrf": tok, "texto": "oi"})
+    assert not any(m["com"] == "estranho" for m in sb.dms)

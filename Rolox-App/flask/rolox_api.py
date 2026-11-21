@@ -365,6 +365,16 @@ class RoloxAPI:
         """✍️ 'Sobre mim' (o banco passa pelo filtro de palavras e corta em 140 letras)."""
         return self._req("POST", "/rest/v1/rpc/definir_bio", json={"p_texto": str(texto or "")[:300]}) or {}
 
+    # ---------------------------------------------------- 💌 mensagens privadas
+    def minhas_conversas(self) -> list[dict]:
+        return self._req("POST", "/rest/v1/rpc/minhas_conversas", json={}) or []
+
+    def conversa_privada(self, com: str) -> list[dict]:
+        return self._req("POST", "/rest/v1/rpc/conversa_privada", json={"p_com": com, "p_limite": 80}) or []
+
+    def enviar_mensagem_privada(self, para: str, texto: str) -> dict:
+        return self._req("POST", "/rest/v1/rpc/enviar_mensagem_privada", json={"p_para": para, "p_texto": str(texto or "")[:500]}) or {}
+
     def nome_de(self, user_id: str) -> Optional[str]:
         """Nome de usuário de alguém (perfis são visíveis para quem está logado)."""
         linhas = self._req("GET", "/rest/v1/perfis", params={"select": "username", "id": f"eq.{user_id}"}) or []
