@@ -55,6 +55,7 @@ export function ligarTela(jogo, container) {
 // ------------------------------------------------------------------ sons
 let ctx = null;
 function audio() {
+  if (globalThis.window?.ROLOX_MUDO) return null;        // ⚙️ som desligado nos ajustes
   if (!ctx) {
     const C = window.AudioContext || window.webkitAudioContext;
     if (!C) return null;

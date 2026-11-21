@@ -47,6 +47,8 @@
 {% if hack or dono_jogo or criador_jogo %}<section id="executor" class="painel-executor" hidden aria-label="Executor de scripts"></section>{% endif %}
 {% if dono_jogo or criador_jogo %}<section id="painelDono" class="painel-executor painel-dono" hidden aria-label="Painel do dono"></section>{% endif %}
 <div id="gestos" class="painel-gestos" hidden aria-label="Gestos"></div>
+<div id="ajustes" class="painel-gestos painel-ajustes" hidden aria-label="Ajustes"></div>
+<div id="contadorFps" class="contador-fps" hidden></div>
 <canvas id="minimapa" class="minimapa" width="132" height="132" aria-label="Minimapa" hidden></canvas>
 <div id="balaoGesto" class="balao-gesto" aria-hidden="true"></div>
 <header class="barra-jogo">
@@ -66,6 +68,7 @@
   {% if not teste %}<button class="btn-jogo" id="curtir" data-curti="{{ '1' if curti else '0' }}"
     aria-label="Curtir este jogo">{{ '❤️' if curti else '🤍' }}</button>{% endif %}
   <button class="btn-jogo" id="girarTela" hidden aria-label="Deitar a tela">🔄</button>
+  <button class="btn-jogo" id="abrirAjustes" aria-label="Ajustes" aria-expanded="false" title="Ajustes">⚙️</button>
   <button class="btn-jogo" id="botaoMinimapa" aria-label="Minimapa" aria-pressed="true" title="Minimapa">🗺️</button>
   <button class="btn-jogo" id="abrirGestos" aria-label="Gestos" aria-expanded="false" title="Gestos">😀</button>
   <button class="btn-jogo" id="tirarFoto" aria-label="Tirar foto do jogo" title="Foto do jogo">📸</button>
@@ -171,6 +174,11 @@
       cofre: {% if teste or hack %}null{% else %}{ url: {{ url_for('cofre_ler', mapa_id=m.id)|tojson }}, csrf: CSRF }{% endif %},
     });
     carregando.remove();
+    {
+      const { ligarAjustes } = await import("/static/studio/ajustes.js");
+      ligarAjustes(jogo, jogo.render, { botao: document.getElementById("abrirAjustes"), painel: document.getElementById("ajustes"),
+                                        camadaNomes: document.getElementById("nomes"), contador: document.getElementById("contadorFps") });
+    }
     {
       const { ligarEmotes } = await import("/static/studio/emotes.js");
       ligarEmotes(jogo, { botao: document.getElementById("abrirGestos"), painel: document.getElementById("gestos"),

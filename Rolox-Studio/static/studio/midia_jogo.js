@@ -28,6 +28,7 @@ export function ligarMidias(jogo, render) {
     }
     el.loop = !!i.Repetir;
     if (i.ClassName === "Som") el.volume = i.Volume; else el.muted = !i.ComSom;
+    if (window.ROLOX_MUDO) el.muted = true;                // ⚙️ som desligado nos ajustes
     return el;
   }
 

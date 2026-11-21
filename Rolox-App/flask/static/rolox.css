@@ -342,3 +342,14 @@ body.flash-foto::after { content: ""; position: fixed; inset: 0; z-index: 20; ba
   border-radius: 14px; border: 2px solid #ffffff55; box-shadow: 0 4px 14px #0007; pointer-events: none; }
 .minimapa[hidden] { display: none; }
 @media (max-height: 420px) { .minimapa { width: 96px; height: 96px; } }
+
+/* ⚙️ ajustes */
+.painel-ajustes { display: grid; grid-template-columns: 1fr; gap: 8px; min-width: 230px; color: #fff; }
+.painel-ajustes .ajuste { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: .9rem; }
+.painel-ajustes select { padding: 5px; border-radius: 8px; }
+.painel-ajustes input[type=checkbox] { width: 20px; height: 20px; }
+.contador-fps { position: fixed; z-index: 3; left: 50%; bottom: 8px; transform: translateX(-50%); padding: 2px 8px; border-radius: 8px;
+  background: #000a; color: #b9f6ca; font: 700 .8rem ui-monospace, monospace; pointer-events: none; }
+.contador-fps[hidden] { display: none; }
+.painel-ajustes label.ajuste { display: flex; flex-direction: row; align-items: center; justify-content: space-between; margin: 0; text-align: left; color: #fff; }
+.painel-ajustes label.ajuste select { width: auto; max-width: 60%; margin: 0; }
