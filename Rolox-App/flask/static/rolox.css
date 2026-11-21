@@ -307,3 +307,13 @@ body > .tela-rolox { position: fixed; }
 .expulso { position: fixed; inset: 0; z-index: 9; display: grid; place-items: center; padding: 24px; text-align: center;
   background: #0e0a1ce8; color: #fff; font-size: 1.2rem; font-weight: 700; }
 .painel-executor input.dono-texto { background: #07050e; color: #eee; border: 1px solid #ffffff33; }
+/* página do jogo */
+.jogo-capa { display: flex; align-items: center; gap: 14px; }
+.jogo-capa h1 { margin: 0; }
+.jogo-capa-icone { display: grid; place-items: center; width: 64px; height: 64px; border-radius: 16px; font-size: 2rem;
+  background: linear-gradient(135deg, #7c4dff, #00b0ff); flex: none; }
+.jogo-numeros { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 14px 0; }
+.jogo-numeros div { display: grid; text-align: center; padding: 10px 4px; border-radius: 12px; background: var(--cartao, #8881); }
+.jogo-numeros b { font-size: 1.3rem; }
+.jogo-numeros span { font-size: .72rem; color: var(--suave); }
+.cartao.recorde.meu { outline: 2px solid var(--primaria); }

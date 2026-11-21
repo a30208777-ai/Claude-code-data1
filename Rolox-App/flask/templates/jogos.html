@@ -17,7 +17,7 @@
   <div class="cartao" id="mapa-{{ m.id }}">
     <span class="icone">🕹️</span>
     <div class="info">
-      <div class="titulo">{{ m.nome }}</div>
+      <div class="titulo"><a href="{{ url_for('jogo_pagina', mapa_id=m.id) }}">{{ m.nome }}</a></div>
       {% if m.descricao %}<div class="detalhe">{{ m.descricao }}</div>{% endif %}
       <div class="detalhe">👁 {{ m.visitas or 0 }} · ❤ {{ m.curtidas or 0 }}</div>
     </div>

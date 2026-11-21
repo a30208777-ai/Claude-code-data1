@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block titulo %}{{ m.nome }} · Rolox{% endblock %}
+{% block conteudo %}
+<p><a class="btn texto" href="{{ url_for('jogos') }}">‹ Jogos</a></p>
+<div class="jogo-capa">
+  <span class="jogo-capa-icone" aria-hidden="true">🕹️</span>
+  <div>
+    <h1>{{ m.nome }}</h1>
+    {% if autor %}<p class="muted">por <a href="{{ url_for('jogador', nome=autor) }}">{{ autor }}</a>{% if m.aprovado_em %} · no ar desde {{ m.aprovado_em|data }}{% endif %}</p>{% endif %}
+  </div>
+</div>
+{% if m.descricao %}<p>{{ m.descricao }}</p>{% endif %}
+
+<div class="jogo-numeros">
+  <div><b>{{ m.visitas or 0 }}</b><span>👁 visitas</span></div>
+  <div><b>{{ m.curtidas or 0 }}</b><span>❤ curtidas</span></div>
+  <div><b>{{ jogando }}</b><span>🟢 jogando agora</span></div>
+  <div><b>{{ servidores }}</b><span>🖥️ servidores</span></div>
+</div>
+
+{% if m.caminho_aprovado %}
+<div class="linha botoes">
+  <form method="post" action="{{ url_for('jogar_entrar', mapa_id=m.id) }}" class="cresce">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <button class="btn">▶ Jogar</button>
+  </form>
+  <form method="post" action="{{ url_for('jogo_curtir', mapa_id=m.id) }}">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <input type="hidden" name="curtir" value="{{ '0' if curti else '1' }}">
+    <input type="hidden" name="voltar" value="jogo">
+    <button class="btn contorno" aria-label="{{ 'Descurtir' if curti else 'Curtir' }}">{{ '❤️' if curti else '🤍' }}</button>
+  </form>
+  <button class="btn contorno" type="button" id="compartilhar" aria-label="Compartilhar">🔗</button>
+</div>
+<p class="nota"><a href="{{ url_for('hacks') }}#mapa-{{ m.id }}">🤖 Jogar com hacks</a>{% if jogando_hack %} · {{ jogando_hack }} no modo hack agora{% endif %}</p>
+{% else %}
+<p class="nota">Este jogo ainda não foi aprovado pelo dono (só você vê esta página).</p>
+{% endif %}
+
+<h2>🏆 Recordes</h2>
+{% for r in recordes %}
+  <div class="cartao recorde{{ ' meu' if r.username == eu }}">
+    <span class="icone">{{ ['🥇','🥈','🥉'][loop.index0] if loop.index0 < 3 else loop.index }}</span>
+    <div class="info"><div class="titulo"><a href="{{ url_for('jogador', nome=r.username) }}">{{ r.username }}</a></div>
+      <div class="detalhe">{{ r.estatistica }}</div></div>
+    <b>{{ '%g'|format(r.valor|float) }}</b>
+  </div>
+{% else %}
+  <p class="muted"><i>Ninguém tem recorde ainda. Seja o primeiro!</i></p>
+{% endfor %}
+
+{% with tipo='jogo', alvo=m.id, voltar=request.path %}{% include "_denunciar.html" %}{% endwith %}
+<script>
+  document.getElementById("compartilhar")?.addEventListener("click", async () => {
+    const dados = { title: {{ m.nome|tojson }}, text: "Bora jogar no ROLOX?", url: location.href };
+    try {
+      if (navigator.share) await navigator.share(dados);
+      else { await navigator.clipboard.writeText(location.href); aviso("Link copiado!", "ok"); }
+    } catch { /* cancelou */ }
+  });
+</script>
+{% endblock %}

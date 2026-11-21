@@ -353,6 +353,11 @@ class RoloxAPI:
             "select": "user_id,username,estatistica,valor,atualizado_em", "mapa_id": f"eq.{mapa_id}",
             "order": "valor.desc,atualizado_em.asc", "limit": str(limite)}) or []
 
+    def nome_de(self, user_id: str) -> Optional[str]:
+        """Nome de usuário de alguém (perfis são visíveis para quem está logado)."""
+        linhas = self._req("GET", "/rest/v1/perfis", params={"select": "username", "id": f"eq.{user_id}"}) or []
+        return linhas[0]["username"] if linhas else None
+
     def mapa_do_jogo(self, gameid: str) -> Optional[dict]:
         linhas = self._req("GET", "/rest/v1/mapas", params={"select": "id,nome", "gameid": f"eq.{gameid}", "limit": "1"})
         return linhas[0] if linhas else None

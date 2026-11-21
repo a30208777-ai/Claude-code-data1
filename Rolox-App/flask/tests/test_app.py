@@ -1603,3 +1603,25 @@ def test_criador_do_mapa_tem_o_painel_no_proprio_jogo(cliente, sb, tmp_path, mon
     assert 'id="abrirDono"' not in t
     r = cliente.post("/api/dono/jogo/anunciar", json={"passe": passe, "texto": "oi"}, headers={"X-CSRF": tok})
     assert r.status_code == 403
+
+
+def test_pagina_do_jogo(cliente, sb):
+    entrar(cliente)
+    tok = csrf(cliente)
+    mid = enviar_mapa(cliente).get_json()["id"]
+    assert cliente.get(f"/jogos/{mid}").status_code == 200            # o autor vê antes de aprovar
+    assert "ainda não foi aprovado" in html(cliente.get(f"/jogos/{mid}"))
+    sb.dono = True
+    cliente.post(f"/dono/{mid}/aprovar", data={"csrf": tok})
+    sb.dono = False
+    assert f'href="/jogos/{mid}"' in html(cliente.get("/jogos"))
+    cliente.post(f"/api/placar/{mid}", json={"estatistica": "Vitórias", "valor": 7}, headers={"X-CSRF": tok})
+    t = html(cliente.get(f"/jogos/{mid}"))
+    assert "Obby da lava" in t and "por <a href=\"/jogador/alice\">alice</a>" in t
+    assert "▶ Jogar" in t and "🏆 Recordes" in t and "🥇" in t and "Vitórias" in t and "🚩 Denunciar" in t
+    r = cliente.post(f"/jogos/{mid}/curtir", data={"csrf": tok, "curtir": "1", "voltar": "jogo"})
+    assert r.headers["Location"].endswith(f"/jogos/{mid}")
+    assert cliente.get("/jogos/nao-e-id").status_code == 404
+    sb.mapas[mid]["caminho_aprovado"] = None
+    sb.mapas[mid]["autor_id"] = "u9"
+    assert cliente.get(f"/jogos/{mid}").status_code == 404           # não aprovado e não é meu

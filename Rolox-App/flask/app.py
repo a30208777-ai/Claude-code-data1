@@ -603,6 +603,35 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
         return render_template("jogos.html", publicados=g.api.mapas_publicados(ordem), meus=g.api.meus_mapas(),
                                curti=curti, ordem=ordem, aba="jogos")
 
+    @app.get("/jogos/<mapa_id>")
+    @logado
+    def jogo_pagina(mapa_id: str):
+        """Página do jogo: criador, números, recordes, quem está jogando agora e os botões."""
+        m = _mapa_ou_404(mapa_id)
+        if not m.get("caminho_aprovado") and not (session.get("dono") or m["autor_id"] == g.api.user_id):
+            abort(404)
+        perfil = carregar_perfil()
+        try:
+            autor = g.api.nome_de(m["autor_id"])
+        except ErroRolox:
+            autor = None
+        try:
+            recordes = g.api.placar(mapa_id)
+        except ErroRolox:
+            recordes = []
+        try:
+            servs = [x for x in g.api.servidores() if x.get("gameid") and x["gameid"] == m.get("gameid")]
+        except ErroRolox:
+            servs = []
+        try:
+            curti = mapa_id in g.api.minhas_curtidas()
+        except ErroRolox:
+            curti = False
+        return render_template("jogo.html", m=m, autor=autor, recordes=recordes, curti=curti,
+                               jogando=sum(x.get("humanos", 0) for x in servs if not x.get("is_hack_server")),
+                               jogando_hack=sum(x.get("humanos", 0) for x in servs if x.get("is_hack_server")),
+                               servidores=len(servs), eu=perfil.get("username"), aba="jogos")
+
     @app.get("/api/placar/<mapa_id>")
     @logado
     def placar_ver(mapa_id: str):
@@ -636,6 +665,8 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
         r = g.api.curtir_mapa(mapa_id, str(dados.get("curtir", "1")) in ("1", "true", "True"))
         if request.is_json:
             return jsonify(r)
+        if request.form.get("voltar") == "jogo":
+            return redirect(url_for("jogo_pagina", mapa_id=mapa_id))
         return redirect(url_for("jogos", ordem=request.form.get("ordem") or None) + f"#mapa-{mapa_id}")
 
     @app.post("/jogos/<mapa_id>/jogar")
