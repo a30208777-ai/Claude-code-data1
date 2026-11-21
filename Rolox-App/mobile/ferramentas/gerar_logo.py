@@ -139,6 +139,19 @@ def icone(n: int = 1024, hacks: bool = False) -> Image.Image:
     return fundo.convert("RGB")
 
 
+def icone_android(n: int = 1024, hacks: bool = False, escala: float = 0.6) -> Image.Image:
+    """Camada da frente do ícone ADAPTATIVO do Android (fundo transparente; a cor vem do
+    adaptive_icon_background). O Android só mostra os 66% do meio desta imagem, então o desenho
+    fica pequeno no centro; senão a logo aparece ampliada e cortada na tela inicial."""
+    img = Image.new("RGBA", (n, n), (0, 0, 0, 0))
+    m = marca(int(n * escala))
+    if hacks:
+        r = robo(int(m.width * 0.42))
+        m.alpha_composite(r, (m.width - r.width, m.height - r.height))
+    img.alpha_composite(m, ((n - m.width) // 2, (n - m.height) // 2))
+    return img
+
+
 def logo_com_nome(altura: int = 220, nome: str = "ROLOX", hacks: bool = False) -> Image.Image:
     """Símbolo + 'ROLOX' (para telas e para o site). `hacks`: 'ROLOX HACKS' em laranja."""
     m = marca(altura)
@@ -167,14 +180,17 @@ def main() -> None:
     marca(1024).save(ASSETS / "splash.png", optimize=True)
     marca(512).save(ASSETS / "logo.png", optimize=True)
     logo_com_nome(220).save(ASSETS / "logo_nome.png", optimize=True)
+    icone_android().save(ASSETS / "icon_android.png", optimize=True)
     if ATUALIZADOR.parent.is_dir():
         ATUALIZADOR.mkdir(exist_ok=True)
         icone(1024).save(ATUALIZADOR / "icon.png", optimize=True)
+        icone_android().save(ATUALIZADOR / "icon_android.png", optimize=True)
         marca(1024).save(ATUALIZADOR / "splash.png", optimize=True)
         logo_com_nome(220).save(ATUALIZADOR / "logo_nome.png", optimize=True)
     if HACKS.parent.is_dir():
         HACKS.mkdir(exist_ok=True)
         icone(1024, hacks=True).save(HACKS / "icon.png", optimize=True)
+        icone_android(hacks=True).save(HACKS / "icon_android.png", optimize=True)
         logo_com_nome(220, "ROLOX HACKS", hacks=True).save(HACKS / "logo_nome.png", optimize=True)
         im = marca(1024); r = robo(330); im.alpha_composite(r, (1024 - 330 - 60, 1024 - 330 - 60))
         im.save(HACKS / "splash.png", optimize=True)
