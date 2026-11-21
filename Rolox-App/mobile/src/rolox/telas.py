@@ -494,7 +494,8 @@ class RoloxApp:
     def linha_tickets(self) -> ft.Control:
         return ft.Row([ft.Icon(ft.Icons.CONFIRMATION_NUMBER, size=18, color=COR_HACK),
                        ft.Text(self.texto_tickets(), weight=ft.FontWeight.BOLD),
-                       ft.TextButton("🛒 Loja", on_click=lambda _: self.page.run_task(self.abrir_site, None, "loja"))],
+                       ft.TextButton("🛒 Loja", on_click=lambda _: self.page.run_task(self.abrir_site, None, "loja")),
+                       ft.TextButton("🏅 Ranking", on_click=lambda _: self.page.run_task(self.abrir_site, None, "ranking"))],
                       spacing=6)
 
     # --------------------------------------------------------------- início

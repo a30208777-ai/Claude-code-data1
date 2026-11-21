@@ -16,7 +16,7 @@ from typing import Optional
 
 import httpx
 
-VERSAO_APP = "0.24.0"          # igual ao version do pyproject.toml (um teste confere)
+VERSAO_APP = "0.25.0"          # igual ao version do pyproject.toml (um teste confere)
 URL_INFO = "https://raw.githubusercontent.com/a30208777-ai/Rolox-apk/refs/heads/main/Vision-apk-link.json"
 LINK_ATUALIZADOR = "roloxatualizador://atualizar"
 MAX_INFO = 64 * 1024

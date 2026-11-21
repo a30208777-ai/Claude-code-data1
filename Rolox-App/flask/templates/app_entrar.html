@@ -21,7 +21,8 @@
         f.action = `/jogos/${mapa}/jogar`;
         f.submit();
       } else {
-        location.href = dados.get('ir') === 'amigos' ? '{{ url_for("amigos") }}' : dados.get('ir') === 'loja' ? '{{ url_for("loja") }}' : '{{ url_for("jogos") }}';
+        const destinos = { amigos: '{{ url_for("amigos") }}', loja: '{{ url_for("loja") }}', ranking: '{{ url_for("ranking") }}' };
+        location.href = destinos[dados.get('ir')] || '{{ url_for("jogos") }}';
       }
     } catch (e) {
       msg.textContent = 'Não deu para entrar pelo app. Entre com usuário e senha.';

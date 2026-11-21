@@ -310,7 +310,7 @@ class RoloxAPI:
         dados = {"t": self.sessao.access_token}
         if mapa_id and re.fullmatch(r"[0-9a-f-]{36}", str(mapa_id)):
             dados["mapa"] = str(mapa_id)
-        elif ir in ("jogos", "amigos", "loja"):
+        elif ir in ("jogos", "amigos", "loja", "ranking"):
             dados["ir"] = ir
         return f"{config.SITE_URL}/app/entrar#{urlencode(dados)}"
 

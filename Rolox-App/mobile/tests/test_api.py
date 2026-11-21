@@ -394,6 +394,8 @@ def test_link_entrar_no_site_ja_logado():
     assert base.endswith("/app/entrar") and "t=" in frag and "mapa=123e4567-e89b-12d3-a456-426614174000" in frag
     assert "?" not in base                      # token nunca vai na parte que chega ao servidor
     assert "ir=amigos" in rodar(api.link_entrar_no_site(None, "amigos"))
+    assert "ir=ranking" in rodar(api.link_entrar_no_site(None, "ranking"))
+    assert "ir=" not in rodar(api.link_entrar_no_site(None, "javascript:alert(1)"))
     assert "mapa=" not in rodar(api.link_entrar_no_site("../../x"))
 
 
@@ -438,5 +440,5 @@ def test_verificar_app_manda_chave_e_versao():
         chamadas.append((req.url.path, json.loads(req.content)))
         return resposta(200, {"status": "oficial"})
     api = logada(h)
-    assert rodar(api.verificar_app("  ttjZz!chave ", "0.24.0")) == "oficial"
-    assert chamadas[-1] == ("/rest/v1/rpc/verificar_app", {"p_chave": "ttjZz!chave", "p_versao": "0.24.0"})
+    assert rodar(api.verificar_app("  ttjZz!chave ", "0.25.0")) == "oficial"
+    assert chamadas[-1] == ("/rest/v1/rpc/verificar_app", {"p_chave": "ttjZz!chave", "p_versao": "0.25.0"})

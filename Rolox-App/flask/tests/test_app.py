@@ -1141,6 +1141,7 @@ def test_entrar_pelo_app_vai_direto_para_o_jogo(sb):
     app.testing = True
     c = app.test_client()
     t = html(c.get("/app/entrar"))
+    assert "ranking: '/ranking'" in t
     assert "history.replaceState" in t and "/api/app/sessao" in t
     tok = csrf(c)
     assert c.post("/api/app/sessao", json={"token": "T1"}).status_code == 400          # sem CSRF
