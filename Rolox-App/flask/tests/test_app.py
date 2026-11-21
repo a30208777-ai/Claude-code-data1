@@ -299,6 +299,8 @@ class SupabaseFalso:
                 return Resp(403, {"code": "42501", "message": "só o criador muda a categoria"})
             m["categoria"] = json["p_categoria"]
             return Resp(200, {"categoria": json["p_categoria"]})
+        if p == "/rest/v1/rpc/meus_recentes":
+            return Resp(200, getattr(self, "recentes", []))
         if p == "/rest/v1/rpc/definir_bio":
             t = " ".join(json["p_texto"].split())[:140].replace("idiota", "******")
             self.perfil["bio"] = t
@@ -1865,3 +1867,11 @@ def test_servidor_privado_com_codigo(cliente, sb):
     assert r.headers["Location"].endswith(f"/jogar/{mid}?s=p1")
     r = cliente.post("/privado/entrar", data={"csrf": tok, "codigo": "ZZZZZZ"})
     assert r.status_code == 302 and "/jogar/" not in r.headers["Location"]          # código errado não entra
+
+
+def test_jogados_recentemente(cliente, sb):
+    entrar(cliente)
+    assert "Jogados recentemente" not in html(cliente.get("/inicio"))
+    sb.recentes = [{"id": "11111111-1111-1111-1111-111111111111", "nome": "Obby <x>", "dia": "2026-11-21"}]
+    t = html(cliente.get("/inicio"))
+    assert "🕘 Jogados recentemente" in t and "Obby &lt;x&gt;" in t and "/jogos/11111111-1111-1111-1111-111111111111" in t

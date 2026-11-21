@@ -353,7 +353,11 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
             missoes = g.api.minhas_missoes()
         except ErroRolox:
             missoes = []
-        return render_template("inicio.html", perfil=carregar_perfil(), onde=onde, missoes=missoes, pedidos=pedidos,
+        try:
+            recentes = g.api.meus_recentes()
+        except ErroRolox:
+            recentes = []
+        return render_template("inicio.html", perfil=carregar_perfil(), onde=onde, missoes=missoes, pedidos=pedidos, recentes=recentes,
                                alertas=g.api.alertas(), amigos_online=amigos, aba="inicio")
 
     @app.post("/missoes/<codigo>/resgatar")

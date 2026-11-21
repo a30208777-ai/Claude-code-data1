@@ -21,6 +21,13 @@
 </a>
 {% endif %}
 
+{% if recentes %}
+<h2>🕘 Jogados recentemente</h2>
+<div class="recentes">
+  {% for m in recentes %}<a class="recente" href="{{ url_for('jogo_pagina', mapa_id=m.id) }}">🕹️ {{ m.nome }}</a>{% endfor %}
+</div>
+{% endif %}
+
 <h2 id="missoes">🎯 Missões de hoje</h2>
 {% for x in missoes %}
   <div class="cartao missao{{ ' feita' if x.feita }}">

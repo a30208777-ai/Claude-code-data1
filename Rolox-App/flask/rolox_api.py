@@ -388,6 +388,9 @@ class RoloxAPI:
     def codigo_do_meu_privado(self, server_uid: str) -> Optional[str]:
         return self._req("POST", "/rest/v1/rpc/codigo_do_meu_privado", json={"p_server": server_uid})
 
+    def meus_recentes(self) -> list[dict]:
+        return self._req("POST", "/rest/v1/rpc/meus_recentes", json={"p_limite": 6}) or []
+
     def nome_de(self, user_id: str) -> Optional[str]:
         """Nome de usuário de alguém (perfis são visíveis para quem está logado)."""
         linhas = self._req("GET", "/rest/v1/perfis", params={"select": "username", "id": f"eq.{user_id}"}) or []

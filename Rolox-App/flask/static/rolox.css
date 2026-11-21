@@ -380,3 +380,6 @@ body.flash-foto::after { content: ""; position: fixed; inset: 0; z-index: 20; ba
 .categorias { display: flex; gap: 6px; overflow-x: auto; padding: 4px 0 8px; }
 .categorias a { white-space: nowrap; padding: 6px 10px; border-radius: 16px; background: #8881; text-decoration: none; color: inherit; font-size: .85rem; }
 .categorias a.ativo { background: var(--primaria); color: #fff; }
+
+.recentes { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; }
+.recente { white-space: nowrap; padding: 10px 14px; border-radius: 14px; background: #8881; text-decoration: none; color: inherit; font-weight: 600; }
