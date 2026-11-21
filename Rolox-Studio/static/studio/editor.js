@@ -13,6 +13,7 @@ import { carregarPython } from "./scripts.js";
 import { MODELOS } from "./modelos.js";
 import { TIPOS_MUNDO, gerarMundo } from "./gerador.js";
 import { PRONTOS, colocarPronto } from "./prontos.js";
+import { copiar, colar } from "./copiar.js";
 import { extrairAcoes, aplicarAcoes, resumoCena } from "./agente_ia.js";
 import { ligarTela, ligarSons, ligarInternet } from "./tela_jogo.js";
 import { ligarMidias } from "./midia_jogo.js";
@@ -636,6 +637,21 @@ const acoes = {
   localscript() { novoScript("LocalScript"); },
   modulescript() { novoScript("ModuleScript"); },
   pasta() { const f = criar("Folder"); f.Parent = ondeColocar("Folder"); mudou(); selecionar(f); },
+  copiar() {
+    try { const n = copiar(estado.sel); saida(`📋 Copiado: ${estado.sel.Name}${n > 1 ? ` (+${n - 1} dentro)` : ""}. Cole aqui ou em outro projeto.`, "sistema"); }
+    catch (e) { modal(e.message); }
+  },
+  colar() {
+    try {
+      const pai = estado.sel && !estado.sel._destruida && ["Model", "Folder"].includes(estado.sel.ClassName) ? estado.sel : null;
+      const novo = colar(pai || estado.mundo.workspace);
+      if (novo.ClassName === "Script" && !pai) novo.Parent = estado.mundo.game.ServerScriptService;
+      if (novo.ClassName === "LocalScript" && !pai) novo.Parent = estado.mundo.game.StarterPlayer.FindFirstChildOfClass("StarterPlayerScripts");
+      if (estado.mundo.contarPartes() > LIMITE_PARTES) { novo.Destroy(); modal(`Passaria do limite de ${LIMITE_PARTES} peças.`); return; }
+      mudou(); selecionar(novo);
+      saida(`📌 Colado: ${novo.Name}`, "sistema");
+    } catch (e) { modal(e.message); }
+  },
   duplicar() {
     const s = estado.sel; if (!s || s.constructor.naoCriavel) return;
     const c = s.Clone(); c.Parent = s.Parent;
@@ -722,6 +738,8 @@ document.addEventListener("keydown", (e) => {
   else if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === "y" || (e.key.toLowerCase() === "z" && e.shiftKey))) { e.preventDefault(); acoes.refazer(); }
   else if ((e.ctrlKey || e.metaKey) && e.key === "s") { e.preventDefault(); acoes.salvar(); }
   else if ((e.ctrlKey || e.metaKey) && e.key === "d") { e.preventDefault(); acoes.duplicar(); }
+  else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "c") { e.preventDefault(); acoes.copiar(); }
+  else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "v") { e.preventDefault(); acoes.colar(); }
   else if (e.key === "Delete") acoes.apagar();
   else if (e.key === "w" && PESADO) acoes.mover();
   else if (e.key === "r" && PESADO) acoes.escalar();
