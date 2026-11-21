@@ -321,17 +321,19 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
             flash(f"🎟️ Presente do dia: +{presente['ganhou']} tickets! "
                   f"Amanhã você ganha {presente['amanha']}.", "ok")
         try:
-            amigos = [a for a in g.api.meus_amigos() if a["tipo"] == "amigo" and a.get("online")]
+            todos = g.api.meus_amigos()
+            pedidos = [a["username"] for a in todos if a["tipo"] == "recebido"]
+            amigos = [a for a in todos if a["tipo"] == "amigo" and a.get("online")]
             selo = parceiros(a["username"] for a in amigos)
             for a in amigos:
                 a["parceiro"] = a["username"] in selo
         except ErroRolox:
-            amigos = []
+            amigos, pedidos = [], []
         try:
             missoes = g.api.minhas_missoes()
         except ErroRolox:
             missoes = []
-        return render_template("inicio.html", perfil=carregar_perfil(), onde=onde, missoes=missoes,
+        return render_template("inicio.html", perfil=carregar_perfil(), onde=onde, missoes=missoes, pedidos=pedidos,
                                alertas=g.api.alertas(), amigos_online=amigos, aba="inicio")
 
     @app.post("/missoes/<codigo>/resgatar")

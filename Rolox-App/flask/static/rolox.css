@@ -356,3 +356,5 @@ body.flash-foto::after { content: ""; position: fixed; inset: 0; z-index: 20; ba
 
 .bio { margin: 4px 0; font-style: italic; }
 .tempo-hoje { font-weight: 700; color: #b9f6ca; }
+
+.pedidos-amizade { text-decoration: none; color: inherit; border: 2px solid var(--primaria); }

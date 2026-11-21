@@ -13,6 +13,14 @@
   </div>
 </div>
 
+{% if pedidos %}
+<a class="cartao pedidos-amizade" href="{{ url_for('amigos') }}">
+  <span class="icone">📬</span>
+  <div class="info"><div class="titulo">{{ pedidos|length }} {{ 'pedido' if pedidos|length == 1 else 'pedidos' }} de amizade</div>
+    <div class="detalhe">{{ pedidos[:3]|join(', ') }}{% if pedidos|length > 3 %} e mais {{ pedidos|length - 3 }}{% endif %} — toque para responder</div></div>
+</a>
+{% endif %}
+
 <h2 id="missoes">🎯 Missões de hoje</h2>
 {% for x in missoes %}
   <div class="cartao missao{{ ' feita' if x.feita }}">

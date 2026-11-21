@@ -1699,3 +1699,12 @@ def test_sobre_mim_no_perfil(cliente, sb):
     cliente.post("/perfil/bio", data={"csrf": tok, "bio": "Sou o <i>melhor</i>"})
     t = html(cliente.get("/jogador/alice"))
     assert "“Sou o &lt;i&gt;melhor&lt;/i&gt;”" in t
+
+
+def test_inicio_avisa_pedidos_de_amizade(cliente, sb):
+    entrar(cliente)
+    assert "pedido" not in html(cliente.get("/inicio")).split("Missões")[0].lower()
+    sb.amigos = [{"username": "bob", "tipo": "recebido"}, {"username": "<carla>", "tipo": "recebido"},
+                 {"username": "davi", "tipo": "enviado"}]
+    t = html(cliente.get("/inicio"))
+    assert "2 pedidos de amizade" in t and "bob, &lt;carla&gt;" in t and 'href="/amigos"' in t
