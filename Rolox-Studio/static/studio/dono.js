@@ -47,7 +47,7 @@ export function ligarPainelDono({ jogo, botao, painel, mj = null, executor, abri
   const lista = el("div", { className: "dono-jogadores" });
   const motivo = el("input", { type: "text", maxLength: 200, placeholder: podeBanir ? "Motivo do kick/ban (opcional)" : "Motivo do kick (opcional)", className: "dono-texto" });
   motivo.addEventListener("keydown", (e) => e.stopPropagation());
-  const titulo = el("div", { className: "dono-sub" });
+  const tituloLista = el("div", { className: "dono-sub" });
   const poderes = el("div", { className: "dono-poderes" },
     ...Object.entries(PODERES).map(([nome, codigo]) => el("button", {
       type: "button", className: "dono-poder", textContent: nome,
@@ -59,7 +59,7 @@ export function ligarPainelDono({ jogo, botao, painel, mj = null, executor, abri
   const fechar = el("button", { type: "button", className: "btn-jogo pequeno", textContent: "✕", ariaLabel: "Fechar painel do dono" });
   painel.replaceChildren(
     el("div", { className: "exec-topo" }, el("b", { textContent: titulo }), el("span", { className: "exec-nota", textContent: "só você vê" }), fechar),
-    titulo, motivo, lista,
+    tituloLista, motivo, lista,
     el("div", { className: "dono-sub", textContent: "Poderes" }), poderes,
     el("div", { className: "dono-sub", textContent: "Anúncio" }), el("div", { className: "exec-botoes" }, texto, anunciar));
 
@@ -74,7 +74,7 @@ export function ligarPainelDono({ jogo, botao, painel, mj = null, executor, abri
 
   const desenhar = () => {
     const outros = mj ? [...mj.outros.values()] : [];
-    titulo.textContent = `Jogadores no servidor (${outros.length})`;
+    tituloLista.textContent = `Jogadores no servidor (${outros.length})`;
     if (!outros.length) {
       lista.replaceChildren(el("p", { className: "exec-nota", textContent: passe ? "Só você está aqui agora." : "Jogando sozinho (sem servidor): kick e ban só num servidor." }));
       return;

@@ -206,9 +206,14 @@
                          pulo: document.getElementById("botaoPulo") });
     }
   } catch (e) {
+    console.error(e);
     const st = document.getElementById("carregandoStatus");
-    st.textContent = "Não deu para abrir o jogo: " + e.message; st.classList.add("erro");
-    carregando.querySelector(".carregando-barra")?.remove();
+    if (st) {                                   // ainda carregando: mostra na tela de carregar
+      st.textContent = "Não deu para abrir o jogo: " + e.message; st.classList.add("erro");
+      carregando.querySelector(".carregando-barra")?.remove();
+    } else {                                    // o jogo já abriu: avisa sem travar o resto
+      aviso("Algo falhou no jogo: " + e.message);
+    }
   }
 </script>
 
