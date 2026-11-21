@@ -1730,3 +1730,13 @@ def test_jogos_mais_curtidos_e_filtro(cliente, sb):
     sb.chamadas.clear()
     assert cliente.get("/jogos?ordem=<script>").status_code == 200          # ordem estranha: volta para populares
     assert any(c[2].get("order", "").startswith("visitas.desc") for c in sb.chamadas if c[1] == "/rest/v1/mapas")
+
+
+def test_jogo_tem_botao_voltar(cliente, sb):
+    entrar(cliente)
+    tok = csrf(cliente)
+    mid = enviar_mapa(cliente).get_json()["id"]
+    sb.dono = True
+    cliente.post(f"/dono/{mid}/aprovar", data={"csrf": tok})
+    t = html(cliente.get(f"/jogar/{mid}?teste=1"))
+    assert 'id="voltarInicio"' in t and "_ondeRenascer" in t

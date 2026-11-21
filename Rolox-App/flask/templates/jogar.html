@@ -68,6 +68,7 @@
   {% if not teste %}<button class="btn-jogo" id="curtir" data-curti="{{ '1' if curti else '0' }}"
     aria-label="Curtir este jogo">{{ '❤️' if curti else '🤍' }}</button>{% endif %}
   <button class="btn-jogo" id="girarTela" hidden aria-label="Deitar a tela">🔄</button>
+  <button class="btn-jogo" id="voltarInicio" aria-label="Voltar ao checkpoint" title="Preso? Volta ao último checkpoint (ou ao começo)">↺</button>
   <button class="btn-jogo" id="abrirAjustes" aria-label="Ajustes" aria-expanded="false" title="Ajustes">⚙️</button>
   <button class="btn-jogo" id="botaoMinimapa" aria-label="Minimapa" aria-pressed="true" title="Minimapa">🗺️</button>
   <button class="btn-jogo" id="abrirGestos" aria-label="Gestos" aria-expanded="false" title="Gestos">😀</button>
@@ -174,6 +175,13 @@
       cofre: {% if teste or hack %}null{% else %}{ url: {{ url_for('cofre_ler', mapa_id=m.id)|tojson }}, csrf: CSRF }{% endif %},
     });
     carregando.remove();
+    document.getElementById("voltarInicio").addEventListener("click", () => {
+      const eu = jogo.local;
+      if (!eu || eu.humanoid.Health <= 0) return;
+      eu.raiz.Position = jogo._ondeRenascer(eu);
+      eu.raiz.Velocity = eu.raiz.Velocity.mul(0);
+      aviso(eu._checkpoint ? "↺ De volta ao checkpoint" : "↺ De volta ao começo", "ok");
+    });
     {
       const { ligarAjustes } = await import("/static/studio/ajustes.js");
       const aj = ligarAjustes(jogo, jogo.render, { botao: document.getElementById("abrirAjustes"), painel: document.getElementById("ajustes"),
