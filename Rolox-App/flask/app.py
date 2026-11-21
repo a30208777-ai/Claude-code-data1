@@ -1143,8 +1143,15 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
         por_jogo: dict = {}
         for e in emblemas:
             por_jogo.setdefault(e["jogo"], []).append(e)
+        try:                                            # 🎮 jogos aprovados que essa pessoa criou
+            publicados = g.api.mapas_publicados("populares")
+            nomes = g.api.nomes_de([m["autor_id"] for m in publicados])
+            criados = [m for m in publicados if nomes.get(m["autor_id"]) == p["username"]]
+        except ErroRolox:
+            criados = []
         return render_template("jogador.html", p=p, redes=redes, eu_nome=carregar_perfil().get("username"),
-                               emblemas=por_jogo, total_emblemas=len(emblemas), aba="inicio")
+                               emblemas=por_jogo, total_emblemas=len(emblemas), criados=criados,
+                               visitas_criados=sum(m.get("visitas") or 0 for m in criados), aba="inicio")
 
     @app.post("/dono/parcerias/criar")
     @logado

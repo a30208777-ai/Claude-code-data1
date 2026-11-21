@@ -10,6 +10,16 @@
     <p class="muted">No ROLOX desde {{ p.criado_em|data }}</p>
   </div>
 </div>
+{% if criados %}
+<h2>🎮 Jogos criados ({{ criados|length }}) <small class="muted">· 👁 {{ visitas_criados }} visitas</small></h2>
+{% for m in criados %}
+  <div class="cartao">
+    <span class="icone">🕹️</span>
+    <div class="info"><div class="titulo"><a href="{{ url_for('jogo_pagina', mapa_id=m.id) }}">{{ m.nome }}</a></div>
+      <div class="detalhe">👁 {{ m.visitas or 0 }} · ❤ {{ m.curtidas or 0 }}</div></div>
+  </div>
+{% endfor %}
+{% endif %}
 <h2>🏅 Emblemas ({{ total_emblemas }})</h2>
 {% for jogo, lista in emblemas.items() %}
   <p class="muted" style="margin:8px 0 4px">🎮 {{ jogo }}</p>

@@ -1708,3 +1708,15 @@ def test_inicio_avisa_pedidos_de_amizade(cliente, sb):
                  {"username": "davi", "tipo": "enviado"}]
     t = html(cliente.get("/inicio"))
     assert "2 pedidos de amizade" in t and "bob, &lt;carla&gt;" in t and 'href="/amigos"' in t
+
+
+def test_jogador_mostra_jogos_criados(cliente, sb):
+    entrar(cliente)
+    tok = csrf(cliente)
+    assert "Jogos criados" not in html(cliente.get("/jogador/alice"))
+    mid = enviar_mapa(cliente).get_json()["id"]
+    sb.dono = True
+    cliente.post(f"/dono/{mid}/aprovar", data={"csrf": tok})
+    sb.mapas[mid]["visitas"] = 9
+    t = html(cliente.get("/jogador/alice"))
+    assert "🎮 Jogos criados (1)" in t and "👁 9 visitas" in t and f'href="/jogos/{mid}"' in t
