@@ -652,6 +652,12 @@ const acoes = {
   desfazer() { irParaFoto(historico.i - 1); },
   refazer() { irParaFoto(historico.i + 1); },
   async jogar() { estado.jogo ? pararJogo() : iniciarJogo(); },
+  async jogarDaqui() {
+    if (estado.jogo) { pararJogo(); return; }
+    const i = estado.sel;
+    if (!(i instanceof BasePart) || i._destruida) { modal("Selecione a peça de onde quer começar (ex.: um degrau do obby) e toque em ▶ Daqui."); return; }
+    iniciarJogo(i);
+  },
 };
 
 function marcarBotao(acao) {
@@ -724,7 +730,12 @@ document.addEventListener("keydown", (e) => {
 document.addEventListener("keyup", (e) => estado.jogo?.teclas.delete(e.key.toLowerCase()));
 
 // -------------------------------------------------------------- jogar
-async function iniciarJogo() {
+/** Ponto em cima de uma peça (para "▶ Testar daqui"). Puro: dá para testar. */
+export function pontoEmCima(peca) {
+  return peca.Position.add(new Vector3(0, peca.Size.Y / 2 + 3, 0));
+}
+
+async function iniciarJogo(daqui = null) {
   if (scriptAberto) fecharScript();
   gizmo?.detach();
   orbita.enabled = false;
@@ -744,6 +755,12 @@ async function iniciarJogo() {
   catch (err) { saida(`Erro ao iniciar: ${err.message}`, "erro"); pararJogo(); return; }
   jogo._pararMidias = ligarMidias(jogo, render);
   $("#controlesToque").hidden = !(CELULAR || "ontouchstart" in window);
+  if (daqui && jogo.local?.raiz) {                         // ▶ Testar daqui: começa em cima da peça escolhida
+    jogo.local.raiz.Position = pontoEmCima(daqui);
+    jogo.local.raiz.Velocity = new Vector3();
+    jogo.cam?.posicionarAtras?.(jogo.local.raiz.Position);
+    saida(`▶ Começando em cima de "${daqui.Name}"`, "sistema");
+  }
 }
 
 function pararJogo() {
