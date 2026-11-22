@@ -415,3 +415,4 @@ body.flash-foto::after { content: ""; position: fixed; inset: 0; z-index: 20; ba
   --ok: #2e7d32;
 }
 .btn-jogo { zoom: var(--escala-botoes, 1); }   /* 🔘 ⚙️ tamanho dos botões do jogo */
+body.sem-botoes .btn-jogo, body.sem-botoes .online-jogo { visibility: hidden; }   /* 🙈 */

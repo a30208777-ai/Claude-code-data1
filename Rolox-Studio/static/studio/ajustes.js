@@ -61,13 +61,26 @@ export function aplicarAjustes(jogo, render, a, { camadaNomes, contador } = {}) 
 export const CONTROLES = [
   ["W A S D / setas", "andar"], ["Espaço", "pular"], ["Arrastar / botão direito", "girar a câmera"],
   ["Roda do mouse / pinça", "zoom"], ["Q / E", "girar a câmera pelo teclado"], ["Enter", "abrir o chat"],
-  ["Esc", "fechar o chat"], ["Celular", "joystick à esquerda, botão de pular à direita"],
+  ["Esc", "fechar o chat"], ["H", "esconder/mostrar os botões"], ["Celular", "joystick à esquerda, botão de pular à direita"],
 ];
 function controles() {
   const d = el("details", { className: "ajuste-controles" }, el("summary", { textContent: "❓ Controles" }));
   d.append(el("ul", {}, ...CONTROLES.map(([k, v]) => el("li", {}, el("b", { textContent: k }), document.createTextNode(" — " + v)))));
   return d;
 }
+
+/** 🙈 Some com os botões por N segundos (bom para foto/vídeo). Tecla H também alterna. */
+export function esconderBotoes(seg = 10, corpo = globalThis.document?.body) {
+  if (!corpo) return;
+  corpo.classList.add("sem-botoes");
+  clearTimeout(esconderBotoes._t);
+  if (seg) esconderBotoes._t = setTimeout(() => corpo.classList.remove("sem-botoes"), seg * 1000);
+}
+globalThis.addEventListener?.("keydown", (e) => {
+  if (e.key?.toLowerCase() !== "h" || /input|textarea/i.test(e.target?.tagName || "")) return;
+  const c = globalThis.document.body;
+  if (c.classList.contains("sem-botoes")) c.classList.remove("sem-botoes"); else esconderBotoes(0);
+});
 
 export function ligarAjustes(jogo, render, { botao, painel, camadaNomes, contador }) {
   let a = lerAjustes();
@@ -96,6 +109,8 @@ export function ligarAjustes(jogo, render, { botao, painel, camadaNomes, contado
   painel.replaceChildren(el("b", { textContent: "⚙️ Ajustes" }),
     linha("Qualidade", qual), linha("🔊 Som", marca("som")), linha("🔉 Volume", vol), linha("🏷️ Nomes dos jogadores", marca("nomes")), linha("📈 Mostrar FPS", marca("fps")), linha("💀 Som ao cair", morte), linha("🎥 Sensibilidade da câmera", sens), linha("↕️ Inverter câmera", marca("inverterY")), linha("🔋 Limite de FPS", lim), linha("⏰ Lembrete de pausa", lem), linha("🔘 Tamanho dos botões", tb),
     el("div", { className: "ajuste" }, el("span", { textContent: "⏱️ Jogado hoje" }), tempoHoje),
+    el("button", { type: "button", className: "btn-jogo pequeno", textContent: "🙈 Esconder botões por 10 s",
+      onclick: () => { painel.hidden = true; esconderBotoes(10); } }),
     el("button", { type: "button", className: "btn-jogo pequeno", textContent: "↺ Restaurar padrão",
       onclick: () => { salvarAjustes({ ...PADRAO }); location.reload(); } }),
     controles());
