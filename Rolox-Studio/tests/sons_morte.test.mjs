@@ -39,3 +39,8 @@ test("tamanho dos botões aceita 0.8, 1 ou 1.25", () => {
   assert.equal(lerAjustes(m({ botoes: 1.25 })).botoes, 1.25);
   assert.equal(lerAjustes(m({ botoes: 9 })).botoes, 1);
 });
+test("volume fica entre 0 e 1", () => {
+  const m = (v) => ({ getItem: () => JSON.stringify(v) });
+  assert.equal(lerAjustes(m({ volume: 5 })).volume, 1);
+  assert.equal(lerAjustes(m({ volume: 0.4 })).volume, 0.4);
+});

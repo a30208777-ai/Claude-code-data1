@@ -81,7 +81,7 @@ function nota(a, freq, inicio, dur, tipo = "square", vol = 0.12, freqFim = null)
   o.type = tipo;
   o.frequency.setValueAtTime(freq, inicio);
   if (freqFim) o.frequency.exponentialRampToValueAtTime(freqFim, inicio + dur);
-  g.gain.setValueAtTime(vol, inicio);
+  g.gain.setValueAtTime(Math.max(0.0001, vol * (globalThis.ROLOX_VOLUME ?? 1)), inicio);   // 🔉 volume dos ajustes
   g.gain.exponentialRampToValueAtTime(0.0001, inicio + dur);
   o.connect(g).connect(a.destination);
   o.start(inicio); o.stop(inicio + dur + 0.02);
@@ -91,7 +91,7 @@ function ruido(a, inicio, dur, vol = 0.3) {
   const n = Math.floor(a.sampleRate * dur), buf = a.createBuffer(1, n, a.sampleRate), d = buf.getChannelData(0);
   for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / n);
   const s = a.createBufferSource(), g = a.createGain();
-  s.buffer = buf; g.gain.value = vol; s.connect(g).connect(a.destination); s.start(inicio);
+  s.buffer = buf; g.gain.value = vol * (globalThis.ROLOX_VOLUME ?? 1); s.connect(g).connect(a.destination); s.start(inicio);
 }
 
 export const RECEITAS = {

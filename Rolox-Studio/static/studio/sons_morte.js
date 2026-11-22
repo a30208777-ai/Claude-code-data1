@@ -31,7 +31,7 @@ export function tocarSomMorte(nome) {
     const o = a.createOscillator(), g = a.createGain(), filtro = a.createBiquadFilter();
     o.type = forma; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + dur);
     filtro.type = "lowpass"; filtro.frequency.value = 1800;
-    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.3, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(Math.max(0.0002, 0.3 * (globalThis.ROLOX_VOLUME ?? 1)), t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
     o.connect(filtro).connect(g).connect(a.destination); o.start(t); o.stop(t + dur + 0.02);
     if (nome !== "sino") t += dur;
   }
