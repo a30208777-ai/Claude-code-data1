@@ -41,6 +41,27 @@
     });
   })();
 </script>
+<p><button type="button" class="btn texto" id="soFavoritos">⭐ Meus favoritos</button></p>
+<script>
+  // ⭐ Favoritos ficam salvos neste aparelho — sempre à vista, sem algoritmo escondendo seus jogos.
+  (() => {
+    const CH = "rolox.favoritos";
+    let favs; try { favs = new Set(JSON.parse(localStorage.getItem(CH) || "[]")); } catch { favs = new Set(); }
+    const salvar = () => { try { localStorage.setItem(CH, JSON.stringify([...favs])); } catch {} };
+    let filtro = false;
+    const pintar = () => document.querySelectorAll("[data-fav]").forEach((b) => {
+      const id = b.dataset.fav, on = favs.has(id);
+      b.textContent = on ? "⭐" : "☆"; b.setAttribute("aria-label", on ? "Tirar dos favoritos" : "Favoritar");
+      const c = document.getElementById("mapa-" + id); if (c) c.hidden = filtro && !on;
+    });
+    document.addEventListener("click", (e) => {
+      const b = e.target.closest("[data-fav]");
+      if (b) { favs.has(b.dataset.fav) ? favs.delete(b.dataset.fav) : favs.add(b.dataset.fav); salvar(); pintar(); }
+      if (e.target.id === "soFavoritos") { filtro = !filtro; e.target.classList.toggle("ativo", filtro); pintar(); }
+    });
+    document.addEventListener("DOMContentLoaded", pintar); pintar();
+  })();
+</script>
 <p class="nota">Mapas feitos pela comunidade no ROLOX Studio e aprovados pelo dono. Toque em Jogar: você entra
   num servidor com a galera e com chat.</p>
 
@@ -52,6 +73,7 @@
       {% if m.descricao %}<div class="detalhe">{{ m.descricao }}</div>{% endif %}
       <div class="detalhe">{{ categorias.get(m.categoria, '') }} · 👁 {{ m.visitas or 0 }} · ❤ {{ m.curtidas or 0 }}</div>
     </div>
+    <button type="button" class="btn texto favorito" data-fav="{{ m.id }}" aria-label="Favoritar">☆</button>
     <form method="post" action="{{ url_for('jogo_curtir', mapa_id=m.id) }}">
       <input type="hidden" name="csrf" value="{{ csrf }}">
       <input type="hidden" name="curtir" value="{{ '0' if m.id in curti else '1' }}">

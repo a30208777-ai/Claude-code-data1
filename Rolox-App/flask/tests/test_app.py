@@ -1878,3 +1878,9 @@ def test_jogados_recentemente(cliente, sb):
     sb.recentes = [{"id": "11111111-1111-1111-1111-111111111111", "nome": "Obby <x>", "dia": "2026-11-21"}]
     t = html(cliente.get("/inicio"))
     assert "🕘 Jogados recentemente" in t and "Obby &lt;x&gt;" in t and "/jogos/11111111-1111-1111-1111-111111111111" in t
+
+
+def test_jogos_tem_favoritos(cliente, sb):
+    entrar(cliente)
+    t = html(cliente.get("/jogos"))
+    assert "⭐ Meus favoritos" in t and "rolox.favoritos" in t
