@@ -8,6 +8,30 @@
     campos.forEach(x => q.set(x.name, x.value));
     document.getElementById('previa').src = '{{ url_for("avatar_svg") }}?' + q.toString();
   }));
+  // 👕 Visuais salvos (até 20, neste aparelho): troque de visual num toque.
+  const CH = 'rolox.visuais';
+  const ler = () => { try { return JSON.parse(localStorage.getItem(CH) || '[]'); } catch { return []; } };
+  const gravar = (v) => { try { localStorage.setItem(CH, JSON.stringify(v.slice(0, 20))); } catch {} };
+  function listar() {
+    const caixa = document.getElementById('visuais'); if (!caixa) return;
+    caixa.replaceChildren(...ler().map((v, i) => {
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'btn pequeno contorno';
+      b.textContent = '👕 ' + v.nome; b.title = 'Usar este visual';
+      b.onclick = () => { campos.forEach(c => { if (v.campos[c.name] !== undefined && [...c.options].some(o => o.value === v.campos[c.name])) c.value = v.campos[c.name]; });
+                          campos[0]?.dispatchEvent(new Event('change')); };
+      const x = document.createElement('button'); x.type = 'button'; x.className = 'btn texto'; x.textContent = '✕'; x.title = 'Apagar';
+      x.onclick = () => { const l = ler(); l.splice(i, 1); gravar(l); listar(); };
+      const s = document.createElement('span'); s.append(b, x); return s;
+    }));
+  }
+  document.addEventListener('DOMContentLoaded', () => {
+    listar();
+    document.getElementById('salvarVisual')?.addEventListener('click', () => {
+      const nome = (prompt('Nome do visual:', 'Visual ' + (ler().length + 1)) || '').trim().slice(0, 20); if (!nome) return;
+      const c = {}; campos.forEach(x => c[x.name] = x.value);
+      gravar([{ nome, campos: c }, ...ler()]); listar();
+    });
+  });
 </script>
 {% endblock %}
 {% block conteudo %}
@@ -34,6 +58,9 @@
     <label>Camisa<select name="camisa" data-avatar>{% for n, v in av.CORES.items() %}<option value="{{ v }}" {{ 'selected' if avatar.camisa == v }}>{{ n }}</option>{% endfor %}{% for n, v in av.ESPECIAIS.items() if v in comprados.get('camisa', ()) %}<option value="{{ v }}" {{ 'selected' if avatar.camisa == v }}>⭐ {{ n }}</option>{% endfor %}</select></label>
     <label>Calça<select name="calca" data-avatar>{% for n, v in av.CORES.items() %}<option value="{{ v }}" {{ 'selected' if avatar.calca == v }}>{{ n }}</option>{% endfor %}{% for n, v in av.ESPECIAIS.items() if v in comprados.get('calca', ()) %}<option value="{{ v }}" {{ 'selected' if avatar.calca == v }}>⭐ {{ n }}</option>{% endfor %}</select></label>
   </div>
+  <p><button type="button" class="btn pequeno" id="salvarVisual">💾 Salvar este visual</button>
+    <small class="muted">Guarde até 20 visuais e troque num toque (depois clique em Salvar lá embaixo).</small></p>
+  <div id="visuais" class="linha" style="flex-wrap:wrap;gap:6px"></div>
   <h2>⚙️ Configurações (config)</h2>
   <label>Idioma do chat
     <select name="idioma">
