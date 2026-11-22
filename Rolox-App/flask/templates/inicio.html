@@ -48,6 +48,7 @@
 <div class="linha">
   <h2 class="cresce">👥 Amigos online</h2>
   <a class="btn texto" href="{{ url_for('amigos') }}">Ver amigos</a>
+  <a class="btn texto" href="{{ url_for('novidades') }}">📰 Novidades</a>
   <a class="btn texto" href="{{ url_for('mensagens') }}">💌 Mensagens{% if nao_lidas %} <span class="contador-novo" aria-label="{{ nao_lidas }} não lidas">{{ nao_lidas }}</span>{% endif %}</a>
   <a class="btn texto" href="{{ url_for('loja') }}">🛒 Loja</a>
 </div>

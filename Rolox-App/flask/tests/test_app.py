@@ -1925,3 +1925,9 @@ def test_inicio_mostra_mensagens_nao_lidas(cliente, sb):
     assert 'class="contador-novo"' in html(cliente.get("/inicio"))
     sb.nao_lidas = 0
     assert 'class="contador-novo"' not in html(cliente.get("/inicio"))
+
+
+def test_novidades_publica_e_no_inicio(cliente, sb):
+    assert "📰 Novidades do ROLOX" in html(cliente.get("/novidades"))
+    entrar(cliente)
+    assert "/novidades" in html(cliente.get("/inicio"))

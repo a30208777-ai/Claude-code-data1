@@ -495,6 +495,11 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
                                aba="perfil")
 
     # ------------------------------------------------ termos e política (públicas)
+    @app.get("/novidades")
+    def novidades():
+        """📰 O que mudou no ROLOX — sempre aberto, sem esconder nada dos jogadores."""
+        return render_template("novidades.html", aba="inicio")
+
     @app.get("/termos")
     def termos():
         return render_template("termos.html")
