@@ -44,3 +44,8 @@ test("volume fica entre 0 e 1", () => {
   assert.equal(lerAjustes(m({ volume: 5 })).volume, 1);
   assert.equal(lerAjustes(m({ volume: 0.4 })).volume, 0.4);
 });
+test("campo de visão fica entre 50 e 100", () => {
+  const m = (v) => ({ getItem: () => JSON.stringify(v) });
+  assert.equal(lerAjustes(m({ fov: 200 })).fov, 100);
+  assert.equal(lerAjustes(m({})).fov, 70);
+});

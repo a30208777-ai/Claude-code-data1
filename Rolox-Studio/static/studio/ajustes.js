@@ -2,7 +2,7 @@
 import { SONS_MORTE, tocarSomMorte } from "./sons_morte.js";
 //   qualidade (baixa = celular fraco roda liso) · som · nomes dos jogadores · contador de FPS
 
-export const PADRAO = { qualidade: "auto", som: true, nomes: true, fps: false, somMorte: "classico", sensibilidade: 1, inverterY: false, fpsMax: 0, lembrete: 60, botoes: 1, volume: 1, vibrar: true };
+export const PADRAO = { qualidade: "auto", som: true, nomes: true, fps: false, somMorte: "classico", sensibilidade: 1, inverterY: false, fpsMax: 0, lembrete: 60, botoes: 1, volume: 1, vibrar: true, fov: 70 };
 export const TAMANHOS_BOTOES = { 0.8: "Pequenos", 1: "Normais", 1.25: "Grandes" };
 export const LEMBRETES = { 0: "Desligado", 30: "A cada 30 min", 60: "A cada 1 hora" };
 export const LIMITES_FPS = { 0: "Sem limite", 60: "60 FPS", 30: "30 FPS (economia de bateria)" };
@@ -23,6 +23,7 @@ export function lerAjustes(armazenamento = globalThis.localStorage) {
       fpsMax: String(d.fpsMax) in LIMITES_FPS ? Number(d.fpsMax) : PADRAO.fpsMax,
       lembrete: String(d.lembrete) in LEMBRETES ? Number(d.lembrete) : PADRAO.lembrete,
       botoes: String(d.botoes) in TAMANHOS_BOTOES ? Number(d.botoes) : PADRAO.botoes,
+      fov: Number.isFinite(d.fov) ? Math.min(100, Math.max(50, d.fov)) : PADRAO.fov,
       vibrar: typeof d.vibrar === "boolean" ? d.vibrar : PADRAO.vibrar,
       volume: Number.isFinite(d.volume) ? Math.min(1, Math.max(0, d.volume)) : PADRAO.volume,
     };
@@ -54,6 +55,7 @@ export function aplicarAjustes(jogo, render, a, { camadaNomes, contador } = {}) 
   if (camadaNomes) camadaNomes.style.display = a.nomes ? "" : "none";
   if (contador) contador.hidden = !a.fps;
   if (jogo) jogo.fpsMax = a.fpsMax;
+  if (render?.camera && a.fov) { render.camera.fov = a.fov; render.camera.updateProjectionMatrix?.(); }   // 👁️ campo de visão
   globalThis.document?.documentElement.style.setProperty("--escala-botoes", String(a.botoes));   // 🔘 tamanho dos botões do jogo
   if (jogo?.cam) { jogo.cam.sensibilidade = a.sensibilidade; jogo.cam.inverterY = a.inverterY; }
 }
@@ -110,9 +112,11 @@ export function ligarAjustes(jogo, render, { botao, painel, camadaNomes, contado
   tb.addEventListener("change", () => { a.botoes = Number(tb.value); mudou(); });
   const vol = el("input", { type: "range", min: "0", max: "1", step: "0.05", value: String(a.volume) });
   vol.addEventListener("input", () => { a.volume = Number(vol.value); mudou(); });
+  const fov = el("input", { type: "range", min: "50", max: "100", step: "5", value: String(a.fov) });
+  fov.addEventListener("input", () => { a.fov = Number(fov.value); mudou(); });
   const tempoHoje = el("span", { className: "tempo-hoje", textContent: "—" });
   painel.replaceChildren(el("b", { textContent: "⚙️ Ajustes" }),
-    linha("Qualidade", qual), linha("🔊 Som", marca("som")), linha("🔉 Volume", vol), linha("🏷️ Nomes dos jogadores", marca("nomes")), linha("📈 Mostrar FPS", marca("fps")), linha("💀 Som ao cair", morte), linha("📳 Vibrar ao cair (celular)", marca("vibrar")), linha("🎥 Sensibilidade da câmera", sens), linha("↕️ Inverter câmera", marca("inverterY")), linha("🔋 Limite de FPS", lim), linha("⏰ Lembrete de pausa", lem), linha("🔘 Tamanho dos botões", tb),
+    linha("Qualidade", qual), linha("🔊 Som", marca("som")), linha("🔉 Volume", vol), linha("🏷️ Nomes dos jogadores", marca("nomes")), linha("📈 Mostrar FPS", marca("fps")), linha("💀 Som ao cair", morte), linha("📳 Vibrar ao cair (celular)", marca("vibrar")), linha("🎥 Sensibilidade da câmera", sens), linha("👁️ Campo de visão", fov), linha("↕️ Inverter câmera", marca("inverterY")), linha("🔋 Limite de FPS", lim), linha("⏰ Lembrete de pausa", lem), linha("🔘 Tamanho dos botões", tb),
     el("div", { className: "ajuste" }, el("span", { textContent: "⏱️ Jogado hoje" }), tempoHoje),
     el("button", { type: "button", className: "btn-jogo pequeno", textContent: "🙈 Esconder botões por 10 s",
       onclick: () => { painel.hidden = true; esconderBotoes(10); } }),
