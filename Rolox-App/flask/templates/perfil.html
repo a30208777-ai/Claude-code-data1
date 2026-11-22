@@ -62,6 +62,19 @@
     <small class="muted">Guarde até 20 visuais e troque num toque (depois clique em Salvar lá embaixo).</small></p>
   <div id="visuais" class="linha" style="flex-wrap:wrap;gap:6px"></div>
   <h2>⚙️ Configurações (config)</h2>
+  <label>🌗 Tema do site
+    <select id="temaSite">
+      <option value="auto">Automático (igual ao aparelho)</option><option value="claro">☀️ Claro</option><option value="escuro">🌙 Escuro</option>
+    </select>
+  </label>
+  <script>
+    (() => { const s = document.getElementById('temaSite'); let t = 'auto';
+      try { t = localStorage.getItem('rolox.tema') || 'auto'; } catch {}
+      s.value = t;
+      s.addEventListener('change', () => { try { localStorage.setItem('rolox.tema', s.value); } catch {}
+        if (s.value === 'auto') delete document.documentElement.dataset.tema; else document.documentElement.dataset.tema = s.value; });
+    })();
+  </script>
   <label>Idioma do chat
     <select name="idioma">
       {% for k, v in idiomas.items() %}<option value="{{ k }}" {{ 'selected' if perfil.idioma == k }}>{{ v }}</option>{% endfor %}

@@ -388,3 +388,29 @@ body.flash-foto::after { content: ""; position: fixed; inset: 0; z-index: 20; ba
 .frases-rapidas{display:flex;flex-wrap:wrap;gap:4px;margin:4px 0}
 .frases-rapidas .frase{font-size:.8em}
 .ausente{position:fixed;left:50%;top:12px;transform:translateX(-50%);background:#1e1533ee;color:#fff;padding:8px 14px;border-radius:12px;z-index:50;max-width:90vw;text-align:center}
+
+/* 🌗 tema escolhido pelo jogador (Perfil) vence o do aparelho */
+:root[data-tema="escuro"] {
+    --fundo: #141218;
+    --cartao: #1f1c26;
+    --texto: #ece8f5;
+    --suave: #a6a1b5;
+    --borda: #34303f;
+    --primaria: #b39ddb;
+    --primaria-texto: #1d1236;
+    --perigo: #ef9a9a;
+    --hack: #ffb74d;
+    --ok: #a5d6a7;
+  }
+:root[data-tema="claro"] {
+  --fundo: #f6f4fb;
+  --cartao: #ffffff;
+  --texto: #1d1b24;
+  --suave: #6b6778;
+  --borda: #e3dff0;
+  --primaria: #5e35b1;
+  --primaria-texto: #ffffff;
+  --perigo: #c62828;
+  --hack: #ef6c00;
+  --ok: #2e7d32;
+}

@@ -1915,7 +1915,7 @@ def test_seguir_e_seguidores(cliente, sb):
 def test_perfil_tem_visuais_salvos(cliente, sb):
     entrar(cliente)
     t = html(cliente.get("/perfil"))
-    assert "💾 Salvar este visual" in t and "rolox.visuais" in t
+    assert "💾 Salvar este visual" in t and "rolox.visuais" in t and "🌗 Tema do site" in t and "rolox.tema" in t
 
 
 def test_inicio_mostra_mensagens_nao_lidas(cliente, sb):
