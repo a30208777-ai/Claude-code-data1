@@ -148,6 +148,7 @@ export class Jogo {
       const h = p.humanoid;
       if (h.Health <= 0 && !p._renascendo) {
         p._renascendo = true;
+        try { this.aoMorrer?.(p, p === this.local); } catch { /* som opcional */ }
         setTimeout(() => {
           if (!this.rodando) return;
           h.Health = h.MaxHealth; p.raiz.Position = this._ondeRenascer(p);

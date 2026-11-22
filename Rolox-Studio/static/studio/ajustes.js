@@ -1,7 +1,8 @@
 // ROLOX — ⚙️ ajustes do jogo (ficam salvos neste aparelho):
+import { SONS_MORTE, tocarSomMorte } from "./sons_morte.js";
 //   qualidade (baixa = celular fraco roda liso) · som · nomes dos jogadores · contador de FPS
 
-export const PADRAO = { qualidade: "auto", som: true, nomes: true, fps: false };
+export const PADRAO = { qualidade: "auto", som: true, nomes: true, fps: false, somMorte: "classico" };
 export const QUALIDADES = { auto: "Automática", baixa: "Baixa (mais leve)", media: "Média", alta: "Alta (sombras)" };
 const CHAVE = "rolox.ajustes";
 
@@ -13,6 +14,7 @@ export function lerAjustes(armazenamento = globalThis.localStorage) {
       som: typeof d.som === "boolean" ? d.som : PADRAO.som,
       nomes: typeof d.nomes === "boolean" ? d.nomes : PADRAO.nomes,
       fps: typeof d.fps === "boolean" ? d.fps : PADRAO.fps,
+      somMorte: d.somMorte in SONS_MORTE ? d.somMorte : PADRAO.somMorte,
     };
   } catch { return { ...PADRAO }; }
 }
@@ -51,9 +53,12 @@ export function ligarAjustes(jogo, render, { botao, painel, camadaNomes, contado
   };
   const qual = el("select", {}, ...Object.entries(QUALIDADES).map(([k, v]) => el("option", { value: k, textContent: v, selected: a.qualidade === k })));
   qual.addEventListener("change", () => { a.qualidade = qual.value; mudou(); });
+  const morte = el("select", {}, ...Object.entries(SONS_MORTE).map(([k, v]) => el("option", { value: k, textContent: v, selected: a.somMorte === k })));
+  morte.addEventListener("change", () => { a.somMorte = morte.value; mudou(); tocarSomMorte(a.somMorte); });
+  jogo.aoMorrer = (_p, local) => { if (local && a.som) tocarSomMorte(a.somMorte); };
   const tempoHoje = el("span", { className: "tempo-hoje", textContent: "—" });
   painel.replaceChildren(el("b", { textContent: "⚙️ Ajustes" }),
-    linha("Qualidade", qual), linha("🔊 Som", marca("som")), linha("🏷️ Nomes dos jogadores", marca("nomes")), linha("📈 Mostrar FPS", marca("fps")),
+    linha("Qualidade", qual), linha("🔊 Som", marca("som")), linha("🏷️ Nomes dos jogadores", marca("nomes")), linha("📈 Mostrar FPS", marca("fps")), linha("💀 Som ao cair", morte),
     el("div", { className: "ajuste" }, el("span", { textContent: "⏱️ Jogado hoje" }), tempoHoje));
   function mudou() { salvarAjustes(a); aplicarAjustes(jogo, render, a, { camadaNomes, contador }); }
   botao.addEventListener("click", () => { painel.hidden = !painel.hidden; botao.setAttribute("aria-expanded", String(!painel.hidden)); });
