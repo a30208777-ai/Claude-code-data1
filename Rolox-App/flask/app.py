@@ -682,6 +682,18 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
         carregar_perfil()
         return render_template("conversa.html", com=nome, msgs=g.api.conversa_privada(nome), aba="inicio")
 
+    @app.get("/mensagens/<nome>/baixar")
+    @logado
+    def mensagens_baixar(nome: str):
+        """💾 Sua conversa é sua: baixe e guarde (no ROLOX nada some sem você saber)."""
+        eu = carregar_perfil().get("username") or "eu"
+        linhas = [f"Conversa ROLOX entre {eu} e {nome}", ""]
+        for m in g.api.conversa_privada(nome):
+            linhas.append(f"[{str(m.get('criado_em', ''))[:16].replace('T', ' ')}] {eu if m.get('minha') else nome}: {m.get('texto', '')}")
+        seguro = "".join(c for c in nome if c.isalnum() or c in "_-")[:30] or "conversa"
+        return ("\n".join(linhas) + "\n", 200, {"Content-Type": "text/plain; charset=utf-8",
+                "Content-Disposition": f'attachment; filename="rolox_conversa_{seguro}.txt"'})
+
     @app.post("/jogos/<mapa_id>/categoria")
     @logado
     def jogo_categoria(mapa_id: str):

@@ -1827,6 +1827,9 @@ def test_mensagens_privadas_entre_amigos(cliente, sb):
     t = html(cliente.get("/mensagens/bob"))
     assert "oi &lt;b&gt;bob&lt;/b&gt;" in t and 'class="bolha minha"' in t
     assert "bob" in html(cliente.get("/mensagens"))
+    r = cliente.get("/mensagens/bob/baixar")
+    assert "attachment" in r.headers["Content-Disposition"] and "oi <b>bob</b>" in r.get_data(as_text=True)
+    assert "💾 Baixar conversa" in t
     cliente.post("/mensagens/estranho", data={"csrf": tok, "texto": "oi"})
     assert not any(m["com"] == "estranho" for m in sb.dms)
 

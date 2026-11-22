@@ -3,6 +3,7 @@
 {% block conteudo %}
 <p><a class="btn texto" href="{{ url_for('mensagens') }}">‹ Mensagens</a></p>
 <h1><a href="{{ url_for('jogador', nome=com) }}">{{ com }}</a></h1>
+<p><a class="btn texto" href="{{ url_for('mensagens_baixar', nome=com) }}">💾 Baixar conversa</a> <small class="muted">Suas conversas são suas — guarde quando quiser.</small></p>
 <div class="conversa-lista">
 {% for m in msgs %}
   <div class="bolha{{ ' minha' if m.minha }}">{{ m.texto }}<small>{{ m.criado_em|data }}</small></div>
