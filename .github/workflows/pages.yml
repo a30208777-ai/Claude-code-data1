@@ -1,4 +1,4 @@
-# 🌐 ROLOX no GitHub Pages: início, Termos, Política, Novidades e o Studio (roda no navegador).
+# 🌐 ROLOX no GitHub Pages: só o site (início, Termos, Política e Novidades).
 # Login, jogos online, chat e loja continuam no Render (precisam do servidor + Supabase).
 # Para ativar: Settings → Pages → Source: "GitHub Actions".
 name: GitHub Pages
@@ -6,7 +6,7 @@ name: GitHub Pages
 on:
   push:
     branches: [main, claude/rolox-arquitetura-v2-review-n5kxxe]
-    paths: ["Rolox-Studio/**", "Rolox-App/flask/**", "ferramentas/gerar_pages.py", ".github/workflows/pages.yml"]
+    paths: ["Rolox-App/flask/**", "ferramentas/gerar_pages.py", ".github/workflows/pages.yml"]
   workflow_dispatch:
 
 permissions:
@@ -30,9 +30,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Dependências
-        run: pip install -r Rolox-App/flask/requirements.txt -r Rolox-Studio/requirements.txt
-      - name: Baixar o Pyodide (Python no navegador)
-        run: python Rolox-Studio/baixar_pyodide.py
+        run: pip install -r Rolox-App/flask/requirements.txt
       - name: Gerar o site estático
         run: python ferramentas/gerar_pages.py _site
       - uses: actions/upload-pages-artifact@v3

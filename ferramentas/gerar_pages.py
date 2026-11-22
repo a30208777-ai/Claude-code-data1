@@ -1,8 +1,7 @@
 """Gera a versão estática do ROLOX para o GitHub Pages.
 
-O que vai para o Pages (não precisa de servidor):
+O que vai para o Pages (só o site, não precisa de servidor):
   • página inicial, Termos, Política e Novidades
-  • o ROLOX Studio inteiro (Three.js + Lua + Python rodam no navegador)
 O que continua no Render (precisa do servidor Flask + Supabase):
   • login, jogos online, chat, loja, multiplayer, IA do Studio  → links apontam para SITE_RENDER.
 
@@ -41,22 +40,11 @@ def gerar(saida: Path):
     saida.mkdir(parents=True, exist_ok=True)
     for velho in ("static", "studio", "termos", "politica", "novidades"):
         shutil.rmtree(saida / velho, ignore_errors=True)
-    # arquivos estáticos (Studio + site)
-    shutil.copytree(RAIZ / "Rolox-Studio/static", saida / "static")
+    # arquivos estáticos do site (css e logos)
+    (saida / "static").mkdir()
     for f in (RAIZ / "Rolox-App/flask/static").iterdir():
         if f.is_file():
             shutil.copy2(f, saida / "static" / f.name)
-    scripts = saida / "static/studio/scripts.js"          # import absoluto → relativo ao módulo
-    scripts.write_text(scripts.read_text(encoding="utf-8").replace(
-        'import("/static/vendor/pyodide/pyodide.mjs")', 'import("../vendor/pyodide/pyodide.mjs")'), encoding="utf-8")
-
-    # Studio (o servidor local do Studio renderiza as páginas)
-    sys.path.insert(0, str(RAIZ / "Rolox-Studio"))
-    import servidor as studio_srv
-    cli = studio_srv.criar_app().test_client()
-    for modo in ("pc", "leve"):
-        html = cli.get(f"/studio/{modo}").get_data(as_text=True)
-        _salvar(saida, f"studio/{modo}", _relativo(html, "../../"))
 
     # páginas públicas do site
     sys.path.insert(0, str(RAIZ / "Rolox-App/flask"))
@@ -81,9 +69,7 @@ INICIO = """<!doctype html>
 <img src="static/logo_nome.png" alt="ROLOX">
 <p>Jogue, crie e divirta-se com os amigos. Grátis.</p>
 <a class="btn" href="{SITE}/">▶ Jogar no ROLOX</a>
-<a class="btn contorno" href="studio/pc/">🧱 Abrir o Studio (PC)</a>
-<a class="btn contorno" href="studio/leve/">📱 Studio leve (celular)</a>
-<p class="nota">O Studio roda direto no navegador. Para jogar online, fazer login e enviar mapas, use o botão Jogar.</p>
+<a class="btn contorno" href="{SITE}/login">Entrar ou criar conta</a>
 <p class="rodape-links"><a href="novidades/">📰 Novidades</a> · <a href="termos/">Termos de Uso</a> · <a href="politica/">Política de Uso</a>
  · <a href="https://discord.gg/6NZ5Ftq3p" target="_blank" rel="noopener">Discord</a></p>
 </main></body></html>
