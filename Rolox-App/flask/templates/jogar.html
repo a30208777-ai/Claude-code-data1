@@ -77,7 +77,8 @@
   {% if not teste %}<button class="btn-jogo" id="abrirDenuncia" aria-label="Denunciar">🚩</button>{% endif %}
   </div>
   <button class="btn-jogo" id="abrirRanking" aria-label="Ranking do jogo">🏆</button>
-  {% if s %}<span class="online-jogo" id="online" title="Jogadores no mapa">👥 1</span>{% endif %}
+  {% if s %}<span class="online-jogo" id="online" title="Jogadores no mapa">👥 1</span>
+  <span class="online-jogo" id="ping" title="Ping: tempo de resposta do servidor">📶 —</span>{% endif %}
   {% if s %}<button class="btn-jogo" id="abrirChat" aria-label="Chat">💬<span id="naoLidas" hidden></span></button>{% endif %}
 </header>
 
@@ -379,7 +380,10 @@
   async function puxar() {
     if (puxando) return; puxando = true;
     try {
+      const t0 = performance.now();
       const d = await api(`/api/chat/${UID}?depois=${ultimo}`);
+      const ms = Math.round(performance.now() - t0), elPing = document.getElementById('ping');   // 📶 ping sempre visível
+      if (elPing) { elPing.textContent = `📶 ${ms} ms`; elPing.style.color = ms < 150 ? '#81c784' : ms < 400 ? '#ffb74d' : '#ef9a9a'; }
       const noFim = caixa.scrollHeight - caixa.scrollTop - caixa.clientHeight < 40;
       for (const m of d.mensagens) {
         ultimo = Math.max(ultimo, m.id);
