@@ -67,7 +67,14 @@
       <option value="auto">Automático (igual ao aparelho)</option><option value="claro">☀️ Claro</option><option value="escuro">🌙 Escuro</option>
     </select>
   </label>
+  <label>🔠 Tamanho do texto
+    <select id="fonteSite"><option value="normal">Normal</option><option value="grande">Grande</option><option value="enorme">Enorme</option></select>
+  </label>
   <script>
+    (() => { const f = document.getElementById('fonteSite'); try { f.value = localStorage.getItem('rolox.fonte') || 'normal'; } catch {}
+      f.addEventListener('change', () => { try { localStorage.setItem('rolox.fonte', f.value); } catch {}
+        document.documentElement.style.fontSize = { normal: '', grande: '118%', enorme: '135%' }[f.value]; });
+    })();
     (() => { const s = document.getElementById('temaSite'); let t = 'auto';
       try { t = localStorage.getItem('rolox.tema') || 'auto'; } catch {}
       s.value = t;
