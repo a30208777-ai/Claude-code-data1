@@ -7,6 +7,15 @@
     <h1>{{ p.username }}{{ selo(p.is_parceiro) }}{{ selo_app(p.app) }}</h1>
     {% if p.is_parceiro %}<p class="parceiro-tag">🤝 Parceiro do ROLOX{% if p.parceiro_desde %} desde {{ p.parceiro_desde|data }}{% endif %}</p>{% endif %}
     {% if p.bio %}<p class="bio">“{{ p.bio }}”</p>{% endif %}
+    <p><a href="{{ url_for('jogador_seguidores', nome=p.username, tipo='seguidores') }}"><b>{{ seg.seguidores }}</b> seguidores</a> ·
+      <a href="{{ url_for('jogador_seguidores', nome=p.username, tipo='seguindo') }}"><b>{{ seg.seguindo }}</b> seguindo</a></p>
+    {% if eu_nome and eu_nome != p.username %}
+    <form method="post" action="{{ url_for('jogador_seguir', nome=p.username) }}">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <input type="hidden" name="seguir" value="{{ '0' if seg.eu_sigo else '1' }}">
+      <button class="btn pequeno{{ ' contorno' if seg.eu_sigo }}">{{ '✓ Seguindo' if seg.eu_sigo else '➕ Seguir' }}</button>
+    </form>
+    {% endif %}
     <p class="muted">No ROLOX desde {{ p.criado_em|data }}</p>
   </div>
 </div>

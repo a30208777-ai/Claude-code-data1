@@ -203,6 +203,17 @@ class SupabaseFalso:
                 else:
                     atual[k] = v
             return Resp(200, {"ok": True})
+        if p in ("/rest/v1/rpc/seguir", "/rest/v1/rpc/info_seguidores", "/rest/v1/rpc/lista_seguidores"):
+            self.segue = getattr(self, "segue", set())
+            nome = p.rsplit("/", 1)[1]
+            if nome == "seguir":
+                if json["p_nome"] == "eu_mesmo":
+                    return Resp(400, {"code": "P0001", "message": "você não pode seguir você mesmo"})
+                (self.segue.add if json["p_seguir"] else self.segue.discard)(json["p_nome"])
+                return Resp(200, {"seguindo": json["p_seguir"]})
+            if nome == "info_seguidores":
+                return Resp(200, {"seguidores": int(json["p_nome"] in self.segue), "seguindo": 0, "eu_sigo": json["p_nome"] in self.segue})
+            return Resp(200, [{"username": "eu", "criado_em": "2026-11-22T00:00:00Z"}] if json["p_tipo"] == "seguidores" and json["p_nome"] in self.segue else [])
         if p in ("/rest/v1/rpc/dar_emblema", "/rest/v1/rpc/meus_emblemas", "/rest/v1/rpc/emblemas_de"):
             self.emblemas = getattr(self, "emblemas", {})
             if p.endswith("dar_emblema"):
@@ -1884,3 +1895,18 @@ def test_jogos_tem_favoritos(cliente, sb):
     entrar(cliente)
     t = html(cliente.get("/jogos"))
     assert "⭐ Meus favoritos" in t and "rolox.favoritos" in t
+
+
+def test_seguir_e_seguidores(cliente, sb):
+    entrar(cliente)
+    tok = csrf(cliente)
+    r = cliente.post("/jogador/bob/seguir", data={"csrf": tok, "seguir": "1"})
+    assert r.headers["Location"].endswith("/jogador/bob")
+    assert "bob" in sb.segue
+    t = html(cliente.get("/jogador/bob/seguidores"))
+    assert "👥 Seguidores (1)" in t
+    cliente.post("/jogador/bob/seguir", data={"csrf": tok, "seguir": "0"})
+    assert "bob" not in sb.segue
+    assert "Ninguém por aqui" in html(cliente.get("/jogador/bob/seguindo"))
+    t = html(cliente.get("/jogador/alice"))
+    assert "seguidores</a>" in t and "➕ Seguir" not in t   # não segue a si mesmo

@@ -1248,6 +1248,23 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
         flash("Redes sociais salvas! Elas aparecem na sua página de jogador.", "ok")
         return redirect(url_for("parceria"))
 
+    @app.post("/jogador/<nome>/seguir")
+    @logado
+    def jogador_seguir(nome: str):
+        seguir = request.form.get("seguir") == "1"
+        try:
+            g.api.seguir(nome, seguir)
+            flash(f"✅ Agora você segue {nome}!" if seguir else f"Você deixou de seguir {nome}.", "ok")
+        except ErroRolox as e:
+            flash(str(e), "erro")
+        return redirect(url_for("jogador", nome=nome))
+
+    @app.get("/jogador/<nome>/<any(seguidores, seguindo):tipo>")
+    @logado
+    def jogador_seguidores(nome: str, tipo: str):
+        carregar_perfil()
+        return render_template("seguidores.html", nome=nome, tipo=tipo, lista=g.api.lista_seguidores(nome, tipo), aba="inicio")
+
     @app.get("/jogador/<nome>")
     @logado
     def jogador(nome: str):
@@ -1269,7 +1286,11 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
             criados = [m for m in publicados if nomes.get(m["autor_id"]) == p["username"]]
         except ErroRolox:
             criados = []
-        return render_template("jogador.html", p=p, redes=redes, eu_nome=carregar_perfil().get("username"),
+        try:
+            seg = g.api.info_seguidores(p["username"])
+        except ErroRolox:
+            seg = {"seguidores": 0, "seguindo": 0, "eu_sigo": False}
+        return render_template("jogador.html", p=p, redes=redes, eu_nome=carregar_perfil().get("username"), seg=seg,
                                emblemas=por_jogo, total_emblemas=len(emblemas), criados=criados,
                                visitas_criados=sum(m.get("visitas") or 0 for m in criados), aba="inicio")
 

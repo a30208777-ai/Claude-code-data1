@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block titulo %}{{ nome }} · {{ 'Seguidores' if tipo == 'seguidores' else 'Seguindo' }} · Rolox{% endblock %}
+{% block conteudo %}
+<p><a class="btn texto" href="{{ url_for('jogador', nome=nome) }}">‹ {{ nome }}</a></p>
+<h1>{{ '👥 Seguidores' if tipo == 'seguidores' else '➡️ Seguindo' }} ({{ lista|length }})</h1>
+{% for u in lista %}
+  <div class="cartao"><span class="icone">🙂</span>
+    <div class="info"><div class="titulo"><a href="{{ url_for('jogador', nome=u.username) }}">{{ u.username }}</a></div>
+      <div class="detalhe">desde {{ u.criado_em|data }}</div></div></div>
+{% else %}
+  <p class="muted"><i>Ninguém por aqui ainda.</i></p>
+{% endfor %}
+{% endblock %}
