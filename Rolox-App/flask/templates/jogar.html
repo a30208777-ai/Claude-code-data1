@@ -144,6 +144,9 @@
   <div class="topo-chat"><b>Chat</b><span class="nota">filtro SELECT · IA usa 1 ticket</span>
     <button class="btn-jogo pequeno" id="fecharChat" aria-label="Fechar chat">▾</button></div>
   <div id="mensagens" aria-live="polite"></div>
+  <div class="frases-rapidas" aria-label="Frases rápidas">
+    {% for f in ['Oi! 👋', 'Bora! 🚀', 'GG 🏆', 'Me ajuda? 🙏', 'Valeu! 😄', 'Segue eu! ➡️'] %}<button type="button" class="btn-jogo pequeno frase" data-frase="{{ f }}">{{ f }}</button>{% endfor %}
+  </div>
   <form id="envio" class="linha">
     <input type="text" id="texto" class="cresce" maxlength="500" placeholder="Mensagem" autocomplete="off">
     <button class="btn pequeno" aria-label="Enviar">➤</button>
@@ -388,6 +391,11 @@
     try { await api(`/api/chat/${UID}`, {texto}); campo.value = ''; await puxar(); }
     catch (e) { aviso(e.message); }
   });
+
+  // 💬 Frases rápidas: conversa num toque, sem precisar digitar (e sem verificação de rosto)
+  document.querySelectorAll('.frase').forEach(b => b.addEventListener('click', async () => {
+    try { await api(`/api/chat/${UID}`, {texto: b.dataset.frase}); await puxar(); } catch (e) { aviso(e.message); }
+  }));
 
   puxar();
   setInterval(puxar, 2000);
