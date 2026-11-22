@@ -1064,7 +1064,7 @@ def test_jogo_aprovado_todos_jogam_com_chat(cliente, sb):
     novo = next(s for s in sb.servidores if s["server_uid"] == "s9")
     assert novo["gameid"] == sb.mapas[mid]["gameid"] and novo["capacidade"] == 10
     t = html(cliente.get(f"/jogar/{mid}?s=s9"))
-    assert "painelChat" in t and "GG 🏆" in t and "/api/chat/" in t and f"/api/mapas/{mid}/dados?versao=aprovada" in t
+    assert "painelChat" in t and "GG 🏆" in t and "ninguém é expulso" in t and "/api/chat/" in t and f"/api/mapas/{mid}/dados?versao=aprovada" in t
     assert "/static/studio/jogar.js" in t
     assert json.loads(cliente.get(f"/api/mapas/{mid}/dados?versao=aprovada").get_data()) == PROJETO
     # chat do servidor do jogo

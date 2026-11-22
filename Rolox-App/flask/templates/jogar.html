@@ -392,6 +392,17 @@
     catch (e) { aviso(e.message); }
   });
 
+  // 💤 Ausente: no ROLOX ninguém é expulso por ficar parado (no ROBLOX são 20 min e tchau).
+  (() => {
+    let parado = 0;
+    const aviso = Object.assign(document.createElement('div'), { className: 'ausente', hidden: true,
+      textContent: '💤 Você está ausente — relaxa, no ROLOX ninguém é expulso por ficar parado. Toque para voltar.' });
+    document.body.append(aviso);
+    const mexeu = () => { parado = 0; aviso.hidden = true; };
+    for (const e of ['keydown', 'pointerdown', 'touchstart', 'mousemove']) addEventListener(e, mexeu, { passive: true });
+    setInterval(() => { if ((parado += 10) >= 180) aviso.hidden = false; }, 10000);
+  })();
+
   // 💬 Frases rápidas: conversa num toque, sem precisar digitar (e sem verificação de rosto)
   document.querySelectorAll('.frase').forEach(b => b.addEventListener('click', async () => {
     try { await api(`/api/chat/${UID}`, {texto: b.dataset.frase}); await puxar(); } catch (e) { aviso(e.message); }
