@@ -23,3 +23,8 @@ test("limite de FPS só aceita 0, 30 ou 60", () => {
   assert.equal(lerAjustes(m({ fpsMax: 30 })).fpsMax, 30);
   assert.equal(lerAjustes(m({ fpsMax: 7 })).fpsMax, 0);
 });
+test("lembrete de pausa só 0, 30 ou 60", () => {
+  const m = (v) => ({ getItem: () => JSON.stringify(v) });
+  assert.equal(lerAjustes(m({ lembrete: 30 })).lembrete, 30);
+  assert.equal(lerAjustes(m({ lembrete: 5 })).lembrete, 0);
+});
