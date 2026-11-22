@@ -190,7 +190,7 @@
       const aj = ligarAjustes(jogo, jogo.render, { botao: document.getElementById("abrirAjustes"), painel: document.getElementById("ajustes"),
                                         camadaNomes: document.getElementById("nomes"), contador: document.getElementById("contadorFps") });
       const { ligarPausa } = await import("/static/studio/pausa.js");
-      ligarPausa(jogo, { mostrarTempo: aj.mostrarTempo });
+      ligarPausa(jogo, { mostrarTempo: aj.mostrarTempo, intervalo: () => aj.ajustes.lembrete });
     }
     {
       const { ligarEmotes } = await import("/static/studio/emotes.js");

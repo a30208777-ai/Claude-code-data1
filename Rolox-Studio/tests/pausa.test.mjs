@@ -20,3 +20,9 @@ test("tempo de hoje soma e zera no dia seguinte", () => {
   assert.equal(textoTempo(30), "30 min");
   assert.match(hoje(new Date(2026, 10, 21)), /^2026-11-21$/);
 });
+test("lembrete respeita o intervalo escolhido (0 = desligado)", async () => {
+  const { lembrete } = await import("../static/studio/pausa.js");
+  assert.equal(lembrete(30, 0, 30) !== null, true);
+  assert.equal(lembrete(30, 0, 60), null);
+  assert.equal(lembrete(120, 0, 0), null);
+});

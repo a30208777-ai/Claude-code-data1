@@ -2,7 +2,7 @@
 import { SONS_MORTE, tocarSomMorte } from "./sons_morte.js";
 //   qualidade (baixa = celular fraco roda liso) · som · nomes dos jogadores · contador de FPS
 
-export const PADRAO = { qualidade: "auto", som: true, nomes: true, fps: false, somMorte: "classico", sensibilidade: 1, inverterY: false, fpsMax: 0, lembrete: 0 };
+export const PADRAO = { qualidade: "auto", som: true, nomes: true, fps: false, somMorte: "classico", sensibilidade: 1, inverterY: false, fpsMax: 0, lembrete: 60 };
 export const LEMBRETES = { 0: "Desligado", 30: "A cada 30 min", 60: "A cada 1 hora" };
 export const LIMITES_FPS = { 0: "Sem limite", 60: "60 FPS", 30: "30 FPS (economia de bateria)" };
 export const QUALIDADES = { auto: "Automática", baixa: "Baixa (mais leve)", media: "Média", alta: "Alta (sombras)" };
@@ -69,16 +69,7 @@ export function ligarAjustes(jogo, render, { botao, painel, camadaNomes, contado
   const lim = el("select", {}, ...Object.entries(LIMITES_FPS).map(([k, v]) => el("option", { value: k, textContent: v, selected: String(a.fpsMax) === k })));
   lim.addEventListener("change", () => { a.fpsMax = Number(lim.value); mudou(); });
   const lem = el("select", {}, ...Object.entries(LEMBRETES).map(([k, v]) => el("option", { value: k, textContent: v, selected: String(a.lembrete) === k })));
-  lem.addEventListener("change", () => { a.lembrete = Number(lem.value); jogando = 0; mudou(); });
-  let jogando = 0;   // ⏰ lembrete de pausa: você controla seu tempo (não só os pais)
-  jogo.extras.push({ quadro(dt) {
-    if (!a.lembrete) return;
-    jogando += dt;
-    if (jogando >= a.lembrete * 60) {
-      jogando = 0;
-      try { jogo.mundo.game.Tela.Aviso(`⏰ Você já jogou ${a.lembrete} min. Que tal beber água e esticar as pernas?`, 6); } catch { /* sem tela */ }
-    }
-  } });
+  lem.addEventListener("change", () => { a.lembrete = Number(lem.value); mudou(); });
   const tempoHoje = el("span", { className: "tempo-hoje", textContent: "—" });
   painel.replaceChildren(el("b", { textContent: "⚙️ Ajustes" }),
     linha("Qualidade", qual), linha("🔊 Som", marca("som")), linha("🏷️ Nomes dos jogadores", marca("nomes")), linha("📈 Mostrar FPS", marca("fps")), linha("💀 Som ao cair", morte), linha("🎥 Sensibilidade da câmera", sens), linha("↕️ Inverter câmera", marca("inverterY")), linha("🔋 Limite de FPS", lim), linha("⏰ Lembrete de pausa", lem),

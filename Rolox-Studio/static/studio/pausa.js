@@ -34,20 +34,22 @@ export function somarTempo(min, arm = globalThis.localStorage, dia = hoje()) {
 }
 
 /** Texto do lembrete para N minutos desta sessão (ou null se ainda não é hora). */
-export function lembrete(minSessao, jaAvisados) {
-  const marco = Math.floor(minSessao / INTERVALO_MIN);
+export function lembrete(minSessao, jaAvisados, intervalo = INTERVALO_MIN) {
+  if (!intervalo) return null;                           // ⚙️ lembrete desligado
+  const marco = Math.floor(minSessao / intervalo);
   if (marco < 1 || marco <= jaAvisados) return null;
-  return MENSAGENS[(marco - 1) % MENSAGENS.length].replace("{h}", textoTempo(marco * INTERVALO_MIN));
+  return MENSAGENS[(marco - 1) % MENSAGENS.length].replace("{h}", textoTempo(marco * intervalo));
 }
 
-export function ligarPausa(jogo, { mostrarTempo = () => {} } = {}) {
+export function ligarPausa(jogo, { mostrarTempo = () => {}, intervalo = () => INTERVALO_MIN } = {}) {
   let sessao = 0, avisados = 0;
   const umMinuto = setInterval(() => {
     if (!jogo.rodando || document.hidden) return;        // só conta com o jogo aberto e na tela
     sessao += 1;
     mostrarTempo(textoTempo(somarTempo(1)));
-    const t = lembrete(sessao, avisados);
-    if (t) { avisados = Math.floor(sessao / INTERVALO_MIN); try { jogo.mundo.game.Tela.Aviso(t, 8); } catch { /* sem tela */ } }
+    const iv = intervalo();
+    const t = lembrete(sessao, avisados, iv);
+    if (t) { avisados = Math.floor(sessao / iv); try { jogo.mundo.game.Tela.Aviso(t, 8); } catch { /* sem tela */ } }
   }, 60_000);
   mostrarTempo(textoTempo(lerTempo()));
   return () => clearInterval(umMinuto);
