@@ -34,3 +34,8 @@ test("lista de controles tem andar e pular", async () => {
   const t = CONTROLES.map((c) => c[1]).join(" ");
   assert.match(t, /andar/); assert.match(t, /pular/);
 });
+test("tamanho dos botões aceita 0.8, 1 ou 1.25", () => {
+  const m = (v) => ({ getItem: () => JSON.stringify(v) });
+  assert.equal(lerAjustes(m({ botoes: 1.25 })).botoes, 1.25);
+  assert.equal(lerAjustes(m({ botoes: 9 })).botoes, 1);
+});
