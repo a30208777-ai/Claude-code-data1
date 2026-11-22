@@ -1931,3 +1931,8 @@ def test_novidades_publica_e_no_inicio(cliente, sb):
     assert "📰 Novidades do ROLOX" in html(cliente.get("/novidades"))
     entrar(cliente)
     assert "/novidades" in html(cliente.get("/inicio"))
+
+
+def test_ban_mostra_como_recorrer():
+    from rolox_api import MENSAGENS
+    assert "revisão" in MENSAGENS["conta_banida"] and "discord.gg" in MENSAGENS["conta_banida"]
