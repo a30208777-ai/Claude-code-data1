@@ -91,6 +91,8 @@ export function ligarAjustes(jogo, render, { botao, painel, camadaNomes, contado
   painel.replaceChildren(el("b", { textContent: "⚙️ Ajustes" }),
     linha("Qualidade", qual), linha("🔊 Som", marca("som")), linha("🏷️ Nomes dos jogadores", marca("nomes")), linha("📈 Mostrar FPS", marca("fps")), linha("💀 Som ao cair", morte), linha("🎥 Sensibilidade da câmera", sens), linha("↕️ Inverter câmera", marca("inverterY")), linha("🔋 Limite de FPS", lim), linha("⏰ Lembrete de pausa", lem), linha("🔘 Tamanho dos botões", tb),
     el("div", { className: "ajuste" }, el("span", { textContent: "⏱️ Jogado hoje" }), tempoHoje),
+    el("button", { type: "button", className: "btn-jogo pequeno", textContent: "↺ Restaurar padrão",
+      onclick: () => { salvarAjustes({ ...PADRAO }); location.reload(); } }),
     controles());
   function mudou() { salvarAjustes(a); aplicarAjustes(jogo, render, a, { camadaNomes, contador }); }
   botao.addEventListener("click", () => { painel.hidden = !painel.hidden; botao.setAttribute("aria-expanded", String(!painel.hidden)); });
