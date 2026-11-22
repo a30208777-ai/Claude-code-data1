@@ -383,3 +383,5 @@ body.flash-foto::after { content: ""; position: fixed; inset: 0; z-index: 20; ba
 
 .recentes { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; }
 .recente { white-space: nowrap; padding: 10px 14px; border-radius: 14px; background: #8881; text-decoration: none; color: inherit; font-weight: 600; }
+
+.contador-novo{background:#e53935;color:#fff;border-radius:999px;padding:0 7px;font-size:.8em;margin-left:4px}

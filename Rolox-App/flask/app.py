@@ -357,7 +357,12 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
             recentes = g.api.meus_recentes()
         except ErroRolox:
             recentes = []
+        try:                                            # 💌 mensagens não lidas (o ROLOX mantém a caixa de mensagens)
+            nao_lidas = sum(int(c.get("nao_lidas") or 0) for c in g.api.minhas_conversas())
+        except (ErroRolox, TypeError, ValueError):
+            nao_lidas = 0
         return render_template("inicio.html", perfil=carregar_perfil(), onde=onde, missoes=missoes, pedidos=pedidos, recentes=recentes,
+                               nao_lidas=nao_lidas,
                                alertas=g.api.alertas(), amigos_online=amigos, aba="inicio")
 
     @app.post("/missoes/<codigo>/resgatar")

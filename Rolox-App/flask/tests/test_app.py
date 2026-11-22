@@ -286,7 +286,7 @@ class SupabaseFalso:
                 return Resp(200, {"ok": True})
             if nome == "conversa_privada":
                 return Resp(200, [m for m in self.dms if m["com"] == json["p_com"]])
-            return Resp(200, [{"username": m["com"], "nao_lidas": 0, "previa": m["texto"]} for m in self.dms[-1:]])
+            return Resp(200, [{"username": m["com"], "nao_lidas": getattr(self, "nao_lidas", 0), "previa": m["texto"]} for m in self.dms[-1:]])
         if p in ("/rest/v1/rpc/criar_servidor_privado", "/rest/v1/rpc/usar_codigo_privado", "/rest/v1/rpc/codigo_do_meu_privado"):
             self.privados = getattr(self, "privados", {})
             nome = p.rsplit("/", 1)[1]
@@ -1916,3 +1916,12 @@ def test_perfil_tem_visuais_salvos(cliente, sb):
     entrar(cliente)
     t = html(cliente.get("/perfil"))
     assert "💾 Salvar este visual" in t and "rolox.visuais" in t
+
+
+def test_inicio_mostra_mensagens_nao_lidas(cliente, sb):
+    entrar(cliente)
+    sb.dms = [{"com": "bob", "minha": False, "texto": "oi", "criado_em": "2026-11-22T00:00:00Z", "id": 1}]
+    sb.nao_lidas = 3
+    assert 'class="contador-novo"' in html(cliente.get("/inicio"))
+    sb.nao_lidas = 0
+    assert 'class="contador-novo"' not in html(cliente.get("/inicio"))
