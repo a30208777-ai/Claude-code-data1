@@ -28,6 +28,8 @@ export class CameraJogador {
     this.ponteiros = new Map();
     this.pincaInicial = null;
     this.teclas = new Set();
+    this.sensibilidade = 1;       // ⚙️ ajustes: 0.3 .. 3
+    this.inverterY = false;       // ⚙️ ajustes: arrastar para cima olha para baixo
     this._ligado = null;
   }
 
@@ -56,9 +58,9 @@ export class CameraJogador {
         if (d > 10) this.distancia = limitar(this.pincaInicial.zoom * (this.pincaInicial.d / d), this.minimo, this.maximo);
         return;
       }
-      const sens = e.pointerType === "touch" ? 0.008 : 0.006;
+      const sens = (e.pointerType === "touch" ? 0.008 : 0.006) * this.sensibilidade;
       this.yaw = (this.yaw - dx * sens) % PI2;
-      this.pitch = limitar(this.pitch + dy * sens, -0.3, 1.1);   // não deixa virar "vista de cima"
+      this.pitch = limitar(this.pitch + (this.inverterY ? -dy : dy) * sens, -0.3, 1.1);   // não deixa virar "vista de cima"
     };
     const cima = (e) => {
       this.ponteiros.delete(e.pointerId);

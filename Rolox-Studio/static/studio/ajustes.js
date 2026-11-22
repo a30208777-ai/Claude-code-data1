@@ -2,7 +2,7 @@
 import { SONS_MORTE, tocarSomMorte } from "./sons_morte.js";
 //   qualidade (baixa = celular fraco roda liso) · som · nomes dos jogadores · contador de FPS
 
-export const PADRAO = { qualidade: "auto", som: true, nomes: true, fps: false, somMorte: "classico" };
+export const PADRAO = { qualidade: "auto", som: true, nomes: true, fps: false, somMorte: "classico", sensibilidade: 1, inverterY: false };
 export const QUALIDADES = { auto: "Automática", baixa: "Baixa (mais leve)", media: "Média", alta: "Alta (sombras)" };
 const CHAVE = "rolox.ajustes";
 
@@ -15,6 +15,8 @@ export function lerAjustes(armazenamento = globalThis.localStorage) {
       nomes: typeof d.nomes === "boolean" ? d.nomes : PADRAO.nomes,
       fps: typeof d.fps === "boolean" ? d.fps : PADRAO.fps,
       somMorte: d.somMorte in SONS_MORTE ? d.somMorte : PADRAO.somMorte,
+      sensibilidade: Number.isFinite(d.sensibilidade) ? Math.min(3, Math.max(0.3, d.sensibilidade)) : PADRAO.sensibilidade,
+      inverterY: typeof d.inverterY === "boolean" ? d.inverterY : PADRAO.inverterY,
     };
   } catch { return { ...PADRAO }; }
 }
@@ -41,6 +43,7 @@ export function aplicarAjustes(jogo, render, a, { camadaNomes, contador } = {}) 
   for (const m of document.querySelectorAll("audio, video")) m.muted = !a.som;
   if (camadaNomes) camadaNomes.style.display = a.nomes ? "" : "none";
   if (contador) contador.hidden = !a.fps;
+  if (jogo?.cam) { jogo.cam.sensibilidade = a.sensibilidade; jogo.cam.inverterY = a.inverterY; }
 }
 
 export function ligarAjustes(jogo, render, { botao, painel, camadaNomes, contador }) {
@@ -56,9 +59,11 @@ export function ligarAjustes(jogo, render, { botao, painel, camadaNomes, contado
   const morte = el("select", {}, ...Object.entries(SONS_MORTE).map(([k, v]) => el("option", { value: k, textContent: v, selected: a.somMorte === k })));
   morte.addEventListener("change", () => { a.somMorte = morte.value; mudou(); tocarSomMorte(a.somMorte); });
   jogo.aoMorrer = (_p, local) => { if (local && a.som) tocarSomMorte(a.somMorte); };
+  const sens = el("input", { type: "range", min: "0.3", max: "3", step: "0.1", value: String(a.sensibilidade) });
+  sens.addEventListener("input", () => { a.sensibilidade = Number(sens.value); mudou(); });
   const tempoHoje = el("span", { className: "tempo-hoje", textContent: "—" });
   painel.replaceChildren(el("b", { textContent: "⚙️ Ajustes" }),
-    linha("Qualidade", qual), linha("🔊 Som", marca("som")), linha("🏷️ Nomes dos jogadores", marca("nomes")), linha("📈 Mostrar FPS", marca("fps")), linha("💀 Som ao cair", morte),
+    linha("Qualidade", qual), linha("🔊 Som", marca("som")), linha("🏷️ Nomes dos jogadores", marca("nomes")), linha("📈 Mostrar FPS", marca("fps")), linha("💀 Som ao cair", morte), linha("🎥 Sensibilidade da câmera", sens), linha("↕️ Inverter câmera", marca("inverterY")),
     el("div", { className: "ajuste" }, el("span", { textContent: "⏱️ Jogado hoje" }), tempoHoje));
   function mudou() { salvarAjustes(a); aplicarAjustes(jogo, render, a, { camadaNomes, contador }); }
   botao.addEventListener("click", () => { painel.hidden = !painel.hidden; botao.setAttribute("aria-expanded", String(!painel.hidden)); });

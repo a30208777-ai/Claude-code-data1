@@ -7,8 +7,8 @@ const memoria = () => { const d = {}; return { getItem: (k) => d[k] ?? null, set
 test("ajustes salvam e voltam; lixo vira o padrão", () => {
   const m = memoria();
   assert.deepEqual(lerAjustes(m), PADRAO);
-  salvarAjustes({ qualidade: "baixa", som: false, nomes: true, fps: true, somMorte: "classico" }, m);
-  assert.deepEqual(lerAjustes(m), { qualidade: "baixa", som: false, nomes: true, fps: true, somMorte: "classico" });
+  salvarAjustes({ qualidade: "baixa", som: false, nomes: true, fps: true, somMorte: "classico", sensibilidade: 1, inverterY: false }, m);
+  assert.deepEqual(lerAjustes(m), { qualidade: "baixa", som: false, nomes: true, fps: true, somMorte: "classico", sensibilidade: 1, inverterY: false });
   m.setItem("rolox.ajustes", '{"qualidade":"ultra","som":"sim"}');
   assert.deepEqual(lerAjustes(m), PADRAO);
   m.setItem("rolox.ajustes", "{quebrado");

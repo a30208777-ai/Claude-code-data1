@@ -12,3 +12,9 @@ test("ajuste guarda o som escolhido e ignora inválido", () => {
   assert.equal(lerAjustes(m({ somMorte: "sino" })).somMorte, "sino");
   assert.equal(lerAjustes(m({ somMorte: "xx" })).somMorte, "classico");
 });
+test("sensibilidade da câmera fica entre 0.3 e 3", () => {
+  const m = (v) => ({ getItem: () => JSON.stringify(v) });
+  assert.equal(lerAjustes(m({ sensibilidade: 9 })).sensibilidade, 3);
+  assert.equal(lerAjustes(m({ sensibilidade: 0.5, inverterY: true })).inverterY, true);
+  assert.equal(lerAjustes(m({ sensibilidade: "x" })).sensibilidade, 1);
+});
