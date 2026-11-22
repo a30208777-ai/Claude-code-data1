@@ -73,6 +73,7 @@
   <button class="btn-jogo" id="botaoMinimapa" aria-label="Minimapa" aria-pressed="true" title="Minimapa">🗺️</button>
   <button class="btn-jogo" id="abrirGestos" aria-label="Gestos" aria-expanded="false" title="Gestos">😀</button>
   <button class="btn-jogo" id="tirarFoto" aria-label="Tirar foto do jogo" title="Foto do jogo">📸</button>
+  <button class="btn-jogo" id="gravarClipe" aria-label="Gravar clipe de 10 segundos" title="Gravar clipe (10 s)">🎥</button>
   {% if not teste %}<button class="btn-jogo" id="abrirDenuncia" aria-label="Denunciar">🚩</button>{% endif %}
   </div>
   <button class="btn-jogo" id="abrirRanking" aria-label="Ranking do jogo">🏆</button>
@@ -198,7 +199,13 @@
                           balao: document.getElementById("balaoGesto") });
     }
     {
-      const { tirarFoto } = await import("/static/studio/foto.js");
+      const { tirarFoto, gravarClipe } = await import("/static/studio/foto.js");
+      const bClipe = document.getElementById("gravarClipe");
+      bClipe.addEventListener("click", () => {
+        if (bClipe.dataset.gravando) return;
+        gravarClipe(jogo.render, {{ m.nome|tojson }}, { avisar: (t) => aviso(t, "ok"),
+          aoMudar: (on) => { bClipe.dataset.gravando = on ? "1" : ""; bClipe.textContent = on ? "⏺️" : "🎥"; if (on) aviso("🎥 Gravando 10 segundos...", "ok"); } });
+      });
       document.getElementById("tirarFoto").addEventListener("click", () => {
         document.body.classList.add("flash-foto");
         setTimeout(() => document.body.classList.remove("flash-foto"), 350);

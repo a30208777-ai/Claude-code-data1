@@ -53,3 +53,37 @@ export async function tirarFoto(render, nomeJogo, { avisar = () => {} } = {}) {
   avisar("📸 Foto salva!");
   return nome;
 }
+
+// ------------------------------------------------------------------ 🎥 clipe
+/** Formato de vídeo que o navegador grava (webm na maioria, mp4 no Safari). */
+export function formatoClipe(MR = globalThis.MediaRecorder) {
+  for (const t of ["video/webm;codecs=vp9", "video/webm", "video/mp4"]) if (MR?.isTypeSupported?.(t)) return t;
+  return null;
+}
+
+/** Grava N segundos da tela do jogo e baixa/compartilha o vídeo (o ROBLOX tirou o gravador; aqui tem). */
+export async function gravarClipe(render, nomeJogo, { segundos = 10, avisar = () => {}, aoMudar = () => {} } = {}) {
+  const tipo = formatoClipe();
+  const tela = render.renderer.domElement;
+  if (!tipo || !tela.captureStream) { avisar("Este aparelho não grava vídeo. Use o 📸."); return null; }
+  const partes = [];
+  const rec = new MediaRecorder(tela.captureStream(30), { mimeType: tipo, videoBitsPerSecond: 4_000_000 });
+  rec.ondataavailable = (e) => e.data.size && partes.push(e.data);
+  const fim = new Promise((ok) => { rec.onstop = ok; });
+  rec.start(); aoMudar(true);
+  setTimeout(() => rec.state !== "inactive" && rec.stop(), segundos * 1000);
+  await fim; aoMudar(false);
+  const ext = tipo.includes("mp4") ? "mp4" : "webm";
+  const nome = nomeDaFoto(nomeJogo).replace(/\.png$/, "." + ext);
+  const blob = new Blob(partes, { type: tipo.split(";")[0] });
+  const arquivo = new File([blob], nome, { type: blob.type });
+  try {
+    if (navigator.canShare?.({ files: [arquivo] })) { await navigator.share({ files: [arquivo], title: `ROLOX · ${nomeJogo}` }); return nome; }
+  } catch (e) { if (e?.name === "AbortError") return null; }
+  const url = URL.createObjectURL(blob);
+  const a = Object.assign(document.createElement("a"), { href: url, download: nome });
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+  avisar("🎥 Clipe salvo!");
+  return nome;
+}
