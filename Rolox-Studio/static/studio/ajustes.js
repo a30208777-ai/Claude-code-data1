@@ -2,7 +2,7 @@
 import { SONS_MORTE, tocarSomMorte } from "./sons_morte.js";
 //   qualidade (baixa = celular fraco roda liso) · som · nomes dos jogadores · contador de FPS
 
-export const PADRAO = { qualidade: "auto", som: true, nomes: true, fps: false, somMorte: "classico", sensibilidade: 1, inverterY: false, fpsMax: 0, lembrete: 60, botoes: 1, volume: 1 };
+export const PADRAO = { qualidade: "auto", som: true, nomes: true, fps: false, somMorte: "classico", sensibilidade: 1, inverterY: false, fpsMax: 0, lembrete: 60, botoes: 1, volume: 1, vibrar: true };
 export const TAMANHOS_BOTOES = { 0.8: "Pequenos", 1: "Normais", 1.25: "Grandes" };
 export const LEMBRETES = { 0: "Desligado", 30: "A cada 30 min", 60: "A cada 1 hora" };
 export const LIMITES_FPS = { 0: "Sem limite", 60: "60 FPS", 30: "30 FPS (economia de bateria)" };
@@ -23,6 +23,7 @@ export function lerAjustes(armazenamento = globalThis.localStorage) {
       fpsMax: String(d.fpsMax) in LIMITES_FPS ? Number(d.fpsMax) : PADRAO.fpsMax,
       lembrete: String(d.lembrete) in LEMBRETES ? Number(d.lembrete) : PADRAO.lembrete,
       botoes: String(d.botoes) in TAMANHOS_BOTOES ? Number(d.botoes) : PADRAO.botoes,
+      vibrar: typeof d.vibrar === "boolean" ? d.vibrar : PADRAO.vibrar,
       volume: Number.isFinite(d.volume) ? Math.min(1, Math.max(0, d.volume)) : PADRAO.volume,
     };
   } catch { return { ...PADRAO }; }
@@ -94,7 +95,11 @@ export function ligarAjustes(jogo, render, { botao, painel, camadaNomes, contado
   qual.addEventListener("change", () => { a.qualidade = qual.value; mudou(); });
   const morte = el("select", {}, ...Object.entries(SONS_MORTE).map(([k, v]) => el("option", { value: k, textContent: v, selected: a.somMorte === k })));
   morte.addEventListener("change", () => { a.somMorte = morte.value; mudou(); tocarSomMorte(a.somMorte); });
-  jogo.aoMorrer = (_p, local) => { if (local && a.som) tocarSomMorte(a.somMorte); };
+  jogo.aoMorrer = (_p, local) => {
+    if (!local) return;
+    if (a.som) tocarSomMorte(a.somMorte);
+    if (a.vibrar) try { navigator.vibrate?.([60, 40, 120]); } catch { /* sem vibração */ }   // 📳 celular
+  };
   const sens = el("input", { type: "range", min: "0.3", max: "3", step: "0.1", value: String(a.sensibilidade) });
   sens.addEventListener("input", () => { a.sensibilidade = Number(sens.value); mudou(); });
   const lim = el("select", {}, ...Object.entries(LIMITES_FPS).map(([k, v]) => el("option", { value: k, textContent: v, selected: String(a.fpsMax) === k })));
@@ -107,7 +112,7 @@ export function ligarAjustes(jogo, render, { botao, painel, camadaNomes, contado
   vol.addEventListener("input", () => { a.volume = Number(vol.value); mudou(); });
   const tempoHoje = el("span", { className: "tempo-hoje", textContent: "—" });
   painel.replaceChildren(el("b", { textContent: "⚙️ Ajustes" }),
-    linha("Qualidade", qual), linha("🔊 Som", marca("som")), linha("🔉 Volume", vol), linha("🏷️ Nomes dos jogadores", marca("nomes")), linha("📈 Mostrar FPS", marca("fps")), linha("💀 Som ao cair", morte), linha("🎥 Sensibilidade da câmera", sens), linha("↕️ Inverter câmera", marca("inverterY")), linha("🔋 Limite de FPS", lim), linha("⏰ Lembrete de pausa", lem), linha("🔘 Tamanho dos botões", tb),
+    linha("Qualidade", qual), linha("🔊 Som", marca("som")), linha("🔉 Volume", vol), linha("🏷️ Nomes dos jogadores", marca("nomes")), linha("📈 Mostrar FPS", marca("fps")), linha("💀 Som ao cair", morte), linha("📳 Vibrar ao cair (celular)", marca("vibrar")), linha("🎥 Sensibilidade da câmera", sens), linha("↕️ Inverter câmera", marca("inverterY")), linha("🔋 Limite de FPS", lim), linha("⏰ Lembrete de pausa", lem), linha("🔘 Tamanho dos botões", tb),
     el("div", { className: "ajuste" }, el("span", { textContent: "⏱️ Jogado hoje" }), tempoHoje),
     el("button", { type: "button", className: "btn-jogo pequeno", textContent: "🙈 Esconder botões por 10 s",
       onclick: () => { painel.hidden = true; esconderBotoes(10); } }),
