@@ -357,6 +357,18 @@
     else if (e.key === 'Escape' && document.activeElement === campo) campo.blur();
   });
 
+  // 🔇 Silenciar alguém só para você (fica salvo no aparelho; toque no nome)
+  let silenciados; try { silenciados = new Set(JSON.parse(localStorage.getItem('rolox.silenciados') || '[]')); } catch { silenciados = new Set(); }
+  caixa.addEventListener('click', (e) => {
+    const b = e.target.closest('b[data-nome]'); if (!b) return;
+    const n = b.dataset.nome, sim = silenciados.has(n);
+    if (!confirm(sim ? `Voltar a ver as mensagens de ${n}?` : `🔇 Silenciar ${n}? Você não verá mais as mensagens dessa pessoa.`)) return;
+    sim ? silenciados.delete(n) : silenciados.add(n);
+    try { localStorage.setItem('rolox.silenciados', JSON.stringify([...silenciados])); } catch {}
+    caixa.querySelectorAll('p[data-de]').forEach(p => { p.hidden = silenciados.has(p.dataset.de); });
+    aviso(sim ? `${n} não está mais silenciado.` : `🔇 ${n} silenciado.`);
+  });
+
   async function puxar() {
     if (puxando) return; puxando = true;
     try {
@@ -365,8 +377,8 @@
       for (const m of d.mensagens) {
         ultimo = Math.max(ultimo, m.id);
         const p = document.createElement('p');
-        const b = document.createElement('b'); b.textContent = m.username;
-        p.append(b);
+        const b = document.createElement('b'); b.textContent = m.username; b.dataset.nome = m.username; b.title = 'Toque para silenciar'; b.style.cursor = 'pointer';
+        p.append(b); p.dataset.de = m.username; p.hidden = silenciados.has(m.username);
         if (m.parceiro) { const s = document.createElement('span'); s.className = 'selo'; s.title = 'Parceiro do ROLOX'; s.textContent = '🤝'; p.append(s); }
         if (m.bot_id) { const t = document.createElement('span'); t.className = 'etiqueta'; t.textContent = 'IA'; p.append(t); }
         p.append(document.createTextNode(': ' + m.mensagem_filtrada));
