@@ -1936,3 +1936,10 @@ def test_novidades_publica_e_no_inicio(cliente, sb):
 def test_ban_mostra_como_recorrer():
     from rolox_api import MENSAGENS
     assert "revisão" in MENSAGENS["conta_banida"] and "discord.gg" in MENSAGENS["conta_banida"]
+
+
+def test_novidades_sem_repeticao_e_titulo_certo(cliente):
+    t = html(cliente.get("/novidades"))
+    assert "<title>Novidades · Rolox</title>" in t.replace("\n", "") or "Novidades · Rolox" in t.split("</title>")[0]
+    titulos = re.findall(r'class="titulo">([^<]*)', t)
+    assert len(titulos) == len(set(titulos)) >= 20
