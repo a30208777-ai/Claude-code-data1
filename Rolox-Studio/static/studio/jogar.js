@@ -76,7 +76,10 @@ export async function jogarMapa({ canvas, urlMapa, nomeJogador = "Jogador", avat
   let antes = performance.now();
   function loop() {
     if (!jogo.rodando) return;
-    const agora = performance.now(), dt = Math.min(0.1, (agora - antes) / 1000);
+    const agora = performance.now();
+    // 🔋 limite de FPS (⚙️ ajustes): poupa bateria e esquenta menos celular simples
+    if (jogo.fpsMax && agora - antes < 1000 / jogo.fpsMax - 2) { requestAnimationFrame(loop); return; }
+    const dt = Math.min(0.1, (agora - antes) / 1000);
     antes = agora;
     for (const x of jogo.extras) x.quadro?.(dt);
     jogo.passo();

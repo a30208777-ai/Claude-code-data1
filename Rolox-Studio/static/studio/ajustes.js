@@ -2,7 +2,8 @@
 import { SONS_MORTE, tocarSomMorte } from "./sons_morte.js";
 //   qualidade (baixa = celular fraco roda liso) · som · nomes dos jogadores · contador de FPS
 
-export const PADRAO = { qualidade: "auto", som: true, nomes: true, fps: false, somMorte: "classico", sensibilidade: 1, inverterY: false };
+export const PADRAO = { qualidade: "auto", som: true, nomes: true, fps: false, somMorte: "classico", sensibilidade: 1, inverterY: false, fpsMax: 0 };
+export const LIMITES_FPS = { 0: "Sem limite", 60: "60 FPS", 30: "30 FPS (economia de bateria)" };
 export const QUALIDADES = { auto: "Automática", baixa: "Baixa (mais leve)", media: "Média", alta: "Alta (sombras)" };
 const CHAVE = "rolox.ajustes";
 
@@ -17,6 +18,7 @@ export function lerAjustes(armazenamento = globalThis.localStorage) {
       somMorte: d.somMorte in SONS_MORTE ? d.somMorte : PADRAO.somMorte,
       sensibilidade: Number.isFinite(d.sensibilidade) ? Math.min(3, Math.max(0.3, d.sensibilidade)) : PADRAO.sensibilidade,
       inverterY: typeof d.inverterY === "boolean" ? d.inverterY : PADRAO.inverterY,
+      fpsMax: String(d.fpsMax) in LIMITES_FPS ? Number(d.fpsMax) : PADRAO.fpsMax,
     };
   } catch { return { ...PADRAO }; }
 }
@@ -43,6 +45,7 @@ export function aplicarAjustes(jogo, render, a, { camadaNomes, contador } = {}) 
   for (const m of document.querySelectorAll("audio, video")) m.muted = !a.som;
   if (camadaNomes) camadaNomes.style.display = a.nomes ? "" : "none";
   if (contador) contador.hidden = !a.fps;
+  if (jogo) jogo.fpsMax = a.fpsMax;
   if (jogo?.cam) { jogo.cam.sensibilidade = a.sensibilidade; jogo.cam.inverterY = a.inverterY; }
 }
 
@@ -61,9 +64,11 @@ export function ligarAjustes(jogo, render, { botao, painel, camadaNomes, contado
   jogo.aoMorrer = (_p, local) => { if (local && a.som) tocarSomMorte(a.somMorte); };
   const sens = el("input", { type: "range", min: "0.3", max: "3", step: "0.1", value: String(a.sensibilidade) });
   sens.addEventListener("input", () => { a.sensibilidade = Number(sens.value); mudou(); });
+  const lim = el("select", {}, ...Object.entries(LIMITES_FPS).map(([k, v]) => el("option", { value: k, textContent: v, selected: String(a.fpsMax) === k })));
+  lim.addEventListener("change", () => { a.fpsMax = Number(lim.value); mudou(); });
   const tempoHoje = el("span", { className: "tempo-hoje", textContent: "—" });
   painel.replaceChildren(el("b", { textContent: "⚙️ Ajustes" }),
-    linha("Qualidade", qual), linha("🔊 Som", marca("som")), linha("🏷️ Nomes dos jogadores", marca("nomes")), linha("📈 Mostrar FPS", marca("fps")), linha("💀 Som ao cair", morte), linha("🎥 Sensibilidade da câmera", sens), linha("↕️ Inverter câmera", marca("inverterY")),
+    linha("Qualidade", qual), linha("🔊 Som", marca("som")), linha("🏷️ Nomes dos jogadores", marca("nomes")), linha("📈 Mostrar FPS", marca("fps")), linha("💀 Som ao cair", morte), linha("🎥 Sensibilidade da câmera", sens), linha("↕️ Inverter câmera", marca("inverterY")), linha("🔋 Limite de FPS", lim),
     el("div", { className: "ajuste" }, el("span", { textContent: "⏱️ Jogado hoje" }), tempoHoje));
   function mudou() { salvarAjustes(a); aplicarAjustes(jogo, render, a, { camadaNomes, contador }); }
   botao.addEventListener("click", () => { painel.hidden = !painel.hidden; botao.setAttribute("aria-expanded", String(!painel.hidden)); });
