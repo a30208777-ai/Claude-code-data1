@@ -1948,3 +1948,14 @@ def test_novidades_sem_repeticao_e_titulo_certo(cliente):
 def test_notdesligar_responde_sem_login(cliente):
     r = cliente.get("/api/notdesligar")
     assert r.status_code == 200 and r.get_json() == {"ok": True, "acordado": True}
+
+
+def test_acordar_so_liga_no_render(tmp_path, monkeypatch):
+    import acordar
+    monkeypatch.delenv("RENDER_EXTERNAL_URL", raising=False)
+    monkeypatch.setattr(acordar, "_iniciado", False)
+    assert acordar.iniciar(trava=str(tmp_path / "t.pid")) is False          # fora do Render: nada
+    monkeypatch.setattr(acordar, "_laco", lambda url: None)
+    assert acordar.iniciar("https://x.onrender.com", trava=str(tmp_path / "t.pid")) is True
+    monkeypatch.setattr(acordar, "_iniciado", False)
+    assert acordar.iniciar("https://x.onrender.com", trava=str(tmp_path / "t.pid")) is False   # trava: só 1

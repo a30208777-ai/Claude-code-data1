@@ -260,7 +260,7 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
     # ------------------------------------------------------------ conta
     @app.get("/api/notdesligar")
     def nao_desligar():
-        """⏰ Cutucada a cada 5 min (GitHub Actions) para o Render grátis não dormir. Não toca no banco."""
+        """⏰ O próprio servidor se abre aqui a cada 5 min (acordar.py) para o Render grátis não dormir."""
         return jsonify(ok=True, acordado=True)
 
     @app.get("/saude")
@@ -1442,6 +1442,8 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
             abort(404)
         return redirect(url_for("adm"))
 
+    import acordar                                    # ⏰ se abre sozinho a cada 5 min (só no Render)
+    acordar.iniciar()
     return app
 
 
