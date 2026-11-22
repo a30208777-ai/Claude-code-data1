@@ -2,7 +2,7 @@ palavras: material, materiais, madeira, metal, grama, pedra, tijolo, concreto, a
 
 # Materiais das peças e o Céu
 ## Materiais (propriedade Material; no bloco acoes use "material": "Madeira")
-Plastico (padrão), Madeira, Metal, Grama, Pedra, Tijolo, Concreto, Areia, Gelo, Neon, Vidro, Tecido, Borracha, Lava, Agua.
+Plastico (padrão), Madeira, Metal, Grama, Pedra, Tijolo, Concreto, Areia, Gelo, Neon, Vidro, Tecido, Borracha, Lava, Agua, Pinos (visual clássico de blocos).
 A COR continua valendo: Madeira + "#8d6e63" = madeira marrom; Madeira + "#fafafa" = madeira clara.
 Materiais que mudam o jogo de verdade:
 - Gelo: o jogador escorrega (demora para acelerar e para parar).

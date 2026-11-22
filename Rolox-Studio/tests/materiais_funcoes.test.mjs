@@ -21,7 +21,7 @@ test("materiais: nomes sem acento, erro claro e salvos no mapa", () => {
   p.Material = "água"; assert.equal(p.Material, "Agua");
   p.Material = "MADEIRA"; assert.equal(p.Material, "Madeira");
   assert.throws(() => { p.Material = "Diamante"; }, /Material desconhecido: Diamante/);
-  assert.equal(MATERIAIS.length, 15);
+  assert.equal(MATERIAIS.length, 16);
   const m2 = carregarMundo(JSON.parse(JSON.stringify(salvarMundo(m))));
   assert.equal(m2.workspace.FindFirstChild("Lago").Material, "Madeira");
   // mapa com material estranho não quebra
@@ -168,4 +168,9 @@ print(ok)`;
   assert.equal(m.workspace.Alvo.Position.Z, -20);
   assert.equal(m.game.Ceu.Hora, 21);
   lua.fechar();
+});
+
+test("material Pinos (visual clássico) existe", async () => {
+  const { materialValido } = await import("../static/studio/motor.js");
+  assert.equal(materialValido("pinos"), "Pinos");
 });

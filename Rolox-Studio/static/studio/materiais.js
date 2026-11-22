@@ -21,6 +21,7 @@ export const ASPECTO = {
   Borracha: { rug: 0.98, metal: 0, tex: "borracha" },
   Lava: { rug: 0.7, metal: 0, brilho: 0.9, tex: "lava" },
   Agua: { rug: 0.1, metal: 0.1, opac: 0.6, tex: "agua", anima: true },
+  Pinos: { rug: 0.5, metal: 0, tex: "pinos" },     // 🧱 visual clássico com pininhos (o ROBLOX tirou em 2018; aqui fica)
 };
 
 // gerador pseudoaleatório com semente (a textura sai sempre igual)
@@ -102,6 +103,15 @@ const DESENHOS = {
     c.fillStyle = "rgba(90,90,90,.35)";
     for (let y = 4; y < n; y += 8) for (let x = 4; x < n; x += 8) { c.beginPath(); c.arc(x + (y % 16 ? 4 : 0), y, 1.6, 0, 7); c.fill(); }
     for (let i = 0; i < n; i++) { c.fillStyle = `rgba(255,255,255,${r() * 0.05})`; c.fillRect(r() * n, r() * n, 2, 2); }
+  },
+  pinos(c, n) {
+    c.fillStyle = "#d6d6d6"; c.fillRect(0, 0, n, n);
+    const passo = n / 4;
+    for (let y = passo / 2; y < n; y += passo) for (let x = passo / 2; x < n; x += passo) {
+      c.fillStyle = "rgba(70,70,70,.35)"; c.beginPath(); c.arc(x + 1.5, y + 1.5, passo * 0.3, 0, 7); c.fill();     // sombra
+      c.fillStyle = "#ececec"; c.beginPath(); c.arc(x, y, passo * 0.3, 0, 7); c.fill();                       // pino
+      c.fillStyle = "rgba(255,255,255,.7)"; c.beginPath(); c.arc(x - passo * 0.1, y - passo * 0.1, passo * 0.1, 0, 7); c.fill();
+    }
   },
   lava(c, n, r) {
     c.fillStyle = "#ffffff"; c.fillRect(0, 0, n, n);

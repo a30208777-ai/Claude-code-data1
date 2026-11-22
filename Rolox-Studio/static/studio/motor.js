@@ -205,7 +205,7 @@ registrar(class NumberValue extends ValorBase {}, "NumberValue");
 // Materiais das peças (nomes do ROLOX). Alguns mudam a física do personagem:
 //   Gelo escorrega, Areia deixa mais devagar, Borracha faz quicar.
 export const MATERIAIS = ["Plastico", "Madeira", "Metal", "Grama", "Pedra", "Tijolo", "Concreto", "Areia",
-  "Gelo", "Neon", "Vidro", "Tecido", "Borracha", "Lava", "Agua"];
+  "Gelo", "Neon", "Vidro", "Tecido", "Borracha", "Lava", "Agua", "Pinos"];   // Pinos = o visual clássico de blocos de montar
 const SEM_ACENTO = (t) => String(t ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 export function materialValido(v) {
   const k = SEM_ACENTO(v);
