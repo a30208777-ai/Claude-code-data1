@@ -258,6 +258,11 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
         return {j["gameid"]: j["nome"] for j in g.api.jogos()}
 
     # ------------------------------------------------------------ conta
+    @app.get("/api/notdesligar")
+    def nao_desligar():
+        """⏰ Cutucada a cada 5 min (GitHub Actions) para o Render grátis não dormir. Não toca no banco."""
+        return jsonify(ok=True, acordado=True)
+
     @app.get("/saude")
     def saude():
         return "ok"

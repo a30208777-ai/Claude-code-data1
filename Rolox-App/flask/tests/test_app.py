@@ -1943,3 +1943,8 @@ def test_novidades_sem_repeticao_e_titulo_certo(cliente):
     assert "<title>Novidades · Rolox</title>" in t.replace("\n", "") or "Novidades · Rolox" in t.split("</title>")[0]
     titulos = re.findall(r'class="titulo">([^<]*)', t)
     assert len(titulos) == len(set(titulos)) >= 20
+
+
+def test_notdesligar_responde_sem_login(cliente):
+    r = cliente.get("/api/notdesligar")
+    assert r.status_code == 200 and r.get_json() == {"ok": True, "acordado": True}
