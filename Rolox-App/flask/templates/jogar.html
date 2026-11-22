@@ -389,8 +389,9 @@
       if (naoLidas) { badge.hidden = false; badge.textContent = naoLidas > 9 ? '9+' : naoLidas; }
       if (noFim || d.mensagens.length) caixa.scrollTop = caixa.scrollHeight;
       if (!d.ainda_no_servidor) {
-        aviso('Você saiu do servidor (ele foi encerrado ou você foi removido).');
-        setTimeout(() => location.href = '{{ url_for("jogos") }}', 1500);
+        // 🔁 caiu? volta para a página do jogo, com o ▶ Jogar a um toque (não te joga na lista inteira)
+        aviso('Você saiu do servidor (ele foi encerrado ou você foi removido). Voltando para o jogo...');
+        setTimeout(() => location.href = {{ url_for("jogo_pagina", mapa_id=m.id)|tojson }}, 1500);
       }
     } catch (e) {} finally { puxando = false; }
   }
