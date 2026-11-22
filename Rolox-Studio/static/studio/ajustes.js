@@ -51,6 +51,18 @@ export function aplicarAjustes(jogo, render, a, { camadaNomes, contador } = {}) 
   if (jogo?.cam) { jogo.cam.sensibilidade = a.sensibilidade; jogo.cam.inverterY = a.inverterY; }
 }
 
+/** ❓ Controles sempre à mão (o ROBLOX tirou a aba de ajuda do menu do jogo). */
+export const CONTROLES = [
+  ["W A S D / setas", "andar"], ["Espaço", "pular"], ["Arrastar / botão direito", "girar a câmera"],
+  ["Roda do mouse / pinça", "zoom"], ["Q / E", "girar a câmera pelo teclado"], ["Enter", "abrir o chat"],
+  ["Esc", "fechar o chat"], ["Celular", "joystick à esquerda, botão de pular à direita"],
+];
+function controles() {
+  const d = el("details", { className: "ajuste-controles" }, el("summary", { textContent: "❓ Controles" }));
+  d.append(el("ul", {}, ...CONTROLES.map(([k, v]) => el("li", {}, el("b", { textContent: k }), document.createTextNode(" — " + v)))));
+  return d;
+}
+
 export function ligarAjustes(jogo, render, { botao, painel, camadaNomes, contador }) {
   let a = lerAjustes();
   const linha = (rotulo, campo) => el("label", { className: "ajuste" }, el("span", { textContent: rotulo }), campo);
@@ -73,7 +85,8 @@ export function ligarAjustes(jogo, render, { botao, painel, camadaNomes, contado
   const tempoHoje = el("span", { className: "tempo-hoje", textContent: "—" });
   painel.replaceChildren(el("b", { textContent: "⚙️ Ajustes" }),
     linha("Qualidade", qual), linha("🔊 Som", marca("som")), linha("🏷️ Nomes dos jogadores", marca("nomes")), linha("📈 Mostrar FPS", marca("fps")), linha("💀 Som ao cair", morte), linha("🎥 Sensibilidade da câmera", sens), linha("↕️ Inverter câmera", marca("inverterY")), linha("🔋 Limite de FPS", lim), linha("⏰ Lembrete de pausa", lem),
-    el("div", { className: "ajuste" }, el("span", { textContent: "⏱️ Jogado hoje" }), tempoHoje));
+    el("div", { className: "ajuste" }, el("span", { textContent: "⏱️ Jogado hoje" }), tempoHoje),
+    controles());
   function mudou() { salvarAjustes(a); aplicarAjustes(jogo, render, a, { camadaNomes, contador }); }
   botao.addEventListener("click", () => { painel.hidden = !painel.hidden; botao.setAttribute("aria-expanded", String(!painel.hidden)); });
   aplicarAjustes(jogo, render, a, { camadaNomes, contador });

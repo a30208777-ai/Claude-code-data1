@@ -29,3 +29,8 @@ test("lembrete de pausa só 0, 30 ou 60", () => {
   assert.equal(lerAjustes(m({ lembrete: 5 })).lembrete, 60);
   assert.equal(lerAjustes(m({ lembrete: 0 })).lembrete, 0);
 });
+test("lista de controles tem andar e pular", async () => {
+  const { CONTROLES } = await import("../static/studio/ajustes.js");
+  const t = CONTROLES.map((c) => c[1]).join(" ");
+  assert.match(t, /andar/); assert.match(t, /pular/);
+});
