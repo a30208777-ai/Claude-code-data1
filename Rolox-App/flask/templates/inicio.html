@@ -45,12 +45,14 @@
 {% endfor %}
 <p class="nota">Missões novas todo dia. Cumpra e toque em Resgatar.</p>
 
+<div class="atalhos-inicio">
+  <a class="btn contorno pequeno" href="{{ url_for('novidades') }}">📰 Novidades</a>
+  <a class="btn contorno pequeno" href="{{ url_for('mensagens') }}">💌 Mensagens{% if nao_lidas %} <span class="contador-novo" aria-label="{{ nao_lidas }} não lidas">{{ nao_lidas }}</span>{% endif %}</a>
+  <a class="btn contorno pequeno" href="{{ url_for('loja') }}">🛒 Loja</a>
+</div>
 <div class="linha">
   <h2 class="cresce">👥 Amigos online</h2>
   <a class="btn texto" href="{{ url_for('amigos') }}">Ver amigos</a>
-  <a class="btn texto" href="{{ url_for('novidades') }}">📰 Novidades</a>
-  <a class="btn texto" href="{{ url_for('mensagens') }}">💌 Mensagens{% if nao_lidas %} <span class="contador-novo" aria-label="{{ nao_lidas }} não lidas">{{ nao_lidas }}</span>{% endif %}</a>
-  <a class="btn texto" href="{{ url_for('loja') }}">🛒 Loja</a>
 </div>
 {% for a in amigos_online %}
   <div class="cartao">
