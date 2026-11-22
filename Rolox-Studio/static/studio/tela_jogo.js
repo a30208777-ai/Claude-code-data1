@@ -103,6 +103,15 @@ export const RECEITAS = {
   porta: (a, t) => { nota(a, 140, t, 0.35, "sawtooth", 0.08, 90); ruido(a, t, 0.25, 0.08); },
   explosao: (a, t) => { ruido(a, t, 0.8, 0.5); nota(a, 90, t, 0.6, "sine", 0.4, 30); },
   erro: (a, t) => { nota(a, 196, t, 0.15, "square", 0.1); nota(a, 147, t + 0.17, 0.25, "square", 0.1); },
+  // 🎵 sons livres: são do ROLOX e de todo mundo, nunca ficam privados nem somem
+  laser: (a, t) => nota(a, 1500, t, 0.2, "sawtooth", 0.08, 200),
+  poder: (a, t) => [392, 523, 659, 784, 1047].forEach((f, i) => nota(a, f, t + i * 0.05, 0.12, "square", 0.08)),
+  sino: (a, t) => { nota(a, 880, t, 0.9, "sine", 0.15); nota(a, 1760, t, 0.5, "sine", 0.05); },
+  tambor: (a, t) => { nota(a, 120, t, 0.25, "sine", 0.35, 50); ruido(a, t, 0.06, 0.15); },
+  apito: (a, t) => { nota(a, 2000, t, 0.12, "sine", 0.1); nota(a, 2000, t + 0.18, 0.35, "sine", 0.1); },
+  bolha: (a, t) => nota(a, 400, t, 0.12, "sine", 0.15, 1200),
+  alarme: (a, t) => [0, 1, 2, 3].forEach((i) => nota(a, i % 2 ? 660 : 880, t + i * 0.2, 0.18, "square", 0.07)),
+  derrota: (a, t) => [392, 370, 349, 330].forEach((f, i) => nota(a, f, t + i * 0.25, i === 3 ? 0.6 : 0.22, "triangle", 0.15)),
 };
 
 const MELODIAS = {

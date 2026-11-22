@@ -2,7 +2,7 @@ palavras: som, sons, musica, audio, barulho, efeito sonoro, tocar, video, filme,
 
 # Receita: sons, música e vídeo
 ## Sons prontos (gerados na hora, sem arquivo)
-`game:GetService("Sons"):Tocar(nome)` com nome = moeda, pulo, vitoria, dano, clique, porta, explosao, erro.
+`game:GetService("Sons"):Tocar(nome)` com nome = moeda, pulo, vitoria, dano, clique, porta, explosao, erro, laser, poder, sino, tambor, apito, bolha, alarme, derrota.
 Música de fundo: `game:GetService("Sons"):Musica("calma")` ou "acao"; `Sons:Musica("")` para parar.
 
 ## Som ou vídeo do próprio criador

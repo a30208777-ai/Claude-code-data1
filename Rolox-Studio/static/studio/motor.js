@@ -552,10 +552,12 @@ registrar(class Cofre extends Servico {
 //   Tela:Botao("abrir", "Abrir a porta", "baixo")   +  Tela.Clicado:Connect(function(id) ... end)
 //   Tela:Barra("vida", 80, 100, "topo")             Tela:Aviso("Você venceu!", 3)
 //   Tela:Remover("placar") / Tela:Limpar()
-//   Sons:Tocar("moeda")   (moeda, pulo, vitoria, dano, clique, porta, explosao, erro)
+//   Sons:Tocar("moeda")   (moeda, pulo, vitoria, dano, clique, porta, explosao, erro,
+//                          laser, poder, sino, tambor, apito, bolha, alarme, derrota) — sons livres, nunca somem
 //   Sons:Musica("calma")  (calma, acao; "" para parar) — sons gerados na hora, sem arquivos
 export const TELA_LUGARES = ["topo", "centro", "baixo", "esquerda", "direita"];
-export const SONS = ["moeda", "pulo", "vitoria", "dano", "clique", "porta", "explosao", "erro"];
+export const SONS = ["moeda", "pulo", "vitoria", "dano", "clique", "porta", "explosao", "erro",
+  "laser", "poder", "sino", "tambor", "apito", "bolha", "alarme", "derrota"];
 export const MUSICAS = ["calma", "acao"];
 const TELA_ID = /^[A-Za-z0-9_-]{1,30}$/;
 registrar(class Tela extends Servico {
