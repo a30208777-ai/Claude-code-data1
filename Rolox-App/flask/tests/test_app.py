@@ -1909,7 +1909,7 @@ def test_seguir_e_seguidores(cliente, sb):
     assert "bob" not in sb.segue
     assert "Ninguém por aqui" in html(cliente.get("/jogador/bob/seguindo"))
     t = html(cliente.get("/jogador/alice"))
-    assert "seguidores</a>" in t and "➕ Seguir" not in t   # não segue a si mesmo
+    assert "seguidores</a>" in t and "➕ Seguir" not in t and "🔗 Compartilhar perfil" in t   # não segue a si mesmo
 
 
 def test_perfil_tem_visuais_salvos(cliente, sb):

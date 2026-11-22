@@ -16,6 +16,13 @@
       <button class="btn pequeno{{ ' contorno' if seg.eu_sigo }}">{{ '✓ Seguindo' if seg.eu_sigo else '➕ Seguir' }}</button>
     </form>
     {% endif %}
+    <p><button class="btn pequeno contorno" type="button" id="compartilharPerfil">🔗 Compartilhar perfil</button></p>
+    <script>
+      document.getElementById("compartilharPerfil")?.addEventListener("click", async () => {
+        const dados = { title: {{ p.username|tojson }} + " no ROLOX", text: "Me segue no ROLOX!", url: location.href };
+        try { if (navigator.share) await navigator.share(dados); else { await navigator.clipboard.writeText(location.href); aviso("Link copiado!", "ok"); } } catch { /* cancelou */ }
+      });
+    </script>
     <p class="muted">No ROLOX desde {{ p.criado_em|data }}</p>
   </div>
 </div>
