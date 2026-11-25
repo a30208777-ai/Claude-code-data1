@@ -10,6 +10,7 @@ import random
 
 CURIOSIDADES = [
     "O VISTA foi inspirado no ROBLOX.",
+    "O VISTA já se chamou ROLOX — mudou de nome, mas continua o mesmo jogo.",
     "O VISTA foi criado por causa das decisões ruins do ROBLOX atualmente.",
     "No VISTA Studio você programa em Lua ou em Python — você escolhe.",
     "Todo mapa enviado é testado e aprovado pelo dono antes de aparecer em Jogos.",
