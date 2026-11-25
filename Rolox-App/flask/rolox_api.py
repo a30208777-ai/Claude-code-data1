@@ -519,6 +519,11 @@ class RoloxAPI:
         r = self._req("POST", "/rest/v1/rpc/emblemas_de", json={"p_username": username})
         return r if isinstance(r, list) else []
 
+    # -------------------------------------------------------- 🎉 eventos
+    def verificar_evento(self, evento_id: str) -> dict:
+        r = self._req("POST", "/rest/v1/rpc/verificar_evento", json={"p_id": str(evento_id or "")[:80]})
+        return r if isinstance(r, dict) else {"existe": False, "ativo": False}
+
     # -------------------------------------------------------- 👥 seguidores
     def seguir(self, nome: str, seguir: bool = True) -> dict:
         return self._req("POST", "/rest/v1/rpc/seguir", json={"p_nome": nome, "p_seguir": bool(seguir)}) or {}

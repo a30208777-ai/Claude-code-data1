@@ -14,6 +14,8 @@ from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parents[1]
 SITE_RENDER = "https://rolox-gj2i.onrender.com"
+SUPABASE_URL = "https://llgriaqnlcylpaxudrlg.supabase.co"
+SUPABASE_CHAVE = "sb_publishable_GFKzsWxgUtXTff5fHWVVfQ_dUKdF62n"     # chave pública (a mesma do app)
 LOCAIS = {"/termos": "termos/", "/politica": "politica/", "/novidades": "novidades/"}
 
 
@@ -55,9 +57,9 @@ def gerar(saida: Path):
         html = cli.get(rota).get_data(as_text=True)
         _salvar(saida, pasta.rstrip("/"), _relativo(html, "../"))
 
-    _salvar(saida, "", INICIO.replace("{SITE}", SITE_RENDER))
+    _salvar(saida, "", _inicio())
     (saida / ".nojekyll").write_text("")                  # serve pastas que começam com _ sem Jekyll
-    (saida / "404.html").write_text(INICIO.replace("{SITE}", SITE_RENDER), encoding="utf-8")
+    (saida / "404.html").write_text(_inicio(), encoding="utf-8")
 
 
 INICIO = """<!doctype html>
@@ -66,6 +68,26 @@ INICIO = """<!doctype html>
 <style>.capa{max-width:560px;margin:40px auto;padding:0 16px;text-align:center}.capa img{max-width:320px;width:80%}
 .capa .btn{display:block;margin:10px 0}.rodape-links{margin-top:24px}</style></head>
 <body><main class="capa">
+<p id="avisoEvento" class="nota" hidden></p>
+<script>
+  // 🎉 ?e=true&evento-id=... → confere o evento no Supabase e manda para o Render com o mesmo ?...
+  (async () => {
+    const q = new URLSearchParams(location.search), id = q.get("evento-id");
+    if (q.get("e") !== "true" || !id) return;
+    const aviso = document.getElementById("avisoEvento");
+    aviso.hidden = false; aviso.textContent = "🎉 Verificando o evento...";
+    try {
+      const r = await fetch("{SUPA}/rest/v1/rpc/verificar_evento", { method: "POST",
+        headers: { "Content-Type": "application/json", apikey: "{CHAVE}", Authorization: "Bearer {CHAVE}" },
+        body: JSON.stringify({ p_id: id }) });
+      const ev = await r.json();
+      if (ev && ev.ativo) {
+        aviso.textContent = "🎉 Evento " + ev["name-e"] + "! Entrando...";
+        location.replace("{SITE}/?" + new URLSearchParams({ e: "true", "evento-id": ev["evento-id"] }));
+      } else aviso.textContent = ev && ev.existe ? "Esse evento ainda não começou ou já terminou." : "Evento não encontrado.";
+    } catch { aviso.textContent = "Não deu para verificar o evento agora. Tente de novo."; }
+  })();
+</script>
 <img src="static/logo_nome.png" alt="VISTA">
 <p>Jogue, crie e divirta-se com os amigos. Grátis.</p>
 <a class="btn" href="{SITE}/">▶ Jogar no VISTA</a>
@@ -74,6 +96,10 @@ INICIO = """<!doctype html>
  · <a href="https://discord.gg/6NZ5Ftq3p" target="_blank" rel="noopener">Discord</a></p>
 </main></body></html>
 """
+
+def _inicio() -> str:
+    return INICIO.replace("{SITE}", SITE_RENDER).replace("{SUPA}", SUPABASE_URL).replace("{CHAVE}", SUPABASE_CHAVE)
+
 
 if __name__ == "__main__":
     gerar(Path(sys.argv[1] if len(sys.argv) > 1 else "pages"))

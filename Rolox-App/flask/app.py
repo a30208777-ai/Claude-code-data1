@@ -10,6 +10,7 @@ use ROLOX_HOST=0.0.0.0 (cuidado: qualquer um na rede poderia abrir sua sessão).
 from __future__ import annotations
 
 import functools
+from urllib.parse import urlencode
 import ipaddress
 import time
 import uuid
@@ -276,7 +277,22 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
 
     @app.get("/")
     def raiz():
-        return redirect(url_for("inicio" if g.api.sessao else "login"))
+        destino = url_for("inicio" if g.api.sessao else "login")
+        # 🎉 ?e=true&evento-id=... (vem do GitHub Pages ou de um link): confere no Supabase e marca o evento
+        evento_id = request.args.get("evento-id", "")
+        if request.args.get("e") == "true" and evento_id:
+            try:
+                ev = g.api.verificar_evento(evento_id)
+            except ErroRolox:
+                ev = {}
+            if ev.get("ativo"):
+                session["evento"] = {"id": ev.get("evento-id"), "nome": ev.get("name-e")}
+                flash(f"🎉 Evento ativo: {ev.get('name-e')}!", "ok")
+                destino += "?" + urlencode({"e": "true", "evento-id": ev.get("evento-id")})
+            else:
+                session.pop("evento", None)
+                flash("Esse evento não existe ou já terminou.", "erro")
+        return redirect(destino)
 
     @app.route("/login", methods=["GET", "POST"])
     def login():

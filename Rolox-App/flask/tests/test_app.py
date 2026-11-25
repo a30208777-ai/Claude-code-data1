@@ -1978,3 +1978,17 @@ def test_converter_obj_com_ia_manda_todos_os_documentos(cliente, sb, monkeypatch
     assert visto["todos"] is True and ".obj" in visto["extra"] and visto["msgs"][0]["role"] == "user"
     assert cliente.post("/api/studio/ia/converter", json={}, headers={"X-CSRF": tok}).status_code == 400
     assert len(docs_ia.carregar()) >= 10                       # "todos os documentos" de verdade
+
+
+def test_link_de_evento_confere_e_marca(cliente, sb, monkeypatch):
+    from rolox_api import RoloxAPI
+    ok = {"existe": True, "ativo": True, "evento-id": "55520184999372947149471948272ggskw", "name-e": "Festa"}
+    monkeypatch.setattr(RoloxAPI, "verificar_evento", lambda self, i: ok if i == ok["evento-id"] else {"existe": False, "ativo": False})
+    r = cliente.get("/?e=true&evento-id=55520184999372947149471948272ggskw")
+    assert "/login?e=true&evento-id=55520184999372947149471948272ggskw" in r.headers["Location"]
+    with cliente.session_transaction() as s:
+        assert s["evento"]["nome"] == "Festa"
+    r = cliente.get("/?e=true&evento-id=naoexiste123")
+    assert "evento-id" not in r.headers["Location"]
+    with cliente.session_transaction() as s:
+        assert "evento" not in s
