@@ -1992,3 +1992,21 @@ def test_link_de_evento_confere_e_marca(cliente, sb, monkeypatch):
     assert "evento-id" not in r.headers["Location"]
     with cliente.session_transaction() as s:
         assert "evento" not in s
+
+
+def test_evento_nao_comecou_adm_ve_e_jogador_nao(cliente, sb, monkeypatch):
+    from rolox_api import RoloxAPI
+    ev = {"existe": True, "ativo": False, "evento-id": "55520184999372947149471948272ggskw", "name-e": "Evento de Natal"}
+    monkeypatch.setattr(RoloxAPI, "verificar_evento", lambda self, i: ev)
+    url = "/?e=true&evento-id=55520184999372947149471948272ggskw"
+    r = cliente.get(url)                                          # sem login: não vê
+    assert "evento-id" not in r.headers["Location"]
+    entrar(cliente)
+    sb.perfil["is_adm"] = False
+    r = cliente.get(url)
+    assert "evento-id" not in r.headers["Location"]               # jogador normal: ainda não começou
+    sb.perfil["is_adm"] = True
+    r = cliente.get(url)
+    assert "evento-id=55520184999372947149471948272ggskw" in r.headers["Location"]
+    t = html(cliente.get("/inicio"))
+    assert "Bem-vindo ADM alice" in t and "ainda não começou" in t and "pode vê-lo" in t

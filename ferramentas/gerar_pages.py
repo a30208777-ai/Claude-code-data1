@@ -84,7 +84,11 @@ INICIO = """<!doctype html>
       if (ev && ev.ativo) {
         aviso.textContent = "🎉 Evento " + ev["name-e"] + "! Entrando...";
         location.replace("{SITE}/?" + new URLSearchParams({ e: "true", "evento-id": ev["evento-id"] }));
-      } else aviso.textContent = ev && ev.existe ? "Esse evento ainda não começou ou já terminou." : "Evento não encontrado.";
+      } else if (ev && ev.existe) {
+        // o GitHub não consegue ler os biscoitos (cookies) do site do VISTA: quem confere se é ADM/dono é o Render
+        aviso.textContent = "Esse evento ainda não começou. Conferindo se você é ADM ou dono...";
+        location.replace("{SITE}/?" + new URLSearchParams({ e: "true", "evento-id": ev["evento-id"] }));
+      } else aviso.textContent = "Evento não encontrado.";
     } catch { aviso.textContent = "Não deu para verificar o evento agora. Tente de novo."; }
   })();
 </script>

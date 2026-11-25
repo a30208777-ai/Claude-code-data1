@@ -285,13 +285,24 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
                 ev = g.api.verificar_evento(evento_id)
             except ErroRolox:
                 ev = {}
-            if ev.get("ativo"):
-                session["evento"] = {"id": ev.get("evento-id"), "nome": ev.get("name-e")}
-                flash(f"🎉 Evento ativo: {ev.get('name-e')}!", "ok")
+            cargo = None
+            if ev.get("existe") and not ev.get("ativo") and g.api.sessao:   # 👑 ADM/dono veem antes de começar
+                try:
+                    p = carregar_perfil()
+                    cargo = "dono" if session.get("dono") else "ADM" if session.get("adm") else None
+                except ErroRolox:
+                    cargo = None
+            if ev.get("ativo") or cargo:
+                session["evento"] = {"id": ev.get("evento-id"), "nome": ev.get("name-e"), "previa": not ev.get("ativo")}
+                if cargo:
+                    flash(f"👑 Bem-vindo {cargo} {p.get('username', '')}! O evento {ev.get('name-e')} ainda não começou, "
+                          "mas você pode vê-lo.", "ok")
+                else:
+                    flash(f"🎉 Evento ativo: {ev.get('name-e')}!", "ok")
                 destino += "?" + urlencode({"e": "true", "evento-id": ev.get("evento-id")})
             else:
                 session.pop("evento", None)
-                flash("Esse evento não existe ou já terminou.", "erro")
+                flash("Esse evento ainda não começou ou já terminou." if ev.get("existe") else "Evento não encontrado.", "erro")
         return redirect(destino)
 
     @app.route("/login", methods=["GET", "POST"])
