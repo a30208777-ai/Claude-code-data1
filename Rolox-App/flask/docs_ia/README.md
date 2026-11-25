@@ -1,4 +1,4 @@
-# Documentos da IA do ROLOX Studio
+# Documentos da IA do VISTA Studio
 
 Cada arquivo `.md` aqui é uma "receita" que o site manda para a IA junto com o pedido do usuário,
 quando o pedido combina com as palavras da linha `palavras:` (sem acento, maiúscula ou minúscula tanto faz).

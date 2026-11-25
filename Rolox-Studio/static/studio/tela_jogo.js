@@ -1,7 +1,7 @@
-// ROLOX — desenha a Tela (textos, botões, barras, avisos) e toca os Sons do jogo.
+// VISTA — desenha a Tela (textos, botões, barras, avisos) e toca os Sons do jogo.
 // Os sons são SINTETIZADOS na hora (Web Audio): nada de arquivo, nada de direito autoral.
 
-/** Internet pelo servidor do ROLOX (só funciona aberto pelo site). */
+/** Internet pelo servidor do VISTA (só funciona aberto pelo site). */
 export function ligarInternet(jogo, url = "/api/internet") {
   jogo.mundo.game.Internet._buscar = async (termo) => {
     const r = await fetch(`${url}?q=${encodeURIComponent(termo)}`, { cache: "no-store" });
@@ -103,7 +103,7 @@ export const RECEITAS = {
   porta: (a, t) => { nota(a, 140, t, 0.35, "sawtooth", 0.08, 90); ruido(a, t, 0.25, 0.08); },
   explosao: (a, t) => { ruido(a, t, 0.8, 0.5); nota(a, 90, t, 0.6, "sine", 0.4, 30); },
   erro: (a, t) => { nota(a, 196, t, 0.15, "square", 0.1); nota(a, 147, t + 0.17, 0.25, "square", 0.1); },
-  // 🎵 sons livres: são do ROLOX e de todo mundo, nunca ficam privados nem somem
+  // 🎵 sons livres: são do VISTA e de todo mundo, nunca ficam privados nem somem
   laser: (a, t) => nota(a, 1500, t, 0.2, "sawtooth", 0.08, 200),
   poder: (a, t) => [392, 523, 659, 784, 1047].forEach((f, i) => nota(a, f, t + i * 0.05, 0.12, "square", 0.08)),
   sino: (a, t) => { nota(a, 880, t, 0.9, "sine", 0.15); nota(a, 1760, t, 0.5, "sine", 0.05); },

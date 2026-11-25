@@ -1,4 +1,4 @@
-// ROLOX — 😀 gestos (emotes): um balão em cima da cabeça por 4 s, que os outros jogadores também veem.
+// VISTA — 😀 gestos (emotes): um balão em cima da cabeça por 4 s, que os outros jogadores também veem.
 // Só os gestos desta lista (o site recusa qualquer outro valor). 💃 dançar gira o personagem e
 // 🎉 comemorar dá um pulo com confete.
 

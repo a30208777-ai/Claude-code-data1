@@ -1,4 +1,4 @@
-// Rolox Studio — execução de scripts.
+// Vista Studio — execução de scripts.
 //   LocalScript  -> Lua (Fengari) por padrão; roda no dispositivo do jogador.
 //   Script       -> Python (Pyodide) por padrão; é o "server script".
 //   ModuleScript -> Lua ou Python, quem decide é o dono do jogo.

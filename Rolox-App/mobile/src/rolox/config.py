@@ -1,4 +1,4 @@
-"""Configuração do app Rolox Mobile.
+"""Configuração do app Vista Mobile.
 
 A chave abaixo é a *publishable key* do Supabase: ela é pública por natureza
 (vai dentro do app) e só dá o acesso que as regras RLS permitem.
@@ -10,10 +10,10 @@ import os
 SUPABASE_URL = os.environ.get("ROLOX_SUPABASE_URL", "https://llgriaqnlcylpaxudrlg.supabase.co")
 SUPABASE_CHAVE = os.environ.get("ROLOX_SUPABASE_CHAVE", "sb_publishable_GFKzsWxgUtXTff5fHWVVfQ_dUKdF62n")
 
-# Rolox Studio (editor de jogos) rodando neste aparelho: Rolox-Studio/servidor.py
+# Vista Studio (editor de jogos) rodando neste aparelho: Rolox-Studio/servidor.py
 STUDIO_URL = os.environ.get("ROLOX_STUDIO_URL", "http://localhost:8600")
 
-# Site do ROLOX (jogos 3D, Studio, multijogador)
+# Site do VISTA (jogos 3D, Studio, multijogador)
 SITE_URL = os.environ.get("ROLOX_SITE_URL", "https://rolox-gj2i.onrender.com").rstrip("/")
 
 # Intervalos de atualização (segundos)

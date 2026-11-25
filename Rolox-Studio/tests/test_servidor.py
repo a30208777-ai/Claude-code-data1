@@ -1,4 +1,4 @@
-"""Testes do servidor do Rolox Studio.  Rodar: python -m pytest -q"""
+"""Testes do servidor do Vista Studio.  Rodar: python -m pytest -q"""
 
 import json
 import sys

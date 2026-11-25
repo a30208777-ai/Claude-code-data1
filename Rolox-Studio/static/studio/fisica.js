@@ -1,4 +1,4 @@
-// Rolox Studio — física simples (caixas alinhadas aos eixos), personagens e Touched.
+// Vista Studio — física simples (caixas alinhadas aos eixos), personagens e Touched.
 // Leve o suficiente para o celular: gravidade, colisão com peças, pulo, Touched.
 
 import { BasePart, Color3, Humanoid, Vector3, criar } from "./motor.js";

@@ -1,7 +1,7 @@
 [project]
 name = "rolox-atualizador"
 version = "1.0.0"
-description = "Atualizador do ROLOX: baixa, atualiza e abre o ROLOX (Android)"
+description = "Atualizador do VISTA: baixa, atualiza e abre o VISTA (Android)"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
@@ -17,12 +17,12 @@ dev = [
 
 [tool.flet]
 org = "com.rolox"
-product = "Atualizador do ROLOX"
-company = "Rolox"
-copyright = "Rolox"
+product = "Atualizador do VISTA"
+company = "Vista"
+copyright = "Vista"
 bundle_id = "com.rolox.atualizador"
 
-# ícone e tela de abertura: a MESMA logo do ROLOX (Rolox-App/mobile/ferramentas/gerar_logo.py)
+# ícone e tela de abertura: a MESMA logo do VISTA (Rolox-App/mobile/ferramentas/gerar_logo.py)
 [tool.flet.splash]
 color = "#26105c"
 dark_color = "#140a33"
@@ -35,15 +35,15 @@ module = "main"
 adaptive_icon_background = "#26105c"
 res_dir = "res_android"             # relativo à raiz do projeto (ao lado do pyproject.toml)
 
-# roloxatualizador://  -> é assim que o ROLOX descobre que o Atualizador está instalado
+# roloxatualizador://  -> é assim que o VISTA descobre que o Atualizador está instalado
 [tool.flet.android.deep_linking]
 scheme = "roloxatualizador"
 
 [tool.flet.android.permission]
 "android.permission.INTERNET" = true
-"android.permission.REQUEST_INSTALL_PACKAGES" = true   # abrir o instalador com o .apk do ROLOX
+"android.permission.REQUEST_INSTALL_PACKAGES" = true   # abrir o instalador com o .apk do VISTA
 
-# o Atualizador precisa "enxergar" o ROLOX (Android 11+) para saber se está instalado e abrir
+# o Atualizador precisa "enxergar" o VISTA (Android 11+) para saber se está instalado e abrir
 [[tool.flet.android.queries.intent]]
 action = "android.intent.action.VIEW"
 data = { scheme = "rolox" }

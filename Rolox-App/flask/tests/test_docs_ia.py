@@ -39,5 +39,5 @@ def test_documentos_vao_junto_para_a_ia():
 
     modelo, texto = ia_studio.perguntar([{"role": "user", "content": "cria uma porta"}], http=Http)
     sistema = enviado["messages"][0]["content"]
-    assert texto == "ok" and "DOCUMENTOS DO ROLOX" in sistema and "Receita: porta que abre" in sistema
+    assert texto == "ok" and "DOCUMENTOS DO VISTA" in sistema and "Receita: porta que abre" in sistema
     assert "Regras de ouro" in sistema and "palavras:" not in sistema

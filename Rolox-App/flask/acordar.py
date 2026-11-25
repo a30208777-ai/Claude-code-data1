@@ -1,4 +1,4 @@
-"""⏰ O próprio ROLOX se abre a cada 5 minutos em /api/notdesligar, pelo endereço público,
+"""⏰ O próprio VISTA se abre a cada 5 minutos em /api/notdesligar, pelo endereço público,
 para o Render grátis não desligar por falta de visitas.
 
 Só liga no Render (ele define RENDER_EXTERNAL_URL). Um arquivo-trava garante uma só

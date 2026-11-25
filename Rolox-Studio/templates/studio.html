@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-  <title>Rolox Studio {{ 'Leve' if modo == 'leve' else 'PC' }}</title>
+  <title>Vista Studio {{ 'Leve' if modo == 'leve' else 'PC' }}</title>
   {% if site %}<meta name="csrf" content="{{ csrf }}">{% endif %}
   {% if midias_base %}<script>window.ROLOX_MIDIAS = {{ midias_base|tojson }};</script>{% endif %}
   <link rel="stylesheet" href="{{ url_for('static', filename='studio/studio.css') }}">
@@ -17,7 +17,7 @@
 </head>
 <body data-modo="{{ modo }}" class="modo-{{ modo }}">
   <header id="barra" role="toolbar" aria-label="Ferramentas">
-    <strong class="marca">ROLOX Studio <small>{{ 'leve' if modo == 'leve' else 'PC' }}</small></strong>
+    <strong class="marca">VISTA Studio <small>{{ 'leve' if modo == 'leve' else 'PC' }}</small></strong>
     <button data-acao="jogar" id="botaoJogar" class="destaque">▶ Jogar</button>
     <button data-acao="jogarDaqui" title="Testar começando em cima da peça selecionada">▶ Daqui</button>
     <button data-acao="ajuda" title="Atalhos e dicas">❓</button>
@@ -29,7 +29,7 @@
       <button data-acao="importarRolox" title="Abrir arquivo .rolox">Importar .rolox</button>
       {% if site %}<button data-acao="midia" title="Enviar som ou vídeo para o jogo">🎵 Som/Vídeo</button>
       <button data-acao="ia" title="IA do Studio ({{ custo_ia }} tickets por mensagem)">🤖 IA</button>
-      <button data-acao="enviarRolox" class="destaque" title="Mandar para o dono aprovar">🚀 Enviar ao ROLOX</button>
+      <button data-acao="enviarRolox" class="destaque" title="Mandar para o dono aprovar">🚀 Enviar ao VISTA</button>
       <a href="/jogos" class="botao-link" title="Voltar ao site">← Site</a>{% endif %}
     </div>
     <div class="grupo">

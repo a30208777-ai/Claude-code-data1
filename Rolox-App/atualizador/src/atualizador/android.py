@@ -101,7 +101,7 @@ def atalho_suportado() -> bool:
 
 
 def criar_atalho() -> bool:
-    """Pede ao Android um atalho 'ROLOX' na tela inicial que abre o ROLOX pelo Atualizador.
+    """Pede ao Android um atalho 'VISTA' na tela inicial que abre o VISTA pelo Atualizador.
 
     Devolve False se a tela inicial do aparelho não aceita atalhos. O Android mostra a
     confirmação ("Adicionar à tela inicial?") e o jogador decide.
@@ -120,8 +120,8 @@ def criar_atalho() -> bool:
     it = Intent(Intent.ACTION_VIEW, Uri.parse(LINK_ATALHO))
     it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     info = (Builder(act, ID_ATALHO)
-            .setShortLabel("ROLOX")
-            .setLongLabel("Abrir o ROLOX")
+            .setShortLabel("VISTA")
+            .setLongLabel("Abrir o VISTA")
             .setIcon(Icon.createWithResource(act, act.getApplicationInfo().icon))   # a mesma logo
             .setIntent(it)
             .build())

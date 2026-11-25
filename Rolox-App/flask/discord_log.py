@@ -1,4 +1,4 @@
-"""Registro de banimentos e punições do ROLOX nos webhooks do Discord.
+"""Registro de banimentos e punições do VISTA nos webhooks do Discord.
 
     Banimentos (ban, desban, IP bloqueado/desbloqueado) -> ROLOX_WEBHOOK_BANIMENTOS
     Punições (sem chat, chat liberado, aviso, denúncia) -> ROLOX_WEBHOOK_PUNICOES
@@ -79,7 +79,7 @@ def formatar_duracao(minutos: int) -> str:
     return f"{minutos} minuto{'s' if minutos > 1 else ''}"
 
 
-def montar_mensagem(tipo: str, alvo: str, motivo: str = "", por: str = "", onde: str = "Jogo ROLOX",
+def montar_mensagem(tipo: str, alvo: str, motivo: str = "", por: str = "", onde: str = "Jogo VISTA",
                     duracao_min: Optional[int] = None, agora: Optional[datetime] = None) -> dict:
     """Corpo do webhook (um embed). Menções desligadas: ninguém é marcado pelo motivo."""
     if tipo not in TIPOS:
@@ -97,13 +97,13 @@ def montar_mensagem(tipo: str, alvo: str, motivo: str = "", por: str = "", onde:
         campos.append({"name": "Até", "value": f"<t:{fim}:f> (<t:{fim}:R>)", "inline": True})
     campos.append({"name": "Motivo", "value": _texto(motivo or "sem motivo", 1000), "inline": False})
     return {
-        "username": "ROLOX Moderação",
+        "username": "VISTA Moderação",
         "allowed_mentions": {"parse": []},
         "embeds": [{"title": titulo, "color": cor, "fields": campos, "timestamp": agora.isoformat()}],
     }
 
 
-async def registrar(tipo: str, alvo: str, motivo: str = "", por: str = "", onde: str = "Jogo ROLOX",
+async def registrar(tipo: str, alvo: str, motivo: str = "", por: str = "", onde: str = "Jogo VISTA",
                     duracao_min: Optional[int] = None, transport: Optional[httpx.AsyncBaseTransport] = None) -> bool:
     """Manda para o webhook certo. Devolve False se não configurado ou se o Discord recusou (nunca lança)."""
     url = url_do_canal(TIPOS[tipo][0]) if tipo in TIPOS else None

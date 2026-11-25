@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block titulo %}Buscar · Rolox{% endblock %}
+{% block titulo %}Buscar · Vista{% endblock %}
 {% block conteudo %}
 <h1>🔍 Buscar</h1>
 <form method="get" class="linha">
@@ -16,7 +16,7 @@
 {% if curto %}<p class="muted">Digite pelo menos 2 letras.</p>{% endif %}
 
 {% if tipo == 'internet' %}
-  <p class="nota">Pesquisa feita pelo servidor do ROLOX só em fontes seguras (Wikipédia e DuckDuckGo com busca segura).</p>
+  <p class="nota">Pesquisa feita pelo servidor do VISTA só em fontes seguras (Wikipédia e DuckDuckGo com busca segura).</p>
   {% if erro_web %}<p class="muted">{{ erro_web }}</p>{% endif %}
   {% for r in web %}
     <a class="cartao" href="{{ r.link }}" target="_blank" rel="noopener noreferrer nofollow">

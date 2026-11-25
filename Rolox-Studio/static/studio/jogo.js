@@ -1,4 +1,4 @@
-// Rolox Studio — modo Jogar (teste do jogo dentro do Studio).
+// Vista Studio — modo Jogar (teste do jogo dentro do Studio).
 // Copia o mundo do editor, cria os personagens, roda os scripts e a física.
 
 import { carregarMundo, salvarMundo, Player, BaseScript, Vector3 } from "./motor.js";

@@ -1,4 +1,4 @@
-// ROLOX — ver os outros jogadores no mapa (site, /jogar).
+// VISTA — ver os outros jogadores no mapa (site, /jogar).
 //
 // A cada ~140 ms manda a minha posição para o site e recebe a dos outros do mesmo
 // servidor. Os outros viram personagens "fantasma" (com o avatar de cada um):

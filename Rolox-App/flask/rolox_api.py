@@ -1,4 +1,4 @@
-"""Cliente do Supabase para o Rolox (versão Flask, síncrona, só `requests`).
+"""Cliente do Supabase para o Vista (versão Flask, síncrona, só `requests`).
 
 Mesmas regras do app Flet: o celular acessa direto as tabelas do Supabase
 (protegidas por RLS) e o login passa pela Edge Function `login-protegido`.
@@ -41,7 +41,7 @@ EMAIL_VALIDO = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 MENSAGENS = {
     "credenciais_invalidas": "Usuário ou senha incorretos.",
     "ip_bloqueado": "Este aparelho/rede foi bloqueado após 3 senhas erradas.",
-    "conta_banida": "Esta conta foi banida por um moderador. Acha que foi injusto? Peça revisão no Discord do ROLOX: https://discord.gg/6NZ5Ftq3p (diga seu usuário e o que aconteceu).",
+    "conta_banida": "Esta conta foi banida por um moderador. Acha que foi injusto? Peça revisão no Discord do VISTA: https://discord.gg/6NZ5Ftq3p (diga seu usuário e o que aconteceu).",
     "email_nao_confirmado": "Confirme seu e-mail (veja a caixa de entrada) antes de entrar.",
     "confirme_por_email": "Muitas tentativas. Enviamos um e-mail para você redefinir a senha.",
     "dados_invalidos": "Preencha usuário e senha.",
@@ -56,9 +56,9 @@ MENSAGENS = {
     "username_em_uso": "Esse nome de usuário já está em uso.",
     "sessao_expirada": "Sua sessão expirou. Entre novamente.",
     "sem_conexao": "Sem conexão com o servidor. Verifique sua internet.",
-    "NOT_FOUND": "O servidor do Rolox ainda não foi configurado no Supabase "
+    "NOT_FOUND": "O servidor do Vista ainda não foi configurado no Supabase "
                  "(função de login não encontrada).",
-    "PGRST205": "O banco do Rolox ainda não foi configurado no Supabase (tabela não encontrada).",
+    "PGRST205": "O banco do Vista ainda não foi configurado no Supabase (tabela não encontrada).",
     "servidor_inexistente": "Esse servidor não existe mais.",
     "use_servidor_hack": "Você marcou hack/mod neste jogo. Entre em um servidor de hack.",
     "servidor_so_para_hack": "Servidor exclusivo para quem usa hack/mod neste jogo.",
@@ -72,7 +72,7 @@ MENSAGENS = {
     "nome_do_mapa": "Dê um nome para o mapa.",
     "denuncia_invalida": "Escolha o motivo da denúncia.",
     "mapa_nao_encontrado": "Mapa não encontrado.",
-    "mapa_invalido": "Esse arquivo não é um mapa do ROLOX Studio.",
+    "mapa_invalido": "Esse arquivo não é um mapa do VISTA Studio.",
     "mapa_grande": "Mapa grande demais (máx. 5 MB).",
 }
 

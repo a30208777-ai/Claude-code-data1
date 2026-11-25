@@ -1,4 +1,4 @@
-// Rolox Studio — tradutor de Luau para Lua 5.3 (o Fengari roda Lua 5.3).
+// Vista Studio — tradutor de Luau para Lua 5.3 (o Fengari roda Lua 5.3).
 //
 // Suporta o que mais aparece em scripts Luau:
 //   local x: number = 1            -> local x = 1          (tipos em locais, parâmetros, retornos, for)

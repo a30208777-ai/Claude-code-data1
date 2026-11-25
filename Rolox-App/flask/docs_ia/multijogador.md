@@ -1,6 +1,6 @@
 palavras: multijogador, multiplayer, todos, todos os jogadores, outros jogadores, servidor, rede, sincronizar, online, time, times, equipe, pvp, chat, mensagem para todos, anfitriao
 
-# Receita: multijogador no ROLOX (modelo anfitrião)
+# Receita: multijogador no VISTA (modelo anfitrião)
 - Script (Python, em ServerScriptService) roda em UM aparelho, o do anfitrião. O que ele muda nas PEÇAS
   (Position, Color, Transparency, CanCollide, criar/apagar) aparece para TODOS automaticamente.
 - LocalScript (Lua) roda em cada jogador: tela, sons, controles, Cofre e Emblemas do próprio jogador.

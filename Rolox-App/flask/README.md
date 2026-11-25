@@ -1,4 +1,4 @@
-# Rolox — versão Flask (Termux)
+# Vista — versão Flask (Termux)
 
 Mesmo app do `../mobile` (Flet), só que em **Flask**: roda dentro do Termux e abre no navegador do celular. Só usa `flask` e `requests`, que são Python puro, então **não precisa compilar nada** (sem Rust, sem `pydantic-core`).
 
@@ -18,13 +18,13 @@ Abra **http://localhost:8550** no Chrome do celular. Dica: no menu do Chrome, us
 |---|---|---|
 | `ROLOX_PORTA` | `8550` | Porta do servidor |
 | `ROLOX_HOST` | `127.0.0.1` | `0.0.0.0` libera para outros aparelhos do Wi-Fi (cuidado: eles poderiam usar a sua sessão) |
-| `ROLOX_SUPABASE_URL` / `ROLOX_SUPABASE_CHAVE` | projeto "Rolox" | Outro projeto Supabase |
+| `ROLOX_SUPABASE_URL` / `ROLOX_SUPABASE_CHAVE` | projeto "Vista" | Outro projeto Supabase |
 
 ## Telas
 Login (com tentativas restantes e aviso de IP bloqueado), Cadastro, Início (status e alertas *"Alguém tentou entrar na sua conta"* com botão para ver a senha usada), Servidores (lista, filtro hack/limpo, criar, entrar ou fila), Chat (atualiza a cada 2 s; o host manda heartbeat) e Perfil (idioma, jogo com hack/mod, localização, sair). Tema claro e escuro automático.
 
 ### Studio (`/studio`)
-A aba 🧱 **Studio** mostra se o ROLOX Studio (`../../Rolox-Studio/servidor.py`, porta 8600) está ligado neste aparelho:
+A aba 🧱 **Studio** mostra se o VISTA Studio (`../../Rolox-Studio/servidor.py`, porta 8600) está ligado neste aparelho:
 
 - **ligado:** botões para abrir o Studio leve (celular) ou o Studio PC, criar um jogo a partir de um modelo (Vazio, Obby em Luau, Coleta de moedas em Python) e abrir os projetos salvos;
 - **desligado:** mostra o comando para ligar no Termux (`cd Claude-code-data1/Rolox-Studio && python servidor.py`, numa segunda sessão) e o botão "Tentar de novo".

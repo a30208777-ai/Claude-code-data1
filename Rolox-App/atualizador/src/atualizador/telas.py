@@ -1,4 +1,4 @@
-"""Tela do Atualizador do ROLOX."""
+"""Tela do Atualizador do VISTA."""
 
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ P_ATALHO = "atualizador.atalho_perguntado"
 
 def logo(altura: int) -> ft.Control:
     return ft.Image(src="logo_nome.png", height=altura,
-                    error_content=ft.Text("ROLOX", size=altura * 0.5, weight=ft.FontWeight.BOLD, color=COR))
+                    error_content=ft.Text("VISTA", size=altura * 0.5, weight=ft.FontWeight.BOLD, color=COR))
 
 
 class AtualizadorApp:
@@ -52,20 +52,20 @@ class AtualizadorApp:
     # ------------------------------------------------------------------- tela
     async def iniciar(self) -> None:
         p = self.page
-        p.title = "Atualizador do ROLOX"
+        p.title = "Atualizador do VISTA"
         p.theme = ft.Theme(color_scheme_seed=COR)
         p.dark_theme = ft.Theme(color_scheme_seed=COR)
         p.theme_mode = ft.ThemeMode.SYSTEM
         p.padding = 0
 
-        self.t_rolox = ft.Text("Procurando o ROLOX neste aparelho...", size=14)
+        self.t_rolox = ft.Text("Procurando o VISTA neste aparelho...", size=14)
         self.t_versao = ft.Text("Conferindo se tem versão nova...", size=14)
         self.t_status = ft.Text("", size=13, color=ft.Colors.ON_SURFACE_VARIANT, text_align=ft.TextAlign.CENTER)
         self.barra = ft.ProgressBar(width=280, value=0, color=COR_DESTAQUE, visible=False, border_radius=4)
-        self.b_baixar = ft.FilledButton("Baixar o ROLOX", icon=ft.Icons.DOWNLOAD, width=280, on_click=self.baixar)
+        self.b_baixar = ft.FilledButton("Baixar o VISTA", icon=ft.Icons.DOWNLOAD, width=280, on_click=self.baixar)
         self.b_instalar = ft.FilledButton("Instalar agora", icon=ft.Icons.INSTALL_MOBILE, width=280,
                                           on_click=self.instalar, visible=False)
-        self.b_jogar = ft.FilledButton("Jogar ROLOX", icon=ft.Icons.PLAY_ARROW, width=280, on_click=self.abrir_rolox,
+        self.b_jogar = ft.FilledButton("Jogar VISTA", icon=ft.Icons.PLAY_ARROW, width=280, on_click=self.abrir_rolox,
                                        style=ft.ButtonStyle(bgcolor=COR_DESTAQUE, color=ft.Colors.WHITE))
         cartao = ft.Container(
             padding=16, border_radius=16, width=380,
@@ -81,16 +81,16 @@ class AtualizadorApp:
             padding=24, expand=True, alignment=ft.Alignment.CENTER,
             content=ft.Column([
                 logo(76),
-                ft.Text("Atualizador do ROLOX", size=20, weight=ft.FontWeight.BOLD),
-                ft.Text("O app oficial que baixa, atualiza e abre o ROLOX.", size=13,
+                ft.Text("Atualizador do VISTA", size=20, weight=ft.FontWeight.BOLD),
+                ft.Text("O app oficial que baixa, atualiza e abre o VISTA.", size=13,
                         color=ft.Colors.ON_SURFACE_VARIANT, text_align=ft.TextAlign.CENTER),
                 ft.Container(height=6),
                 cartao,
                 ft.Container(height=6),
                 self.b_jogar, self.b_baixar, self.b_instalar, self.barra, self.t_status,
-                ft.TextButton("Criar atalho do ROLOX na tela inicial", icon=ft.Icons.ADD_TO_HOME_SCREEN,
+                ft.TextButton("Criar atalho do VISTA na tela inicial", icon=ft.Icons.ADD_TO_HOME_SCREEN,
                               on_click=self.atalho),
-                ft.TextButton("Discord do ROLOX", icon=ft.Icons.FORUM,
+                ft.TextButton("Discord do VISTA", icon=ft.Icons.FORUM,
                               on_click=lambda _: p.run_task(ft.UrlLauncher().launch_url, LINK_DISCORD)),
             ], spacing=10, horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                alignment=ft.MainAxisAlignment.CENTER, tight=True, scroll=ft.ScrollMode.AUTO),
@@ -111,7 +111,7 @@ class AtualizadorApp:
 
     async def conferir(self) -> None:
         instalado = await self.rolox_instalado()
-        self.t_rolox.value = "ROLOX instalado ✅" if instalado else "ROLOX ainda não está instalado"
+        self.t_rolox.value = "VISTA instalado ✅" if instalado else "VISTA ainda não está instalado"
         self.b_jogar.visible = instalado
         self.page.update()
         try:
@@ -127,11 +127,11 @@ class AtualizadorApp:
             self.t_versao.value = f"Você está na versão mais nova ({v}) 🎉"
             self.b_baixar.content = "Baixar de novo"
         elif instalado:
-            self.t_versao.value = f"Tem versão nova do ROLOX: {v} ⬇️"
+            self.t_versao.value = f"Tem versão nova do VISTA: {v} ⬇️"
             self.b_baixar.content = f"Atualizar para a {v}"
         else:
             self.t_versao.value = f"Versão {v} pronta para baixar"
-            self.b_baixar.content = f"Baixar o ROLOX {v}"
+            self.b_baixar.content = f"Baixar o VISTA {v}"
         self.page.update()
 
     # ------------------------------------------------------------------ ações
@@ -141,7 +141,7 @@ class AtualizadorApp:
         self.ocupado = True
         self.b_baixar.disabled = True
         self.barra.visible, self.barra.value = True, None
-        self.t_status.value = "Baixando o ROLOX..."
+        self.t_status.value = "Baixando o VISTA..."
         self.page.update()
         ultimo = [0.0]
 
@@ -151,7 +151,7 @@ class AtualizadorApp:
                 return
             ultimo[0] = agora
             self.barra.value = (feito / total) if total else None
-            self.t_status.value = f"Baixando o ROLOX... {tamanho_legivel(feito)}" + (f" de {tamanho_legivel(total)}" if total else "")
+            self.t_status.value = f"Baixando o VISTA... {tamanho_legivel(feito)}" + (f" de {tamanho_legivel(total)}" if total else "")
             self.page.update()
 
         try:
@@ -172,7 +172,7 @@ class AtualizadorApp:
         except PrecisaNavegador as e:
             # o link é uma página de download (ex.: TransferNow): o jogador baixa por lá
             self.barra.visible = False
-            self.t_status.value = ("Abri a página de download no navegador. Baixe o arquivo do ROLOX, "
+            self.t_status.value = ("Abri a página de download no navegador. Baixe o arquivo do VISTA, "
                                    "abra o .apk e toque em Instalar. Depois volte aqui e toque em Jogar.")
             await self._set(P_VERSAO, self.info.versao if self.info else "")
             try:
@@ -214,7 +214,7 @@ class AtualizadorApp:
                 self.aviso(f"Abra as configurações do Android e permita o Atualizador instalar apps ({e}).")
         self.page.show_dialog(ft.AlertDialog(
             title=ft.Text("Falta uma permissão"),
-            content=ft.Text("Para instalar o ROLOX, o Android precisa deixar o Atualizador instalar apps. "
+            content=ft.Text("Para instalar o VISTA, o Android precisa deixar o Atualizador instalar apps. "
                             "Na próxima tela, ative \"Permitir desta fonte\" e depois volte aqui."),
             actions=[ft.TextButton("Agora não", on_click=lambda _: self.page.pop_dialog()),
                      ft.FilledButton("Abrir configurações", on_click=abrir)],
@@ -224,15 +224,15 @@ class AtualizadorApp:
         try:
             await ft.UrlLauncher().launch_url(android.LINK_ROLOX)
         except Exception:
-            self.aviso("Não achei o ROLOX. Baixe primeiro.")
+            self.aviso("Não achei o VISTA. Baixe primeiro.")
 
     def perguntar_atalho(self) -> None:
         async def sim(_):
             self.page.pop_dialog()
             await self.atalho()
         self.page.show_dialog(ft.AlertDialog(
-            title=ft.Text("Criar atalho do ROLOX?"),
-            content=ft.Text("Coloque um atalho do ROLOX na tela inicial: ele abre o jogo direto, "
+            title=ft.Text("Criar atalho do VISTA?"),
+            content=ft.Text("Coloque um atalho do VISTA na tela inicial: ele abre o jogo direto, "
                             "sempre pela versão oficial."),
             actions=[ft.TextButton("Agora não", on_click=lambda _: self.page.pop_dialog()),
                      ft.FilledButton("Criar atalho", icon=ft.Icons.ADD_TO_HOME_SCREEN, on_click=sim)],
@@ -241,9 +241,9 @@ class AtualizadorApp:
     async def atalho(self, _=None) -> None:
         try:
             if android.criar_atalho():
-                self.aviso("Confirme \"Adicionar\" na janela do Android. O atalho ROLOX vai para a tela inicial.")
+                self.aviso("Confirme \"Adicionar\" na janela do Android. O atalho VISTA vai para a tela inicial.")
             else:
-                self.aviso("A tela inicial deste aparelho não aceita atalhos. Use o botão Jogar ROLOX daqui.")
+                self.aviso("A tela inicial deste aparelho não aceita atalhos. Use o botão Jogar VISTA daqui.")
         except android.SemAndroid:
             self.aviso("O atalho só pode ser criado no Android.")
         except Exception as e:

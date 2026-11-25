@@ -1,4 +1,4 @@
-// ROLOX — ⚙️ ajustes do jogo (ficam salvos neste aparelho):
+// VISTA — ⚙️ ajustes do jogo (ficam salvos neste aparelho):
 import { SONS_MORTE, tocarSomMorte } from "./sons_morte.js";
 //   qualidade (baixa = celular fraco roda liso) · som · nomes dos jogadores · contador de FPS
 

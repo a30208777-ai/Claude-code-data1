@@ -1,6 +1,6 @@
 palavras: python, servidor, serverscriptservice, async, await, def, py, script do servidor
 
-# Python no ROLOX (Script em ServerScriptService)
+# Python no VISTA (Script em ServerScriptService)
 Diferenças para Lua:
 - Métodos e eventos com PONTO: `peca.Touched.Connect(funcao)`, `game.GetService("Rede")`, `peca.FindFirstChildOfClass("Humanoid")`.
 - Esperar: a função precisa ser `async def` e usar `await wait(2)`. Funções ligadas em Connect podem ser async.

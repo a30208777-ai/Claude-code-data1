@@ -1,4 +1,4 @@
-// ROLOX — mundo compartilhado (modelo do ANFITRIÃO).
+// VISTA — mundo compartilhado (modelo do ANFITRIÃO).
 //
 // Em cada servidor de jogo, um jogador é o anfitrião: o navegador dele roda os Scripts
 // (portas, armadilhas, placar...) e manda para os outros o que mudou nas peças. Os outros

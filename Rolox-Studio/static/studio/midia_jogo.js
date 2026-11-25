@@ -1,4 +1,4 @@
-// ROLOX — toca os Sons (Som) e os vídeos (TelaVideo) dos criadores durante o jogo.
+// VISTA — toca os Sons (Som) e os vídeos (TelaVideo) dos criadores durante o jogo.
 // Os arquivos vêm do bucket público "midias" do Supabase (base em window.ROLOX_MIDIAS).
 import * as THREE from "three";
 import { MIDIA } from "./motor.js";

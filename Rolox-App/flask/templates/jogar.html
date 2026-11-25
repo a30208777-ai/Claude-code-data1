@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block titulo %}{{ m.nome }} · Rolox{% endblock %}
+{% block titulo %}{{ m.nome }} · Vista{% endblock %}
 {% block classe_main %}tela-jogo{% endblock %}
 {% block conteudo %}
 <script type="importmap">
@@ -17,7 +17,7 @@
 
 <div id="carregando" role="status" aria-live="polite">
   <div class="carregando-caixa">
-    <img src="{{ url_for('static', filename='logo_nome.png') }}" alt="ROLOX" width="173" height="60">
+    <img src="{{ url_for('static', filename='logo_nome.png') }}" alt="VISTA" width="173" height="60">
     <div class="carregando-barra"><span></span></div>
     <p id="carregandoStatus">Carregando {{ m.nome }}...</p>
     <div class="curiosidade">
@@ -28,7 +28,7 @@
   </div>
 </div>
 <script>
-  // Curiosidades do ROLOX enquanto o jogo carrega (lista em curiosidades.py)
+  // Curiosidades do VISTA enquanto o jogo carrega (lista em curiosidades.py)
   (() => {
     const lista = {{ curiosidades|tojson }}.map((t) => [Math.random(), t]).sort((a, b) => a[0] - b[0]).map((x) => x[1]);
     const texto = document.getElementById("curiosidadeTexto"), num = document.getElementById("curiosidadeNum");
@@ -390,7 +390,7 @@
         const p = document.createElement('p');
         const b = document.createElement('b'); b.textContent = m.username; b.dataset.nome = m.username; b.title = 'Toque para silenciar'; b.style.cursor = 'pointer';
         p.append(b); p.dataset.de = m.username; p.hidden = silenciados.has(m.username);
-        if (m.parceiro) { const s = document.createElement('span'); s.className = 'selo'; s.title = 'Parceiro do ROLOX'; s.textContent = '🤝'; p.append(s); }
+        if (m.parceiro) { const s = document.createElement('span'); s.className = 'selo'; s.title = 'Parceiro do VISTA'; s.textContent = '🤝'; p.append(s); }
         if (m.bot_id) { const t = document.createElement('span'); t.className = 'etiqueta'; t.textContent = 'IA'; p.append(t); }
         p.append(document.createTextNode(': ' + m.mensagem_filtrada));
         caixa.appendChild(p);
@@ -416,11 +416,11 @@
     catch (e) { aviso(e.message); }
   });
 
-  // 💤 Ausente: no ROLOX ninguém é expulso por ficar parado (no ROBLOX são 20 min e tchau).
+  // 💤 Ausente: no VISTA ninguém é expulso por ficar parado (no ROBLOX são 20 min e tchau).
   (() => {
     let parado = 0;
     const aviso = Object.assign(document.createElement('div'), { className: 'ausente', hidden: true,
-      textContent: '💤 Você está ausente — relaxa, no ROLOX ninguém é expulso por ficar parado. Toque para voltar.' });
+      textContent: '💤 Você está ausente — relaxa, no VISTA ninguém é expulso por ficar parado. Toque para voltar.' });
     document.body.append(aviso);
     const mexeu = () => { parado = 0; aviso.hidden = true; };
     for (const e of ['keydown', 'pointerdown', 'touchstart', 'mousemove']) addEventListener(e, mexeu, { passive: true });

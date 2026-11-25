@@ -1,4 +1,4 @@
-"""Rolox — versão Flask (roda no Termux e abre no navegador do celular).
+"""Vista — versão Flask (roda no Termux e abre no navegador do celular).
 
     pip install flask requests
     python app.py            -> abra http://localhost:8550
@@ -39,7 +39,7 @@ from rolox_api import MOTIVOS_DENUNCIA, REDES_SOCIAIS, ErroRolox, RoloxAPI, Sess
 from studio_local import STUDIO_URL as STUDIO_URL_PADRAO, COMANDO_INSTALAR, COMANDO_LIGAR, MODELOS as MODELOS_STUDIO, StudioLocal
 
 IDIOMAS = {"pt-BR": "Português", "en": "English", "es": "Español"}
-# O ROLOX Studio (editor) roda dentro do site: páginas e arquivos vêm de Rolox-Studio/
+# O VISTA Studio (editor) roda dentro do site: páginas e arquivos vêm de Rolox-Studio/
 PASTA_STUDIO = Path(os.environ.get("ROLOX_PASTA_STUDIO", Path(__file__).resolve().parents[2] / "Rolox-Studio"))
 NOME_PROJETO = __import__("re").compile(r"^[A-Za-z0-9_-]{1,40}$")
 TAMANHO_MAX_PROJETO = 5 * 1024 * 1024
@@ -178,7 +178,7 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
         if isinstance(valor, dict):                      # o próprio perfil (vem com status e data)
             valor = marca_app(valor)
         if valor == "oficial":
-            return Markup('<span class="selo-app" title="Usa o app oficial do ROLOX">✅</span>')
+            return Markup('<span class="selo-app" title="Usa o app oficial do VISTA">✅</span>')
         if valor == "modificado":
             return Markup('<span class="selo-app" title="Usando app modificado (não oficial)">❌</span>')
         return Markup("")
@@ -190,7 +190,7 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
                 "eh_dono": bool(session.get("dono")) and "sb" in session,
                 "desenhar_avatar": lambda a, largura=120: Markup(avatar_mod.svg(a, largura)),
                 "motivos_denuncia": MOTIVOS_DENUNCIA,
-                "selo": lambda parceiro: Markup('<span class="selo" title="Parceiro do ROLOX">🤝</span>') if parceiro else "",
+                "selo": lambda parceiro: Markup('<span class="selo" title="Parceiro do VISTA">🤝</span>') if parceiro else "",
                 "selo_app": selo_app, "categorias": CATEGORIAS}
 
     def carregar_perfil() -> dict:
@@ -310,7 +310,7 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
                 g.api.atualizar_local("menu")
             except ErroRolox:
                 pass
-            flash("Conta criada! Bem-vindo ao Rolox.", "ok")
+            flash("Conta criada! Bem-vindo ao Vista.", "ok")
             return redirect(url_for("inicio"))
         return render_template("cadastro.html", dados={}, dono=request.args.get("dono") == "1")
 
@@ -362,7 +362,7 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
             recentes = g.api.meus_recentes()
         except ErroRolox:
             recentes = []
-        try:                                            # 💌 mensagens não lidas (o ROLOX mantém a caixa de mensagens)
+        try:                                            # 💌 mensagens não lidas (o VISTA mantém a caixa de mensagens)
             nao_lidas = sum(int(c.get("nao_lidas") or 0) for c in g.api.minhas_conversas())
         except (ErroRolox, TypeError, ValueError):
             nao_lidas = 0
@@ -502,7 +502,7 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
     # ------------------------------------------------ termos e política (públicas)
     @app.get("/novidades")
     def novidades():
-        """📰 O que mudou no ROLOX — sempre aberto, sem esconder nada dos jogadores."""
+        """📰 O que mudou no VISTA — sempre aberto, sem esconder nada dos jogadores."""
         return render_template("novidades.html", aba="inicio")
 
     @app.get("/termos")
@@ -530,7 +530,7 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
     @app.get("/studio")
     @logado
     def studio_tela():
-        """ROLOX Studio: o editor roda neste aparelho (Rolox-Studio/servidor.py, porta 8600)."""
+        """VISTA Studio: o editor roda neste aparelho (Rolox-Studio/servidor.py, porta 8600)."""
         if studio_no_site:
             projetos = [p | {"tamanho": p.get("tamanho") or 0} for p in g.api.projetos_listar()]
             return render_template("studio.html", studio=studio, ligado=True, no_navegador=False, no_site=True,
@@ -635,7 +635,7 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
                 abort(413, "Projeto grande demais (máx. 5 MB).")
             dados = request.get_json(silent=True)
             if not isinstance(dados, dict) or dados.get("formato") != "rolox-studio":
-                abort(400, "Arquivo não é um projeto do Rolox Studio.")
+                abort(400, "Arquivo não é um projeto do Vista Studio.")
             g.api.projeto_salvar(nome, dados, len(bruto))
             return jsonify({"ok": True, "nome": nome})
 
@@ -700,9 +700,9 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
     @app.get("/mensagens/<nome>/baixar")
     @logado
     def mensagens_baixar(nome: str):
-        """💾 Sua conversa é sua: baixe e guarde (no ROLOX nada some sem você saber)."""
+        """💾 Sua conversa é sua: baixe e guarde (no VISTA nada some sem você saber)."""
         eu = carregar_perfil().get("username") or "eu"
-        linhas = [f"Conversa ROLOX entre {eu} e {nome}", ""]
+        linhas = [f"Conversa VISTA entre {eu} e {nome}", ""]
         for m in g.api.conversa_privada(nome):
             linhas.append(f"[{str(m.get('criado_em', ''))[:16].replace('T', ' ')}] {eu if m.get('minha') else nome}: {m.get('texto', '')}")
         seguro = "".join(c for c in nome if c.isalnum() or c in "_-")[:30] or "conversa"
@@ -869,8 +869,8 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
             return redirect(url_for(voltar))
         return redirect(url_for("jogar", mapa_id=m["id"], s=uid))
 
-    # ---------------------------------------------------------- ROLOX Hacks
-    # Servidores de hack/mod: separados dos jogadores do ROLOX (o banco não mistura) e com o
+    # ---------------------------------------------------------- VISTA Hacks
+    # Servidores de hack/mod: separados dos jogadores do VISTA (o banco não mistura) e com o
     # executor 🤖 de scripts. No modo hack não vale recorde, Cofre nem emblema.
     @app.get("/hacks")
     @logado
@@ -895,11 +895,11 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
     @logado
     def hacks_sair_do_modo():
         g.api.atualizar_perfil(jogo_mod=None)
-        flash("Você saiu do modo hack. Agora joga nos servidores normais do ROLOX.", "ok")
+        flash("Você saiu do modo hack. Agora joga nos servidores normais do VISTA.", "ok")
         return redirect(url_for("jogos"))
 
     def _bloqueio_hack(mapa_id: str):
-        """No modo hack não vale recorde, Cofre nem emblema (senão o hack vira trapaça no ROLOX normal)."""
+        """No modo hack não vale recorde, Cofre nem emblema (senão o hack vira trapaça no VISTA normal)."""
         m = _mapa_ou_404(mapa_id)
         if m.get("gameid") and g.api.meu_perfil().get("jogo_mod") == m["gameid"]:
             return jsonify({"erro": "modo_hack", "mensagem": "No modo hack não vale recorde, Cofre nem emblema."}), 403
@@ -974,7 +974,7 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
             srv = g.api.servidor(sala) or {}
             meus = {x.get("gameid") for x in g.api.meus_mapas() if x.get("gameid")}
             if acao == "banir" or not srv.get("gameid") or srv["gameid"] not in meus:
-                return jsonify({"erro": "so_dono", "mensagem": "Só o dono do ROLOX pode fazer isso."}), 403
+                return jsonify({"erro": "so_dono", "mensagem": "Só o dono do VISTA pode fazer isso."}), 403
         d = request.get_json(silent=True) or {}
         if acao == "anunciar":
             n = salas.anunciar(sala, str(d.get("texto", "")))
@@ -986,7 +986,7 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
         motivo = str(d.get("motivo", "")).strip()[:200]
         if acao == "expulsar":
             if salas.eh_dono_na_sala(sala, alvo):
-                return jsonify({"erro": "intocavel", "mensagem": "Ninguém pode expulsar o dono do ROLOX."}), 403
+                return jsonify({"erro": "intocavel", "mensagem": "Ninguém pode expulsar o dono do VISTA."}), 403
             if eh_dono:
                 g.api.dono_expulsar(sala, alvo)             # tira também do servidor no banco
             quem = "pelo dono" if eh_dono else "pelo criador do jogo"
@@ -996,7 +996,7 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
         salas.expulsar(sala, alvo, "🔨 Sua conta foi banida pelo dono." + (f" Motivo: {motivo}" if motivo else ""),
                        segundos=7 * 86400)
         discord_log.registrar_sync("ban", r.get("username") or nomes[alvo], motivo or "banido pelo dono no jogo",
-                                   f"{quem_sou()} (dono)", "Jogo ROLOX")
+                                   f"{quem_sou()} (dono)", "Jogo VISTA")
         return jsonify({"ok": True, "nome": nomes[alvo]})
 
     @app.post("/api/sala/sair")
@@ -1185,7 +1185,7 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
             nome = r.get("alvo_nome") or alvo
             discord_log.registrar_sync("denuncia", f"{'🎮 jogo' if tipo == 'jogo' else '👤'} {nome}",
                                        f"{MOTIVOS_DENUNCIA.get(motivo, motivo)}{(': ' + detalhe[:300]) if detalhe else ''}",
-                                       quem_sou(), "Site ROLOX")
+                                       quem_sou(), "Site VISTA")
         return r
 
     def denuncias_abertas() -> list[dict]:
@@ -1382,7 +1382,7 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
                     continue
                 por = "sistema (3 senhas erradas)" if i.get("automatico") else f"{quem_sou()} (ADM)"
                 if discord_log.registrar_sync("ip_bloqueado", f"IP {i['ip']} (tentou entrar em {i.get('conta_alvo') or '?'})",
-                                              i.get("motivo") or "", por, "Jogo ROLOX"):
+                                              i.get("motivo") or "", por, "Jogo VISTA"):
                     g.api.adm_marcar_ip_registrado(i["ip"])
         return render_template("adm.html", d=d, eu=g.api.user_id, jogos=nomes_jogos(), denuncias=denuncias_abertas(),
                                discord=discord_log.configurado(), aba="adm")
@@ -1393,7 +1393,7 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
         return g.nome
 
     def avisar_discord(tipo: str, alvo: str, motivo: str = "", duracao: Optional[int] = None) -> None:
-        if not discord_log.registrar_sync(tipo, alvo, motivo, f"{quem_sou()} (ADM)", "Jogo ROLOX", duracao) \
+        if not discord_log.registrar_sync(tipo, alvo, motivo, f"{quem_sou()} (ADM)", "Jogo VISTA", duracao) \
                 and not all(discord_log.configurado().values()):
             flash("Webhooks do Discord não configurados (~/.rolox.env): feito só no jogo.", "erro")
 
@@ -1451,5 +1451,5 @@ if __name__ == "__main__":
     discord_log.carregar_env()      # webhooks do Discord em ~/.rolox.env (opcional)
     host = os.environ.get("ROLOX_HOST", "127.0.0.1")
     porta = int(os.environ.get("ROLOX_PORTA", "8550"))
-    print(f"Rolox rodando: abra http://localhost:{porta} no navegador do celular")
+    print(f"Vista rodando: abra http://localhost:{porta} no navegador do celular")
     criar_app().run(host=host, port=porta, threaded=True)

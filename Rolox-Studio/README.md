@@ -1,6 +1,6 @@
-# Rolox Studio — primeira versão
+# Vista Studio — primeira versão
 
-Editor de jogos do Rolox, que roda no navegador e tem duas versões:
+Editor de jogos do Vista, que roda no navegador e tem duas versões:
 
 | | 📱 **Studio leve** (`/studio/leve`) | 🖥️ **Studio PC** (`/studio/pc`) |
 |---|---|---|
@@ -101,7 +101,7 @@ O Lua roda no Fengari (Lua 5.3), e antes de rodar o Studio traduz o Luau para Lu
 
 ## Importar `.obj` (por exemplo, do Roblox Studio)
 1. No Roblox Studio, selecione o modelo, clique com o botão direito, escolha **Export Selection…** e salve. Ele gera `.obj`, `.mtl` e as texturas `.png`.
-2. No Rolox Studio, clique em **Importar .obj** e escolha **todos os arquivos juntos**: o `.obj`, o `.mtl` e as texturas.
+2. No Vista Studio, clique em **Importar .obj** e escolha **todos os arquivos juntos**: o `.obj`, o `.mtl` e as texturas.
 3. A malha vira um **MeshPart** com o tamanho real do modelo e fica salva dentro do projeto.
 
 Importe só modelos que **você criou** ou que tem permissão para usar.

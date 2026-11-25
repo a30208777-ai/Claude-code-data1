@@ -1,4 +1,4 @@
-"""Testes da ligação do app com o Rolox Studio (sem rede)."""
+"""Testes da ligação do app com o Vista Studio (sem rede)."""
 
 import asyncio
 
@@ -27,7 +27,7 @@ def test_enderecos_invalidos(kw):
 
 
 def test_ligado_quando_o_studio_responde():
-    s = studio_com(lambda r: httpx.Response(200, text="<h1>ROLOX Studio</h1>"))
+    s = studio_com(lambda r: httpx.Response(200, text="<h1>VISTA Studio</h1>"))
     assert asyncio.run(s.ligado()) is True
 
 

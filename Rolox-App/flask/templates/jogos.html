@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block titulo %}Jogos · Rolox{% endblock %}
+{% block titulo %}Jogos · Vista{% endblock %}
 {% block conteudo %}
 <div class="linha">
   <h1 class="cresce">🎮 Jogos</h1>
@@ -62,7 +62,7 @@
     document.addEventListener("DOMContentLoaded", pintar); pintar();
   })();
 </script>
-<p class="nota">Mapas feitos pela comunidade no ROLOX Studio e aprovados pelo dono. Toque em Jogar: você entra
+<p class="nota">Mapas feitos pela comunidade no VISTA Studio e aprovados pelo dono. Toque em Jogar: você entra
   num servidor com a galera e com chat.</p>
 
 {% for m in publicados %}
@@ -86,7 +86,7 @@
     </form>
   </div>
 {% else %}
-  <p class="muted"><i>Nenhum jogo aprovado ainda. Crie o primeiro no Studio e toque em "🚀 Enviar ao ROLOX"!</i></p>
+  <p class="muted"><i>Nenhum jogo aprovado ainda. Crie o primeiro no Studio e toque em "🚀 Enviar ao VISTA"!</i></p>
 {% endfor %}
 
 <h2>Meus mapas</h2>

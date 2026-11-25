@@ -1,4 +1,4 @@
-// ROLOX — jogar um mapa publicado (página /jogar do site).
+// VISTA — jogar um mapa publicado (página /jogar do site).
 // Carrega o mapa do bucket (via site), cria o personagem e roda scripts + física,
 // com a câmera do jogador (camera.js), teclado e joystick de toque.
 

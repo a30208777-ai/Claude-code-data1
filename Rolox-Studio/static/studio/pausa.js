@@ -1,4 +1,4 @@
-// ROLOX — 💧 lembrete de pausa: a cada 1 hora jogando, um aviso amigável. E o tempo jogado hoje
+// VISTA — 💧 lembrete de pausa: a cada 1 hora jogando, um aviso amigável. E o tempo jogado hoje
 // (fica só neste aparelho).
 
 export const INTERVALO_MIN = 60;

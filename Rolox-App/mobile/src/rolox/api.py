@@ -1,4 +1,4 @@
-"""Cliente do Supabase para o Rolox Mobile.
+"""Cliente do Supabase para o Vista Mobile.
 
 O celular acessa direto as bases de dados (REST do Supabase) e as regras RLS
 garantem que cada jogador só lê e altera o que pode. O login passa pela Edge
@@ -43,9 +43,9 @@ MENSAGENS = {
     "username_em_uso": "Esse nome de usuário já está em uso.",
     "sessao_expirada": "Sua sessão expirou. Entre novamente.",
     "sem_conexao": "Sem conexão com o servidor. Verifique sua internet.",
-    "NOT_FOUND": "O servidor do Rolox ainda não foi configurado no Supabase "
+    "NOT_FOUND": "O servidor do Vista ainda não foi configurado no Supabase "
                  "(função de login não encontrada).",
-    "PGRST205": "O banco do Rolox ainda não foi configurado no Supabase (tabela não encontrada).",
+    "PGRST205": "O banco do Vista ainda não foi configurado no Supabase (tabela não encontrada).",
     # resultados das RPCs
     "servidor_inexistente": "Esse servidor não existe mais.",
     "use_servidor_hack": "Você marcou hack/mod neste jogo. Entre em um servidor de hack.",

@@ -1,4 +1,4 @@
-// ROLOX Studio — a IA "põe a mão na massa".
+// VISTA Studio — a IA "põe a mão na massa".
 //
 // A IA responde com um bloco ```acoes [ ... ] ``` (JSON). Aqui ele é lido, conferido
 // (só classes e propriedades permitidas, números com limite) e aplicado no mundo:

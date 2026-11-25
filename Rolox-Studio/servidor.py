@@ -1,4 +1,4 @@
-"""Rolox Studio — servidor local (PC ou Termux).
+"""Vista Studio — servidor local (PC ou Termux).
 
     pip install -r requirements.txt
     python servidor.py              -> abra http://localhost:8600
@@ -34,7 +34,7 @@ NOME_VALIDO = re.compile(r"^[A-Za-z0-9_-]{1,40}$")
 TAMANHO_MAX_PROJETO = 40 * 1024 * 1024
 LIMITES = {"bluetooth": 5, "cabo": 2}
 
-# Sites do ROLOX que podem LER a lista de projetos deste Studio (só GET /api/projetos),
+# Sites do VISTA que podem LER a lista de projetos deste Studio (só GET /api/projetos),
 # para a aba Studio do site mostrar "ligado" e os projetos. Mais sites: ROLOX_STUDIO_ORIGENS=a,b
 ORIGENS_PADRAO = ("https://rolox-gj2i.onrender.com",)
 
@@ -246,7 +246,7 @@ def criar_app(pasta_projetos: Path | None = None) -> Flask:
         p = caminho(nome)
         dados = request.get_json(silent=True)
         if not isinstance(dados, dict) or dados.get("formato") != "rolox-studio":
-            abort(400, "Arquivo não é um projeto do Rolox Studio.")
+            abort(400, "Arquivo não é um projeto do Vista Studio.")
         temp = p.with_suffix(".tmp")
         temp.write_text(json.dumps(dados, ensure_ascii=False), encoding="utf-8")
         temp.replace(p)
@@ -304,7 +304,7 @@ def criar_app(pasta_projetos: Path | None = None) -> Flask:
 if __name__ == "__main__":
     host = os.environ.get("ROLOX_HOST", "127.0.0.1")
     porta = int(os.environ.get("ROLOX_PORTA", "8600"))
-    print(f"Rolox Studio: abra http://localhost:{porta}")
+    print(f"Vista Studio: abra http://localhost:{porta}")
     if host != "127.0.0.1":
         print("Aceitando celulares na rede local (PCtoCelular por Bluetooth). O Studio continua só neste aparelho.")
     criar_app().run(host=host, port=porta, threaded=True)

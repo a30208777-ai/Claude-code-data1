@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block titulo %}{{ nome }} · {{ 'Seguidores' if tipo == 'seguidores' else 'Seguindo' }} · Rolox{% endblock %}
+{% block titulo %}{{ nome }} · {{ 'Seguidores' if tipo == 'seguidores' else 'Seguindo' }} · Vista{% endblock %}
 {% block conteudo %}
 <p><a class="btn texto" href="{{ url_for('jogador', nome=nome) }}">‹ {{ nome }}</a></p>
 <h1>{{ '👥 Seguidores' if tipo == 'seguidores' else '➡️ Seguindo' }} ({{ lista|length }})</h1>

@@ -1,4 +1,4 @@
-"""Gera a versão estática do ROLOX para o GitHub Pages.
+"""Gera a versão estática do VISTA para o GitHub Pages.
 
 O que vai para o Pages (só o site, não precisa de servidor):
   • página inicial, Termos, Política e Novidades
@@ -62,13 +62,13 @@ def gerar(saida: Path):
 
 INICIO = """<!doctype html>
 <html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ROLOX</title><link rel="icon" href="static/favicon.png"><link rel="stylesheet" href="static/rolox.css">
+<title>VISTA</title><link rel="icon" href="static/favicon.png"><link rel="stylesheet" href="static/rolox.css">
 <style>.capa{max-width:560px;margin:40px auto;padding:0 16px;text-align:center}.capa img{max-width:320px;width:80%}
 .capa .btn{display:block;margin:10px 0}.rodape-links{margin-top:24px}</style></head>
 <body><main class="capa">
-<img src="static/logo_nome.png" alt="ROLOX">
+<img src="static/logo_nome.png" alt="VISTA">
 <p>Jogue, crie e divirta-se com os amigos. Grátis.</p>
-<a class="btn" href="{SITE}/">▶ Jogar no ROLOX</a>
+<a class="btn" href="{SITE}/">▶ Jogar no VISTA</a>
 <a class="btn contorno" href="{SITE}/login">Entrar ou criar conta</a>
 <p class="rodape-links"><a href="novidades/">📰 Novidades</a> · <a href="termos/">Termos de Uso</a> · <a href="politica/">Política de Uso</a>
  · <a href="https://discord.gg/6NZ5Ftq3p" target="_blank" rel="noopener">Discord</a></p>

@@ -1,4 +1,4 @@
-"""Baixar e extrair o ROLOX (sem nada de Android aqui: dá para testar no PC).
+"""Baixar e extrair o VISTA (sem nada de Android aqui: dá para testar no PC).
 
 O dono publica no GitHub (repositório a30208777-ai/Rolox-apk) o arquivo Vision-apk-link.json com
 a versão nova e o link de download. O Atualizador lê esse arquivo, compara a versão e baixa pelo
@@ -19,10 +19,10 @@ from typing import Callable, Optional
 import httpx
 
 REPO = "a30208777-ai/Rolox-apk"
-# arquivo que diz qual é a versão nova do ROLOX e onde baixar (o dono edita no GitHub)
+# arquivo que diz qual é a versão nova do VISTA e onde baixar (o dono edita no GitHub)
 URL_INFO = f"https://raw.githubusercontent.com/{REPO}/refs/heads/main/Vision-apk-link.json"
 AGENTE = "AtualizadorROLOX/1.0"
-MAX_ZIP = 400 * 1024 * 1024          # 400 MB: mais que isso não é o ROLOX
+MAX_ZIP = 400 * 1024 * 1024          # 400 MB: mais que isso não é o VISTA
 MAX_INFO = 64 * 1024
 PRAZO = httpx.Timeout(30.0, read=60.0)
 
@@ -66,10 +66,10 @@ def ler_info(texto: str) -> InfoVersao:
     link = _campo(texto, "link", "url")
     protecao = _campo(texto, "proctetion", "protection", "protecao", "proteção") or ""
     if not versao or not re.fullmatch(r"\d+(\.\d+)*", versao.strip()):
-        raise ErroAtualizador("O arquivo de versão do ROLOX está sem a versão (version).")
+        raise ErroAtualizador("O arquivo de versão do VISTA está sem a versão (version).")
     link = (link or "").replace("\\/", "/").strip()
     if not link.startswith("https://"):
-        raise ErroAtualizador("O arquivo de versão do ROLOX está sem um link https de download.")
+        raise ErroAtualizador("O arquivo de versão do VISTA está sem um link https de download.")
     return InfoVersao(versao.strip(), link, protecao)
 
 
@@ -92,11 +92,11 @@ async def buscar_info(cliente: Optional[httpx.AsyncClient] = None) -> InfoVersao
     try:
         r = await cliente.get(URL_INFO, headers={"Cache-Control": "no-cache"})
         if r.status_code == 404:
-            raise ErroAtualizador("Ainda não tem versão do ROLOX publicada.")
+            raise ErroAtualizador("Ainda não tem versão do VISTA publicada.")
         if r.status_code != 200:
             raise ErroAtualizador(f"O GitHub respondeu {r.status_code}. Tente de novo daqui a pouco.")
         if len(r.content) > MAX_INFO:
-            raise ErroAtualizador("O arquivo de versão do ROLOX está estranho (grande demais).")
+            raise ErroAtualizador("O arquivo de versão do VISTA está estranho (grande demais).")
         return ler_info(r.text)
     except httpx.HTTPError as e:
         raise ErroAtualizador("Sem internet ou o GitHub não respondeu. Confira a conexão.") from e
@@ -113,7 +113,7 @@ async def baixar_arquivo(link: str, progresso: Callable[[int, Optional[int]], No
     try:
         async with cliente.stream("GET", link) as r:
             if r.status_code == 404:
-                raise ErroAtualizador("O link de download do ROLOX não existe mais. Avise no Discord.")
+                raise ErroAtualizador("O link de download do VISTA não existe mais. Avise no Discord.")
             if r.status_code != 200:
                 raise ErroAtualizador(f"O site do download respondeu {r.status_code}. Tente de novo daqui a pouco.")
             tipo = r.headers.get("content-type", "").lower()
@@ -121,14 +121,14 @@ async def baixar_arquivo(link: str, progresso: Callable[[int, Optional[int]], No
                 raise PrecisaNavegador(link)
             total = int(r.headers.get("content-length") or 0) or None
             if total and total > MAX_ZIP:
-                raise ErroAtualizador("O arquivo do ROLOX está grande demais.")
+                raise ErroAtualizador("O arquivo do VISTA está grande demais.")
             buf = io.BytesIO()
             async for parte in r.aiter_bytes():
                 if buf.tell() == 0 and not parte.startswith(b"PK"):
                     raise PrecisaNavegador(link)          # não é .apk nem .zip: é uma página
                 buf.write(parte)
                 if buf.tell() > MAX_ZIP:
-                    raise ErroAtualizador("O arquivo do ROLOX está grande demais.")
+                    raise ErroAtualizador("O arquivo do VISTA está grande demais.")
                 progresso(buf.tell(), total)
             return buf.getvalue()
     except httpx.HTTPError as e:
@@ -139,7 +139,7 @@ async def baixar_arquivo(link: str, progresso: Callable[[int, Optional[int]], No
 
 
 def escolher_apk(nomes: list[str]) -> Optional[str]:
-    """O .apk do ROLOX dentro do zip: o que tem 'rolox' no nome (e não é o atualizador); senão o único."""
+    """O .apk do VISTA dentro do zip: o que tem 'rolox' no nome (e não é o atualizador); senão o único."""
     apks = [n for n in nomes if n.lower().endswith(".apk") and not n.endswith("/")]
     if not apks:
         return None
@@ -156,7 +156,7 @@ def escolher_apk(nomes: list[str]) -> Optional[str]:
 
 
 def extrair_apk(dados_zip: bytes, pasta: Path) -> Baixado:
-    """Tira o .apk do ROLOX do zip e salva em `pasta/rolox.apk` (só ele: nada de extrair o zip todo)."""
+    """Tira o .apk do VISTA do zip e salva em `pasta/rolox.apk` (só ele: nada de extrair o zip todo)."""
     try:
         z = zipfile.ZipFile(io.BytesIO(dados_zip))
     except zipfile.BadZipFile as e:
@@ -168,13 +168,13 @@ def extrair_apk(dados_zip: bytes, pasta: Path) -> Baixado:
             return _salvar(dados, pasta, "ROLOX.apk")
         escolhido = escolher_apk(nomes)
         if not escolhido:
-            raise ErroAtualizador("Não achei o app do ROLOX (.apk) no pacote baixado.")
+            raise ErroAtualizador("Não achei o app do VISTA (.apk) no pacote baixado.")
         info = z.getinfo(escolhido)
         if info.file_size > MAX_ZIP:
-            raise ErroAtualizador("O app do ROLOX está grande demais.")
+            raise ErroAtualizador("O app do VISTA está grande demais.")
         dados = z.read(escolhido)
     if dados[:2] != b"PK":                      # um .apk é um zip por dentro
-        raise ErroAtualizador("O arquivo do ROLOX não parece um app Android válido.")
+        raise ErroAtualizador("O arquivo do VISTA não parece um app Android válido.")
     return _salvar(dados, pasta, PurePosixPath(escolhido).name)
 
 

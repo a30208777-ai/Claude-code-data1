@@ -1,11 +1,11 @@
 {% extends "base.html" %}
-{% block titulo %}{{ p.username }} · Rolox{% endblock %}
+{% block titulo %}{{ p.username }} · Vista{% endblock %}
 {% block conteudo %}
 <div class="linha" style="align-items:flex-start">
   <div class="avatar-mini">{{ desenhar_avatar(p.avatar, 64) }}</div>
   <div class="cresce">
     <h1>{{ p.username }}{{ selo(p.is_parceiro) }}{{ selo_app(p.app) }}</h1>
-    {% if p.is_parceiro %}<p class="parceiro-tag">🤝 Parceiro do ROLOX{% if p.parceiro_desde %} desde {{ p.parceiro_desde|data }}{% endif %}</p>{% endif %}
+    {% if p.is_parceiro %}<p class="parceiro-tag">🤝 Parceiro do VISTA{% if p.parceiro_desde %} desde {{ p.parceiro_desde|data }}{% endif %}</p>{% endif %}
     {% if p.bio %}<p class="bio">“{{ p.bio }}”</p>{% endif %}
     <p><a href="{{ url_for('jogador_seguidores', nome=p.username, tipo='seguidores') }}"><b>{{ seg.seguidores }}</b> seguidores</a> ·
       <a href="{{ url_for('jogador_seguidores', nome=p.username, tipo='seguindo') }}"><b>{{ seg.seguindo }}</b> seguindo</a></p>
@@ -19,11 +19,11 @@
     <p><button class="btn pequeno contorno" type="button" id="compartilharPerfil">🔗 Compartilhar perfil</button></p>
     <script>
       document.getElementById("compartilharPerfil")?.addEventListener("click", async () => {
-        const dados = { title: {{ p.username|tojson }} + " no ROLOX", text: "Me segue no ROLOX!", url: location.href };
+        const dados = { title: {{ p.username|tojson }} + " no VISTA", text: "Me segue no VISTA!", url: location.href };
         try { if (navigator.share) await navigator.share(dados); else { await navigator.clipboard.writeText(location.href); aviso("Link copiado!", "ok"); } } catch { /* cancelou */ }
       });
     </script>
-    <p class="muted">No ROLOX desde {{ p.criado_em|data }}</p>
+    <p class="muted">No VISTA desde {{ p.criado_em|data }}</p>
   </div>
 </div>
 {% if criados %}
@@ -55,7 +55,7 @@
       <span>↗</span>
     </a>
   {% endfor %}
-  <p class="nota">Links colocados pelo próprio parceiro. Abrem fora do ROLOX.</p>
+  <p class="nota">Links colocados pelo próprio parceiro. Abrem fora do VISTA.</p>
 {% endif %}
 {% if p.username != eu_nome %}{% with tipo='jogador', alvo=p.username, voltar=request.path %}{% include "_denunciar.html" %}{% endwith %}{% endif %}
 <p><a class="btn texto" href="javascript:history.back()">← Voltar</a></p>

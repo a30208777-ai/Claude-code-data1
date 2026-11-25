@@ -1,4 +1,4 @@
-"""Testes do Rolox Flask com um Supabase falso em memória (sem internet).
+"""Testes do Vista Flask com um Supabase falso em memória (sem internet).
 
 Rodar:  cd Rolox-App/flask && python -m pytest -q
 """
@@ -824,9 +824,9 @@ def test_adm_sem_chat_e_banimento_vao_para_o_discord(cliente, sb, monkeypatch):
     cliente.post("/adm/com-chat", data={"user_id": "u9", "nome": "bob", "csrf": token})
     assert [c[0] for c in sb.adm_chamadas] == ["adm_banir", "adm_sem_chat", "adm_com_chat"]
     assert sb.adm_chamadas[1][1] == {"p_user": "u9", "p_minutos": 60, "p_motivo": "spam"}
-    assert enviados == [("ban", "bob", "xingou", "alice (ADM)", "Jogo ROLOX", None),
-                        ("sem_chat", "bob", "spam", "alice (ADM)", "Jogo ROLOX", 60),
-                        ("com_chat", "bob", "chat liberado pelo ADM", "alice (ADM)", "Jogo ROLOX", None)]
+    assert enviados == [("ban", "bob", "xingou", "alice (ADM)", "Jogo VISTA", None),
+                        ("sem_chat", "bob", "spam", "alice (ADM)", "Jogo VISTA", 60),
+                        ("com_chat", "bob", "chat liberado pelo ADM", "alice (ADM)", "Jogo VISTA", None)]
     # ao abrir o painel, o IP bloqueado que ainda não foi pro Discord é registrado e marcado
     enviados.clear()
     cliente.get("/adm")
@@ -837,7 +837,7 @@ def test_adm_sem_chat_e_banimento_vao_para_o_discord(cliente, sb, monkeypatch):
 
 # ------------------------------------------------------------ Studio
 class StudioFalso:
-    """Imita o servidor do ROLOX Studio (Rolox-Studio/servidor.py) em localhost:8600."""
+    """Imita o servidor do VISTA Studio (Rolox-Studio/servidor.py) em localhost:8600."""
 
     def __init__(self, ligado=True, projetos=None):
         self.ligado = ligado
@@ -852,7 +852,7 @@ class StudioFalso:
         caminho = urlsplit(url).path
         if caminho == "/":
             r = Resp(200)
-            r.text = "<title>Rolox Studio</title>"
+            r.text = "<title>Vista Studio</title>"
             return r
         if caminho == "/api/projetos":
             return Resp(200, self.lista)
@@ -973,7 +973,7 @@ def test_studio_dentro_do_site(cliente, sb):
     t = html(cliente.get("/studio"))
     assert "roda aqui no site" in t and 'href="/studio/leve?modelo=obby"' in t
     ed = cliente.get("/studio/leve")
-    assert ed.status_code == 200 and "ROLOX Studio" in html(ed)
+    assert ed.status_code == 200 and "VISTA Studio" in html(ed)
     assert cliente.get("/static/studio/editor.js").status_code == 200
     assert cliente.get("/static/vendor/fengari/fengari-web.js").status_code == 200
     assert cliente.get("/static/rolox.css").status_code == 200       # o CSS do app continua
@@ -1309,7 +1309,7 @@ def test_parceria_dono_cria_chave_e_pessoa_ativa(cliente, sb):
     # chave certa (com espaços)
     cliente.post("/parceria", data={"csrf": tok, "chave": f"  {chave} "})
     t = html(cliente.get("/parceria"))
-    assert "Você é Parceiro do ROLOX" in t and "Parceria ativada" in t
+    assert "Você é Parceiro do VISTA" in t and "Parceria ativada" in t
     assert "EM USO" in html(cliente.get("/dono"))
     cliente.post("/dono/parcerias/1/revogar", data={"csrf": tok})
     assert "REVOGADA" in html(cliente.get("/dono"))
@@ -1442,7 +1442,7 @@ def test_emblemas_ganhar_e_mostrar_no_perfil(cliente, sb):
 def test_internet_rota_e_aba_buscar(cliente, monkeypatch):
     import internet
     monkeypatch.setattr(internet, "pesquisar", lambda q, usuario="", **k: (_ for _ in ()).throw(
-        internet.ErroInternet("termo_bloqueado", "Essa pesquisa não é permitida no ROLOX.")) if "porn" in q else
+        internet.ErroInternet("termo_bloqueado", "Essa pesquisa não é permitida no VISTA.")) if "porn" in q else
         [{"titulo": "Dinossauro", "resumo": "Répteis", "link": "https://pt.wikipedia.org/wiki/Dinossauro", "fonte": "Wikipédia"}])
     entrar(cliente)
     d = cliente.get("/api/internet?q=dinossauro").get_json()
@@ -1520,7 +1520,7 @@ def test_app_oficial_chave_do_dono_e_marcas(cliente, sb):
     from rolox_api import RoloxAPI
     assert sb.request("POST", "https://falso/rest/v1/rpc/verificar_app", json={"p_chave": chave, "p_versao": "0.24.0"},
                       headers={"Authorization": f"Bearer {sb.token_valido}"}).json()["status"] == "oficial"
-    assert 'title="Usa o app oficial do ROLOX">✅' in html(cliente.get("/perfil"))
+    assert 'title="Usa o app oficial do VISTA">✅' in html(cliente.get("/perfil"))
     assert sb.request("POST", "https://falso/rest/v1/rpc/verificar_app", json={"p_chave": "outra", "p_versao": "9"},
                       headers={"Authorization": f"Bearer {sb.token_valido}"}).json()["status"] == "modificado"
     assert "app modificado" in html(cliente.get("/inicio"))
@@ -1534,10 +1534,10 @@ def test_app_oficial_chave_do_dono_e_marcas(cliente, sb):
 
 def test_termos_e_politica_publicos_e_linkados(cliente):
     t = html(cliente.get("/termos"))
-    assert "Termos de Uso do ROLOX" in t and "não tem nenhuma ligação com a Roblox Corporation" in t
+    assert "Termos de Uso do VISTA" in t and "não tem nenhuma ligação com a Roblox Corporation" in t
     assert "banimento" in t and "não valem dinheiro" in t and "/politica" in t
     p = html(cliente.get("/politica"))
-    assert "Política de Uso do ROLOX" in p and "LGPD" in p and "a senha que a pessoa tentou, cifrada" in p
+    assert "Política de Uso do VISTA" in p and "LGPD" in p and "a senha que a pessoa tentou, cifrada" in p
     assert "✅" in p and "❌" in p and "discord.gg/6NZ5Ftq3p" in p
     assert "/termos" in html(cliente.get("/cadastro")) and "/politica" in html(cliente.get("/login"))
 
@@ -1552,7 +1552,7 @@ def test_rolox_hacks_servidor_separado_com_executor(cliente, sb):
     gameid = sb.mapas[mid]["gameid"]
     t = html(cliente.get("/hacks"))
     assert "Servidores de hack e mod" in t and f"/hacks/{mid}/jogar" in t and "/hacks" in html(cliente.get("/jogos"))
-    # servidor normal do jogo (de outra pessoa): no ROLOX normal não tem executor
+    # servidor normal do jogo (de outra pessoa): no VISTA normal não tem executor
     sb.mapas[mid]["autor_id"] = "u9"
     r = cliente.post(f"/jogos/{mid}/jogar", data={"csrf": tok})
     normal = html(cliente.get(r.headers["Location"].replace("http://localhost", "")))
@@ -1661,9 +1661,9 @@ def test_criador_do_mapa_tem_o_painel_no_proprio_jogo(cliente, sb, tmp_path, mon
     r = cliente.post("/api/dono/jogo/expulsar", json={"passe": passe, "alvo": "u7"}, headers={"X-CSRF": tok})
     assert r.status_code == 200 and not getattr(sb, "poderes_dono", [])
     assert "criador do jogo" in outro.trocar(bob, {"p": [0, 2, 0]})["expulso"]
-    # o dono do ROLOX ninguém expulsa; banir é só do dono
+    # o dono do VISTA ninguém expulsa; banir é só do dono
     r = cliente.post("/api/dono/jogo/expulsar", json={"passe": passe, "alvo": "u2"}, headers={"X-CSRF": tok})
-    assert r.status_code == 403 and "dono do ROLOX" in r.get_json()["mensagem"]
+    assert r.status_code == 403 and "dono do VISTA" in r.get_json()["mensagem"]
     r = cliente.post("/api/dono/jogo/banir", json={"passe": passe, "alvo": "u2"}, headers={"X-CSRF": tok})
     assert r.status_code == 403
     assert cliente.post("/api/dono/jogo/anunciar", json={"passe": passe, "texto": "Bem-vindos ao meu jogo!"},
@@ -1928,7 +1928,7 @@ def test_inicio_mostra_mensagens_nao_lidas(cliente, sb):
 
 
 def test_novidades_publica_e_no_inicio(cliente, sb):
-    assert "📰 Novidades do ROLOX" in html(cliente.get("/novidades"))
+    assert "📰 Novidades do VISTA" in html(cliente.get("/novidades"))
     entrar(cliente)
     assert "/novidades" in html(cliente.get("/inicio"))
 
@@ -1940,7 +1940,7 @@ def test_ban_mostra_como_recorrer():
 
 def test_novidades_sem_repeticao_e_titulo_certo(cliente):
     t = html(cliente.get("/novidades"))
-    assert "<title>Novidades · Rolox</title>" in t.replace("\n", "") or "Novidades · Rolox" in t.split("</title>")[0]
+    assert "<title>Novidades · Vista</title>" in t.replace("\n", "") or "Novidades · Vista" in t.split("</title>")[0]
     titulos = re.findall(r'class="titulo">([^<]*)', t)
     assert len(titulos) == len(set(titulos)) >= 20
 

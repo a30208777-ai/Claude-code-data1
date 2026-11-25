@@ -1,4 +1,4 @@
-// ROLOX Studio — 📋 copiar e colar (também entre projetos: a cópia fica guardada neste aparelho).
+// VISTA Studio — 📋 copiar e colar (também entre projetos: a cópia fica guardada neste aparelho).
 
 import { BasePart, Vector3, salvarInstancia, carregarInstancia } from "./motor.js";
 

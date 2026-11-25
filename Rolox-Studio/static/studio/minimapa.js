@@ -1,4 +1,4 @@
-// ROLOX — 🗺️ minimapa: o mapa visto de cima, com você (seta) e os outros jogadores (pontos).
+// VISTA — 🗺️ minimapa: o mapa visto de cima, com você (seta) e os outros jogadores (pontos).
 // Desenhado num canvas pequeno, 5 vezes por segundo (leve até no celular).
 
 /** Caixa que contém as peças (ignora chão gigante e coisas muito longe). Pura: dá para testar. */

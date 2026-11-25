@@ -1,10 +1,10 @@
 {% extends "base.html" %}
-{% block titulo %}Parceria · Rolox{% endblock %}
+{% block titulo %}Parceria · Vista{% endblock %}
 {% block conteudo %}
 <h1>🤝 Parceria</h1>
 {% if perfil.is_parceiro %}
   <div class="cartao coluna parceiro-ok">
-    <div class="titulo">Você é Parceiro do ROLOX 🤝</div>
+    <div class="titulo">Você é Parceiro do VISTA 🤝</div>
     <div class="detalhe">{% if perfil.parceiro_desde %}Desde {{ perfil.parceiro_desde|data }}. {% endif %}Obrigado por ajudar a comunidade!
       O selo {{ selo(true) }} aparece ao lado do seu nome no chat, no jogo, no ranking e para os amigos.</div>
     <a class="btn texto" href="{{ url_for('jogador', nome=perfil.username) }}">Ver minha página de jogador</a>
@@ -35,6 +35,6 @@
   </label>
   <button class="btn">{{ 'Usar outra chave' if perfil.is_parceiro else 'Ativar parceria' }}</button>
 </form>
-<p class="nota">A chave é pessoal: vale para uma conta só. Nunca passe para ninguém — e o ROLOX nunca pede sua senha
+<p class="nota">A chave é pessoal: vale para uma conta só. Nunca passe para ninguém — e o VISTA nunca pede sua senha
   junto com a chave.</p>
 {% endblock %}

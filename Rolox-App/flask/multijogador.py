@@ -1,4 +1,4 @@
-"""Multijogador do ROLOX: posição de quem está no mesmo servidor de jogo.
+"""Multijogador do VISTA: posição de quem está no mesmo servidor de jogo.
 
 Cada jogador manda o próprio estado (posição, giro, se está andando) umas 7x por
 segundo e recebe o dos outros. A sala fica num arquivo JSON por servidor, com
@@ -275,7 +275,7 @@ class Salas:
         return self._com_trava(sala, ver)
 
     def eh_dono_na_sala(self, sala: str, user_id: str) -> bool:
-        """A 👑 vem do passe assinado pelo site: o dono do ROLOX não pode ser expulso."""
+        """A 👑 vem do passe assinado pelo site: o dono do VISTA não pode ser expulso."""
         def ver(dados):
             jog = dados.get("j") if isinstance(dados.get("j"), dict) else {}
             return bool(jog.get(user_id, {}).get("dn"))

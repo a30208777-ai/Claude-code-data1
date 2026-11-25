@@ -1,7 +1,7 @@
 [project]
 name = "rolox-mobile"
 version = "0.27.0"
-description = "App Rolox para celular (Android/iOS) em Python + Flet"
+description = "App Vista para celular (Android/iOS) em Python + Flet"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
@@ -16,9 +16,9 @@ dev = [
 
 [tool.flet]
 org = "com.rolox"
-product = "Rolox"
-company = "Rolox"
-copyright = "Rolox"
+product = "Vista"
+company = "Vista"
+copyright = "Vista"
 
 # ícone (src/assets/icon.png) e tela de abertura (src/assets/splash.png): ferramentas/gerar_logo.py
 [tool.flet.splash]
@@ -28,11 +28,11 @@ dark_color = "#140a33"
 [tool.flet.android]
 adaptive_icon_background = "#26105c"
 
-# rolox://abrir  -> abre o ROLOX (usado pelo Atualizador do ROLOX e pelo atalho que ele cria)
+# rolox://abrir  -> abre o VISTA (usado pelo Atualizador do VISTA e pelo atalho que ele cria)
 [tool.flet.android.deep_linking]
 scheme = "rolox"
 
-# o ROLOX precisa "enxergar" o Atualizador (Android 11+ esconde os outros apps): ver rolox/protecao.py
+# o VISTA precisa "enxergar" o Atualizador (Android 11+ esconde os outros apps): ver rolox/protecao.py
 [[tool.flet.android.queries.intent]]
 action = "android.intent.action.VIEW"
 data = { scheme = "roloxatualizador" }

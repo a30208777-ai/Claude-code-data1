@@ -1,4 +1,4 @@
-"""Internet do ROLOX (pesquisa segura pelo servidor), sem internet de verdade."""
+"""Internet do VISTA (pesquisa segura pelo servidor), sem internet de verdade."""
 
 import sys
 from pathlib import Path
@@ -47,7 +47,7 @@ def test_pesquisa_junta_fontes_sem_html_sem_repetir():
     assert all("<" not in x["resumo"] for x in r)
     assert all(x["link"].startswith("https://") for x in r)              # javascript: fica de fora
     url, params, cab = http.pedidos[0]
-    assert params["kp"] == 1 and "ROLOX" in cab["User-Agent"]             # busca segura, sem dados de ninguém
+    assert params["kp"] == 1 and "VISTA" in cab["User-Agent"]             # busca segura, sem dados de ninguém
     assert internet.como_texto(r).startswith("Dinossauro: Répteis")
 
 

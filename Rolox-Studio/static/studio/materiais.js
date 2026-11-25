@@ -1,4 +1,4 @@
-// ROLOX — aparência dos materiais. As texturas são DESENHADAS na hora (canvas), em tons de cinza:
+// VISTA — aparência dos materiais. As texturas são DESENHADAS na hora (canvas), em tons de cinza:
 // a cor da peça continua valendo (a textura só dá o "jeito" de madeira, tijolo, grama...).
 // Nada de imagem baixada: leve, sem direito autoral e igual em todo aparelho.
 
@@ -148,7 +148,7 @@ export function texturaBase(nome, pesado) {
   return cacheTex.get(chave);
 }
 
-/** Material do Three.js para a peça (cor + material do ROLOX + transparência). */
+/** Material do Three.js para a peça (cor + material do VISTA + transparência). */
 export function criarMaterial(i, pesado) {
   const a = ASPECTO[i.Material] || ASPECTO.Plastico;
   const m = new THREE.MeshStandardMaterial({ color: i.Color.toHex(), roughness: a.rug, metalness: a.metal });

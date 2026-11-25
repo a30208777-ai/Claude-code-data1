@@ -1,4 +1,4 @@
-// ROLOX — placar do jogo (leaderstats).
+// VISTA — placar do jogo (leaderstats).
 // Mostra na tela os valores da pasta "leaderstats" do jogador e manda o 1º valor
 // para o site como recorde (o site guarda o maior de cada jogador).
 

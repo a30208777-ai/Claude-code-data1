@@ -1,6 +1,6 @@
 palavras: internet, pesquisar, pesquisa, buscar na internet, wikipedia, google, quiz, perguntas, pergunta, curiosidade, informacao, enciclopedia
 
-# Receita: Internet (pesquisa segura feita pelo servidor do ROLOX)
+# Receita: Internet (pesquisa segura feita pelo servidor do VISTA)
 ```lua
 local net = game:GetService("Internet")
 local tela = game:GetService("Tela")

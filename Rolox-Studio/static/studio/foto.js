@@ -1,4 +1,4 @@
-// ROLOX — 📸 foto do jogo: tira uma foto da cena (sem os botões por cima), põe a marca ROLOX e o
+// VISTA — 📸 foto do jogo: tira uma foto da cena (sem os botões por cima), põe a marca VISTA e o
 // nome do jogo no canto e deixa salvar ou compartilhar. Nada sai do aparelho sem o jogador querer.
 
 /** Nome de arquivo seguro: rolox-<jogo>-<data>.png */
@@ -18,7 +18,7 @@ export function montarFoto(render, nomeJogo, documento = document) {
   const g = c.getContext("2d");
   g.drawImage(origem, 0, 0);
   const t = Math.max(14, Math.round(c.height * 0.035));
-  const texto = `ROLOX · ${String(nomeJogo || "").slice(0, 40)}`;
+  const texto = `VISTA · ${String(nomeJogo || "").slice(0, 40)}`;
   g.font = `800 ${t}px Inter, system-ui, sans-serif`;
   const larg = g.measureText(texto).width;
   const x = c.width - larg - t * 1.2, y = c.height - t * 0.9;
@@ -40,7 +40,7 @@ export async function tirarFoto(render, nomeJogo, { avisar = () => {} } = {}) {
   const arquivo = new File([blob], nome, { type: "image/png" });
   try {
     if (navigator.canShare?.({ files: [arquivo] })) {
-      await navigator.share({ files: [arquivo], title: `ROLOX · ${nomeJogo}` });
+      await navigator.share({ files: [arquivo], title: `VISTA · ${nomeJogo}` });
       return nome;
     }
   } catch (e) {
@@ -78,7 +78,7 @@ export async function gravarClipe(render, nomeJogo, { segundos = 10, avisar = ()
   const blob = new Blob(partes, { type: tipo.split(";")[0] });
   const arquivo = new File([blob], nome, { type: blob.type });
   try {
-    if (navigator.canShare?.({ files: [arquivo] })) { await navigator.share({ files: [arquivo], title: `ROLOX · ${nomeJogo}` }); return nome; }
+    if (navigator.canShare?.({ files: [arquivo] })) { await navigator.share({ files: [arquivo], title: `VISTA · ${nomeJogo}` }); return nome; }
   } catch (e) { if (e?.name === "AbortError") return null; }
   const url = URL.createObjectURL(blob);
   const a = Object.assign(document.createElement("a"), { href: url, download: nome });

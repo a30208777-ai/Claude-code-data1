@@ -1,4 +1,4 @@
-"""Internet no ROLOX: pesquisas feitas pelo SERVIDOR (o Render), só em fontes seguras.
+"""Internet no VISTA: pesquisas feitas pelo SERVIDOR (o Render), só em fontes seguras.
 
 Os jogos (serviço Internet) e os jogadores (Buscar → 🌐 Internet) mandam um termo; o site
 pesquisa na Wikipédia em português e nas respostas rápidas do DuckDuckGo (busca segura no
@@ -19,7 +19,7 @@ from typing import Optional
 
 import requests
 
-AGENTE = "ROLOX/1.0 (plataforma de jogos; pesquisa segura)"   # sem dados de ninguém
+AGENTE = "VISTA/1.0 (plataforma de jogos; pesquisa segura)"   # sem dados de ninguém
 PRAZO = 6
 CACHE_S = 600
 LIMITE_MINUTO = 20
@@ -45,7 +45,7 @@ def limpar_termo(termo: str) -> str:
     if len(t) < 2:
         raise ErroInternet("termo_curto", "Digite pelo menos 2 letras para pesquisar.")
     if BLOQUEADAS.search(t):
-        raise ErroInternet("termo_bloqueado", "Essa pesquisa não é permitida no ROLOX.")
+        raise ErroInternet("termo_bloqueado", "Essa pesquisa não é permitida no VISTA.")
     return t
 
 

@@ -1,4 +1,4 @@
-// ROLOX Studio — 📦 peças prontas: um toque e o objeto aparece na sua frente (já com script quando precisa).
+// VISTA Studio — 📦 peças prontas: um toque e o objeto aparece na sua frente (já com script quando precisa).
 
 import { Color3, Vector3, criar } from "./motor.js";
 

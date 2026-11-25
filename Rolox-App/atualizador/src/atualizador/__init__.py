@@ -1,1 +1,1 @@
-"""Atualizador do ROLOX: baixa, instala e abre o ROLOX."""
+"""Atualizador do VISTA: baixa, instala e abre o VISTA."""

@@ -1,4 +1,4 @@
-// Rolox Studio — PCtoCelular (lado do PC).
+// Vista Studio — PCtoCelular (lado do PC).
 //
 // Celulares ligados ao PC por CABO (USB, via "adb reverse") ou BLUETOOTH
 // (ancoragem Bluetooth) abrem a página /controle e mandam a inclinação,

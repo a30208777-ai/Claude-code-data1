@@ -1,7 +1,7 @@
-// ROLOX Hacks — executor 🤖 de scripts (só nos servidores de hack/mod).
+// VISTA Hacks — executor 🤖 de scripts (só nos servidores de hack/mod).
 //
 // Roda código Lua (Luau) no SEU jogo, com a mesma API dos LocalScripts: game, workspace, Players,
-// Tela, Sons, Animar, Efeitos, Raio... Os servidores hack são separados dos jogadores do ROLOX
+// Tela, Sons, Animar, Efeitos, Raio... Os servidores hack são separados dos jogadores do VISTA
 // (o banco não mistura) e lá não vale recorde, Cofre nem emblema.
 
 import { criar } from "./motor.js";

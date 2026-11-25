@@ -1,4 +1,4 @@
-// ROLOX — painel do dono 👑💎 dentro do jogo (só aparece para o dono; o site e o banco conferem de novo).
+// VISTA — painel do dono 👑💎 dentro do jogo (só aparece para o dono; o site e o banco conferem de novo).
 //   Jogadores: 📍 ir até · 👢 expulsar (kick) · 🔨 banir (o dono nunca pode ser banido)
 //   Poderes:   voar, velocidade, super pulo, vida infinita, gravidade, spawn, explosão, festa, voltar ao normal
 //   📢 Anúncio para todo mundo do servidor · 🤖 executor de scripts em qualquer servidor
@@ -85,7 +85,7 @@ export function ligarPainelDono({ jogo, botao, painel, mj = null, executor, abri
         const raiz = jogo.local?.raiz;
         if (raiz) { raiz.Position = o.raiz.Position.add(new Vector3(3, 2, 0)); raiz.Velocity = new Vector3(); }
       } }),
-      ...(o.dn ? [] : [                                   // o dono do ROLOX ninguém expulsa nem bane
+      ...(o.dn ? [] : [                                   // o dono do VISTA ninguém expulsa nem bane
         el("button", { type: "button", className: "dono-acao", textContent: "👢 Kick", onclick: async () => {
           try { await pedir("expulsar", { alvo: o.id, motivo: motivo.value.trim() }); aviso(`👢 ${o.n} foi expulso`); motivo.value = ""; }
           catch (e) { aviso(`❌ ${e.message}`); }

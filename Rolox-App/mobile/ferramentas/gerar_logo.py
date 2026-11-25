@@ -1,8 +1,8 @@
-"""Gera a logo do ROLOX (ícone do app, splash, logo da tela de login e favicon do site).
+"""Gera a logo do VISTA (ícone do app, splash, logo da tela de login e favicon do site).
 
     python ferramentas/gerar_logo.py
 
-Desenho próprio do ROLOX: um "R" em bloco 3D (o ROLOX é feito de peças), saindo de um bloco
+Desenho próprio do VISTA: um "V" em bloco 3D (o VISTA é feito de peças), saindo de um bloco
 inclinado, com a faísca laranja da criação. Tudo desenhado aqui (só precisa do Pillow e da
 fonte Inter, que é livre). Desenha 4x maior e reduz no fim, para as bordas ficarem lisas.
 """
@@ -19,7 +19,7 @@ RAIZ = Path(__file__).resolve().parents[1]
 ASSETS = RAIZ / "src" / "assets"
 SITE = RAIZ.parent / "flask" / "static"
 ATUALIZADOR = RAIZ.parent / "atualizador" / "src" / "assets"     # o Atualizador usa a mesma logo
-HACKS = RAIZ.parent / "hacks" / "src" / "assets"                 # ROLOX Hacks: a logo com o robô
+HACKS = RAIZ.parent / "hacks" / "src" / "assets"                 # VISTA Hacks: a logo com o robô
 FONTE = next((p for p in ("/usr/share/fonts/opentype/inter/InterDisplay-Black.otf",
                           "/usr/share/fonts/opentype/inter/Inter-Black.otf") if Path(p).exists()), None)
 ESCALA = 4
@@ -40,7 +40,7 @@ def degrade(n: int, c1, c2, c3) -> Image.Image:
     return Image.composite(Image.new("RGB", (n, n), c3), a, g.point(lambda v: max(0, v * 2 - 255)))
 
 
-def mascara_letra(n: int, letra: str = "R") -> Image.Image:
+def mascara_letra(n: int, letra: str = "V") -> Image.Image:
     m = Image.new("L", (n, n), 0)
     d = ImageDraw.Draw(m)
     f = ImageFont.truetype(FONTE, int(n * 0.62)) if FONTE else ImageFont.load_default()
@@ -64,7 +64,7 @@ def marca(n: int) -> Image.Image:
     N = n * ESCALA
     img = Image.new("RGBA", (N, N), (0, 0, 0, 0))
 
-    # bloco de fundo inclinado (um "tijolo" do ROLOX), com sombra
+    # bloco de fundo inclinado (um "tijolo" do VISTA), com sombra
     bloco = Image.new("L", (N, N), 0)
     ImageDraw.Draw(bloco).rounded_rectangle((N * 0.17, N * 0.17, N * 0.83, N * 0.83), radius=N * 0.13, fill=255)
     bloco = bloco.rotate(-12, resample=Image.BICUBIC)
@@ -106,7 +106,7 @@ def marca(n: int) -> Image.Image:
 
 
 def robo(n: int) -> Image.Image:
-    """Selo do ROLOX Hacks: carinha de robô num círculo laranja (desenhada, sem emoji)."""
+    """Selo do VISTA Hacks: carinha de robô num círculo laranja (desenhada, sem emoji)."""
     N = n * ESCALA
     img = Image.new("RGBA", (N, N), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
@@ -122,7 +122,7 @@ def robo(n: int) -> Image.Image:
 
 
 def icone(n: int = 1024, hacks: bool = False) -> Image.Image:
-    """Ícone do app: fundo em degradê (sangra até a borda) + símbolo. `hacks`: versão do ROLOX Hacks."""
+    """Ícone do app: fundo em degradê (sangra até a borda) + símbolo. `hacks`: versão do VISTA Hacks."""
     N = n * ESCALA
     cores = ((20, 8, 30), (70, 20, 60), (191, 54, 12)) if hacks else (ROXO_ESCURO, (74, 20, 140), (13, 71, 161))
     fundo = degrade(N, *cores).convert("RGBA")
@@ -152,8 +152,8 @@ def icone_android(n: int = 1024, hacks: bool = False, escala: float = 0.6) -> Im
     return img
 
 
-def logo_com_nome(altura: int = 220, nome: str = "ROLOX", hacks: bool = False) -> Image.Image:
-    """Símbolo + 'ROLOX' (para telas e para o site). `hacks`: 'ROLOX HACKS' em laranja."""
+def logo_com_nome(altura: int = 220, nome: str = "VISTA", hacks: bool = False) -> Image.Image:
+    """Símbolo + 'VISTA' (para telas e para o site). `hacks`: 'VISTA HACKS' em laranja."""
     m = marca(altura)
     if hacks:
         r = robo(int(altura * 0.42))
@@ -191,7 +191,7 @@ def main() -> None:
         HACKS.mkdir(exist_ok=True)
         icone(1024, hacks=True).save(HACKS / "icon.png", optimize=True)
         icone_android(hacks=True).save(HACKS / "icon_android.png", optimize=True)
-        logo_com_nome(220, "ROLOX HACKS", hacks=True).save(HACKS / "logo_nome.png", optimize=True)
+        logo_com_nome(220, "VISTA HACKS", hacks=True).save(HACKS / "logo_nome.png", optimize=True)
         im = marca(1024); r = robo(330); im.alpha_composite(r, (1024 - 330 - 60, 1024 - 330 - 60))
         im.save(HACKS / "splash.png", optimize=True)
     if SITE.is_dir():

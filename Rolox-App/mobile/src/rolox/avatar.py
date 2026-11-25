@@ -1,4 +1,4 @@
-"""Avatar do Rolox — primeiro passo: boneco em blocos com cores e estilos.
+"""Avatar do Vista — primeiro passo: boneco em blocos com cores e estilos.
 
 O avatar fica salvo em perfis.avatar (jsonb) como:
     {"pele": "#c68642", "cabelo": "curto", "cor_cabelo": "#3b2219",

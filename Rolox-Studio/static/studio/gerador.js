@@ -1,4 +1,4 @@
-// ROLOX Studio — 🏝️ gerador de mundo: cria um cenário pronto com peças e materiais do ROLOX.
+// VISTA Studio — 🏝️ gerador de mundo: cria um cenário pronto com peças e materiais do VISTA.
 //   ilha · montanhas · labirinto · cidade        (mesma semente = mesmo mundo)
 // Tudo vai para uma pasta no Workspace, longe do spawn, e cabe no limite de peças do Studio leve.
 

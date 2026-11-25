@@ -1,4 +1,4 @@
-"""Ligação do app com o Rolox Studio (o editor de jogos que roda no aparelho).
+"""Ligação do app com o Vista Studio (o editor de jogos que roda no aparelho).
 
 O Studio é o servidor de `Rolox-Studio/servidor.py` (padrão: http://localhost:8600).
 Ele só responde ao próprio aparelho, então o app e o Studio precisam estar no
@@ -56,7 +56,7 @@ class StudioLocal:
         try:
             async with self._cliente(2) as c:
                 r = await c.get("/")
-            return r.status_code == 200 and "Rolox Studio".lower() in r.text.lower()
+            return r.status_code == 200 and "Vista Studio".lower() in r.text.lower()
         except httpx.HTTPError:
             return False
 

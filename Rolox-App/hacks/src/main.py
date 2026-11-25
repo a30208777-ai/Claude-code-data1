@@ -1,8 +1,8 @@
-"""ROLOX Hacks — app dos servidores de hack/mod do ROLOX.
+"""VISTA Hacks — app dos servidores de hack/mod do VISTA.
 
-As pessoas daqui NÃO jogam com os jogadores do ROLOX normal: entram em servidores de hack/mod
-(o banco do ROLOX separa) e, no jogo, o botão 🤖 lá em cima abre o executor de scripts.
-O jogo roda no site do ROLOX (área /hacks), aberto dentro do app.
+As pessoas daqui NÃO jogam com os jogadores do VISTA normal: entram em servidores de hack/mod
+(o banco do VISTA separa) e, no jogo, o botão 🤖 lá em cima abre o executor de scripts.
+O jogo roda no site do VISTA (área /hacks), aberto dentro do app.
 
 Rodar no PC para testar:   flet run src/main.py      (no PC abre no navegador)
 Gerar APK:                 flet build apk   (ou pelo GitHub: .github/workflows/apk.yml)
@@ -22,7 +22,7 @@ def tem_webview(page: ft.Page) -> bool:
 
 
 async def main(page: ft.Page) -> None:
-    page.title = "ROLOX Hacks"
+    page.title = "VISTA Hacks"
     page.theme = ft.Theme(color_scheme_seed=COR)
     page.dark_theme = ft.Theme(color_scheme_seed=COR)
     page.theme_mode = ft.ThemeMode.DARK
@@ -38,9 +38,9 @@ async def main(page: ft.Page) -> None:
             expand=True, alignment=ft.Alignment.CENTER, padding=24,
             content=ft.Column([
                 ft.Image(src="logo_nome.png", height=72),
-                ft.Text("Servidores de hack/mod do ROLOX, separados dos jogadores normais. "
+                ft.Text("Servidores de hack/mod do VISTA, separados dos jogadores normais. "
                         "No jogo, o botão 🤖 lá em cima abre o executor de scripts.", text_align=ft.TextAlign.CENTER),
-                ft.FilledButton("Abrir o ROLOX Hacks", icon=ft.Icons.OPEN_IN_BROWSER, on_click=abrir_navegador),
+                ft.FilledButton("Abrir o VISTA Hacks", icon=ft.Icons.OPEN_IN_BROWSER, on_click=abrir_navegador),
             ], tight=True, spacing=16, horizontal_alignment=ft.CrossAxisAlignment.CENTER),
         )))
         return
@@ -59,7 +59,7 @@ async def main(page: ft.Page) -> None:
 
     def falhou(e):
         progresso.visible = False
-        page.show_dialog(ft.SnackBar(ft.Text("Sem conexão com o ROLOX. Confira a internet e toque em ⟳."),
+        page.show_dialog(ft.SnackBar(ft.Text("Sem conexão com o VISTA. Confira a internet e toque em ⟳."),
                                      show_close_icon=True))
         page.update()
 

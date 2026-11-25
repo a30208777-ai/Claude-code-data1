@@ -1,4 +1,4 @@
-// ROLOX — câmera do jogador (terceira pessoa).
+// VISTA — câmera do jogador (terceira pessoa).
 //
 //  * segue o personagem de forma suave (sem tremer);
 //  * girar: arrastar na tela (dedo ou mouse) ou teclas Q/E;

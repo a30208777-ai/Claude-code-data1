@@ -1,7 +1,7 @@
 {% extends "base.html" %}
-{% block titulo %}{{ titulo_erro or 'Erro' }} · Rolox{% endblock %}
+{% block titulo %}{{ titulo_erro or 'Erro' }} · Vista{% endblock %}
 {% block conteudo %}
-<div class="logo"><img src="{{ url_for('static', filename='logo_nome.png') }}" alt="ROLOX" width="242" height="84"></div>
+<div class="logo"><img src="{{ url_for('static', filename='logo_nome.png') }}" alt="VISTA" width="242" height="84"></div>
 {% if emoji_erro %}<p class="erro-emoji" aria-hidden="true">{{ emoji_erro }}</p>{% endif %}
 {% if titulo_erro %}<h1 class="erro-titulo">{{ titulo_erro }}</h1>{% endif %}
 <p class="sub">{{ mensagem }}</p>

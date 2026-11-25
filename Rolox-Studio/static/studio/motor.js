@@ -1,4 +1,4 @@
-// Rolox Studio — núcleo do motor: instâncias, mundo, eventos e salvamento.
+// Vista Studio — núcleo do motor: instâncias, mundo, eventos e salvamento.
 // As mecânicas seguem o estilo conhecido de "árvore de instâncias":
 // game > Workspace > Part..., com Name/Parent/ClassName, eventos com :Connect().
 
@@ -202,7 +202,7 @@ registrar(class IntValue extends ValorBase {
 }, "IntValue");
 registrar(class NumberValue extends ValorBase {}, "NumberValue");
 
-// Materiais das peças (nomes do ROLOX). Alguns mudam a física do personagem:
+// Materiais das peças (nomes do VISTA). Alguns mudam a física do personagem:
 //   Gelo escorrega, Areia deixa mais devagar, Borracha faz quicar.
 export const MATERIAIS = ["Plastico", "Madeira", "Metal", "Grama", "Pedra", "Tijolo", "Concreto", "Areia",
   "Gelo", "Neon", "Vidro", "Tecido", "Borracha", "Lava", "Agua", "Pinos"];   // Pinos = o visual clássico de blocos de montar
@@ -768,7 +768,7 @@ registrar(class Efeitos extends Servico {
 }, "Efeitos");
 
 // -------------------------------------------------------------- Internet
-// Pesquisa segura feita pelo servidor do ROLOX (Wikipédia e DuckDuckGo com busca segura).
+// Pesquisa segura feita pelo servidor do VISTA (Wikipédia e DuckDuckGo com busca segura).
 //   local net = game:GetService("Internet")
 //   net.Resultado:Connect(function(termo, texto) print(texto) end)
 //   net:Pesquisar("dinossauros")      -- a resposta chega no Resultado (não trava o jogo)
@@ -781,7 +781,7 @@ registrar(class Internet extends Servico {
   Pesquisar(termo) {
     const t = String(termo ?? "").trim().slice(0, 100);
     if (t.length < 2) throw new Error("Internet: pesquise pelo menos 2 letras");
-    if (!this._buscar) { setTimeout(() => this.Resultado.Fire(t, "Sem internet aqui (abra pelo site do ROLOX).", []), 0); return; }
+    if (!this._buscar) { setTimeout(() => this.Resultado.Fire(t, "Sem internet aqui (abra pelo site do VISTA).", []), 0); return; }
     this._buscar(t).then(
       (d) => this.Resultado.Fire(t, String(d.texto ?? ""), Array.isArray(d.resultados) ? d.resultados.map((r) => `${r.titulo}: ${r.resumo}`) : []),
       (e) => this.Resultado.Fire(t, `Erro na pesquisa: ${e.message}`, []));
@@ -874,7 +874,7 @@ export function salvarMundo(m, nome = "Meu jogo") {
 }
 
 export function carregarMundo(dados) {
-  if (!dados || dados.formato !== "rolox-studio") throw new Error("Arquivo não é um projeto do Rolox Studio");
+  if (!dados || dados.formato !== "rolox-studio") throw new Error("Arquivo não é um projeto do Vista Studio");
   const m = new Mundo();
   m.assets = dados.assets || {};
   if (dados.ceu && typeof dados.ceu === "object") {

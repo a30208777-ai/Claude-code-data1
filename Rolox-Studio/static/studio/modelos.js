@@ -1,4 +1,4 @@
-// Rolox Studio — modelos prontos para começar um jogo ("Novo").
+// Vista Studio — modelos prontos para começar um jogo ("Novo").
 
 import { Color3, Vector3, criar, mundoInicial } from "./motor.js";
 

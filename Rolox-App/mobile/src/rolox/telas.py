@@ -1,4 +1,4 @@
-"""Telas do Rolox Mobile (Flet)."""
+"""Telas do Vista Mobile (Flet)."""
 
 from __future__ import annotations
 
@@ -27,9 +27,9 @@ TROCA_CURIOSIDADE = 5.0         # segundos entre uma curiosidade e outra
 
 
 def logo(altura: int) -> ft.Control:
-    """Logo do ROLOX (símbolo + nome). Arquivo em src/assets (gerado por ferramentas/gerar_logo.py)."""
+    """Logo do VISTA (símbolo + nome). Arquivo em src/assets (gerado por ferramentas/gerar_logo.py)."""
     return ft.Image(src="logo_nome.png", height=altura,
-                     error_content=ft.Text("ROLOX", size=altura * 0.5, weight=ft.FontWeight.BOLD, color=COR_PRIMARIA))
+                     error_content=ft.Text("VISTA", size=altura * 0.5, weight=ft.FontWeight.BOLD, color=COR_PRIMARIA))
 
 
 def formatar_data(iso: str) -> str:
@@ -62,7 +62,7 @@ class RoloxApp:
     # ================================================================ base
     async def iniciar(self) -> None:
         p = self.page
-        p.title = "Rolox"
+        p.title = "Vista"
         p.theme = ft.Theme(color_scheme_seed=COR_PRIMARIA)
         p.dark_theme = ft.Theme(color_scheme_seed=COR_PRIMARIA)
         p.theme_mode = ft.ThemeMode.SYSTEM
@@ -73,7 +73,7 @@ class RoloxApp:
             return
 
         inicio = time.monotonic()
-        tela = self.tela_carregando("Abrindo o ROLOX...")
+        tela = self.tela_carregando("Abrindo o VISTA...")
 
         async def esperar_um_pouco():
             # a tela Carregando fica pelo menos alguns segundos (dá tempo de ler uma curiosidade)
@@ -169,7 +169,7 @@ class RoloxApp:
             self.perfil["app_status"] = status
             self.perfil["app_verificado_em"] = datetime.now().astimezone().isoformat()
         if status == "modificado":
-            self.aviso("❌ Este app não é o oficial. Baixe o ROLOX pelo Atualizador do ROLOX.")
+            self.aviso("❌ Este app não é o oficial. Baixe o VISTA pelo Atualizador do VISTA.")
 
     def dialogo_atualizar(self, info: "atualizacao.InfoVersao") -> None:
         async def atualizar(_):
@@ -180,9 +180,9 @@ class RoloxApp:
                 if info.link:
                     await ft.UrlLauncher().launch_url(info.link)
         self.page.show_dialog(ft.AlertDialog(
-            title=ft.Text("Tem versão nova do ROLOX! ⬇️"),
+            title=ft.Text("Tem versão nova do VISTA! ⬇️"),
             content=ft.Text(f"A versão {info.versao} já saiu (a sua é a {atualizacao.VERSAO_APP}). "
-                            "Abra o Atualizador do ROLOX para baixar."),
+                            "Abra o Atualizador do VISTA para baixar."),
             actions=[ft.TextButton("Depois", on_click=lambda _: self.page.pop_dialog()),
                      ft.FilledButton("Atualizar agora", icon=ft.Icons.SYSTEM_UPDATE, on_click=atualizar)],
         ))
@@ -198,7 +198,7 @@ class RoloxApp:
 
     # ========================================================= cópia pirata
     async def tela_pirata(self) -> None:
-        """ROLOX aberto sem o Atualizador do ROLOX: não inicia e manda baixar o app oficial."""
+        """VISTA aberto sem o Atualizador do VISTA: não inicia e manda baixar o app oficial."""
         usuario = await self._pref_get(protecao.CHAVE_ULTIMO_USUARIO)
         chave = protecao.chave_contador(usuario)
         try:
@@ -222,7 +222,7 @@ class RoloxApp:
             if await protecao.atualizador_instalado(self.page):
                 await self.iniciar()
             else:
-                self.aviso("O Atualizador do ROLOX ainda não está neste aparelho.")
+                self.aviso("O Atualizador do VISTA ainda não está neste aparelho.")
 
         self.mostrar(ft.Container(
             padding=24, expand=True, alignment=ft.Alignment.CENTER,
@@ -234,7 +234,7 @@ class RoloxApp:
                         text_align=ft.TextAlign.CENTER),
                 ft.Text(texto, size=17, text_align=ft.TextAlign.CENTER,
                         weight=ft.FontWeight.BOLD if serio else None),
-                ft.Text("O ROLOX só abre com o app oficial \"Atualizador do ROLOX\" instalado neste aparelho.",
+                ft.Text("O VISTA só abre com o app oficial \"Atualizador do VISTA\" instalado neste aparelho.",
                         size=13, text_align=ft.TextAlign.CENTER, color=ft.Colors.ON_SURFACE_VARIANT),
                 ft.Container(height=6),
                 ft.FilledButton("Entrar no Discord", icon=ft.Icons.FORUM, on_click=discord, width=260),
@@ -249,7 +249,7 @@ class RoloxApp:
 
     # =========================================================== carregando
     def tela_carregando(self, texto: str = "Carregando...") -> int:
-        """Tela "Carregando": logo, o que está acontecendo e curiosidades do ROLOX trocando sozinhas."""
+        """Tela "Carregando": logo, o que está acontecendo e curiosidades do VISTA trocando sozinhas."""
         lista = curiosidades.embaralhadas()
         pos = 0
         self._status_carregando = ft.Text(texto, size=14, color=ft.Colors.ON_SURFACE_VARIANT,
@@ -431,7 +431,7 @@ class RoloxApp:
                                          bool(local.value))
                 await self._salvar_sessao()
                 await self.abrir_principal()
-                self.aviso("Conta criada! Bem-vindo ao Rolox.")
+                self.aviso("Conta criada! Bem-vindo ao Vista.")
             await self.executar(acao)
 
         self.mostrar(ft.Container(
@@ -990,7 +990,7 @@ class RoloxApp:
         def desligado() -> list:
             return [
                 cartao("O Studio não está ligado",
-                       "O Studio é o editor de jogos do Rolox (3D, peças, scripts em Lua e Python). "
+                       "O Studio é o editor de jogos do Vista (3D, peças, scripts em Lua e Python). "
                        "Ele roda neste aparelho. No Termux, abra uma nova sessão (deslize da esquerda e "
                        "toque em NEW SESSION) e rode:",
                        []),
@@ -1040,7 +1040,7 @@ class RoloxApp:
         self.mostrar(ft.Container(
             padding=16,
             content=ft.Column([
-                ft.Row([ft.Icon(ft.Icons.BUILD, color=COR_PRIMARIA), ft.Text("Rolox Studio", size=24, weight=ft.FontWeight.BOLD)]),
+                ft.Row([ft.Icon(ft.Icons.BUILD, color=COR_PRIMARIA), ft.Text("Vista Studio", size=24, weight=ft.FontWeight.BOLD)]),
                 status,
                 corpo,
             ], spacing=12, scroll=ft.ScrollMode.AUTO, expand=True),
@@ -1057,7 +1057,7 @@ class RoloxApp:
         def desenhar_status():
             if self.perfil.get("is_parceiro"):
                 status.controls = [ft.Container(padding=12, border_radius=10, bgcolor=ft.Colors.with_opacity(0.12, ft.Colors.GREEN),
-                    content=ft.Column([ft.Text("Você é Parceiro do ROLOX 🤝", weight=ft.FontWeight.BOLD, size=16),
+                    content=ft.Column([ft.Text("Você é Parceiro do VISTA 🤝", weight=ft.FontWeight.BOLD, size=16),
                                        ft.Text("Obrigado por ajudar a comunidade!", size=13)], spacing=2))]
             else:
                 status.controls = [ft.Text(f"Recebeu uma chave na DM do dono? Cole aqui para ativar a parceria na sua "
@@ -1114,7 +1114,7 @@ class RoloxApp:
 
         async def discord_registrar(tipo: str, alvo: str, motivo: str = "", duracao: Optional[int] = None):
             """Banimentos -> webhook de banimentos; punições -> webhook de punições."""
-            ok = await discord_log.registrar(tipo, alvo, motivo or "", f"{quem} (ADM)", "Jogo ROLOX", duracao)
+            ok = await discord_log.registrar(tipo, alvo, motivo or "", f"{quem} (ADM)", "Jogo VISTA", duracao)
             if not ok and not all(discord_log.configurado().values()):
                 saida_discord.value = "⚠️ Webhooks do Discord não configurados (~/.rolox.env): ação feita só no jogo."
 
@@ -1147,7 +1147,7 @@ class RoloxApp:
                     continue
                 por = "sistema (3 senhas erradas)" if i.get("automatico") else f"{quem} (ADM)"
                 ok = await discord_log.registrar("ip_bloqueado", f"IP {i['ip']} (tentou entrar em {i.get('conta_alvo') or '?'})",
-                                                 i.get("motivo") or "", por, "Jogo ROLOX")
+                                                 i.get("motivo") or "", por, "Jogo VISTA")
                 if ok:
                     await self.api.adm_marcar_ip_registrado(i["ip"])
                     i["registrado_discord"] = True

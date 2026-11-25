@@ -1,4 +1,4 @@
-"""Busca do ROLOX: jogadores, jogos e itens, em ORDEM DE RELEVÂNCIA.
+"""Busca do VISTA: jogadores, jogos e itens, em ORDEM DE RELEVÂNCIA.
 
 Nível (menor = melhor):
   0 igual ao termo · 1 começa com o termo · 2 alguma palavra começa com o termo · 3 contém

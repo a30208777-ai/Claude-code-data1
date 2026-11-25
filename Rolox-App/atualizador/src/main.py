@@ -1,4 +1,4 @@
-"""Atualizador do ROLOX — ponto de entrada.
+"""Atualizador do VISTA — ponto de entrada.
 
 Rodar no PC para testar:   flet run src/main.py
 Gerar APK:                 flet build apk   (ou pelo GitHub: .github/workflows/apk.yml)

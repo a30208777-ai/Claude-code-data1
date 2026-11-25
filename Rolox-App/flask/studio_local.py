@@ -1,4 +1,4 @@
-"""Ligação do Rolox Flask com o ROLOX Studio (o editor de jogos que roda no aparelho).
+"""Ligação do Vista Flask com o VISTA Studio (o editor de jogos que roda no aparelho).
 
 O Studio é o servidor de `Rolox-Studio/servidor.py` (padrão: http://localhost:8600).
 Ele só responde ao próprio aparelho, então este app e o Studio precisam estar no
@@ -61,7 +61,7 @@ class StudioLocal:
     def ligado(self) -> bool:
         """True se o servidor do Studio responde neste aparelho."""
         r = self._get("/", 2)
-        return r is not None and r.status_code == 200 and "rolox studio" in (r.text or "").lower()
+        return r is not None and r.status_code == 200 and any(n in (r.text or "").lower() for n in ("vista studio", "rolox studio"))
 
     def projetos(self) -> list[dict]:
         """Projetos salvos no Studio: [{"nome", "tamanho"}], do mais recente para o mais antigo."""

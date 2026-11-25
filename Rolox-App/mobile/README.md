@@ -1,6 +1,6 @@
-# Rolox Mobile (Python + Flet)
+# Vista Mobile (Python + Flet)
 
-App do Rolox para celular, escrito em Python com [Flet](https://flet.dev) (gera APK para Android e app para iOS).
+App do Vista para celular, escrito em Python com [Flet](https://flet.dev) (gera APK para Android e app para iOS).
 Segue a arquitetura v3: **o celular acessa direto as bases de dados do Supabase**, protegidas por RLS, e o login passa pela Edge Function `login-protegido` (regra das 3 tentativas).
 
 ## Telas
@@ -12,7 +12,7 @@ Segue a arquitetura v3: **o celular acessa direto as bases de dados do Supabase*
 | **Início** | Status (lobby, fila com posição ou servidor) e **alertas de segurança**: "Alguém tentou entrar na sua conta", com IP, data e botão para ver a senha que foi usada. |
 | **Servidores** | Lista servidores com jogadores/capacidade e etiqueta HACK/MOD; filtro "só os que posso entrar"; criar servidor; entrar ou ir para a fila. |
 | **Chat** | Chat do servidor com filtro de palavrões (filtro local antes da IA SELECT); botão Sair. O host manda heartbeat a cada 15 s. |
-| **Studio** | Mostra se o Rolox Studio está ligado neste aparelho, abre o Studio leve ou o PC, cria um jogo novo a partir de um modelo (Vazio, Obby, Coleta de moedas) e lista os projetos salvos para abrir direto. Se o Studio estiver desligado, mostra o comando para ligar no Termux. |
+| **Studio** | Mostra se o Vista Studio está ligado neste aparelho, abre o Studio leve ou o PC, cria um jogo novo a partir de um modelo (Vazio, Obby, Coleta de moedas) e lista os projetos salvos para abrir direto. Se o Studio estiver desligado, mostra o comando para ligar no Termux. |
 | **Perfil (config)** | Idioma do chat, jogo onde usa hack/mod (troca rápida), mostrar localização, e-mail opcional, sair da conta. |
 
 ## Rodar
@@ -32,7 +32,7 @@ python -m pytest                # testes do cliente da API
 
 O workflow `.github/workflows/apk.yml` compila o APK nos servidores do GitHub:
 
-- **push** no branch `claude/rolox-apk` (que mexa em `Rolox-App/mobile/`), ou **Actions → "APK do ROLOX" → Run workflow**;
+- **push** no branch `claude/rolox-apk` (que mexa em `Rolox-App/mobile/`), ou **Actions → "APK do VISTA" → Run workflow**;
 - ele roda os testes, instala Flutter/Java 17/Android SDK e faz `flet build apk`;
 - baixe em **Actions → a execução → Artifacts → `rolox-apk`** (um zip com `ROLOX-0.1.N.apk`);
 - uma tag `apk-v*` (ex.: `apk-v0.1.0`) também publica o APK em **Releases**.

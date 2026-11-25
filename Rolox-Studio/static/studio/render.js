@@ -1,4 +1,4 @@
-// Rolox Studio — render 3D (Three.js). Modo "leve" (celular) e "pesado" (PC).
+// Vista Studio — render 3D (Three.js). Modo "leve" (celular) e "pesado" (PC).
 
 import * as THREE from "three";
 import { OBJLoader } from "three/addons/OBJLoader.js";

@@ -1,4 +1,4 @@
-"""Rolox Mobile — ponto de entrada.
+"""Vista Mobile — ponto de entrada.
 
 Rodar no PC para testar:   flet run src/main.py
 Rodar no celular (dev):    flet run --android src/main.py   (app Flet no celular)

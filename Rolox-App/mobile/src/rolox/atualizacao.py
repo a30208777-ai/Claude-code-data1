@@ -1,10 +1,10 @@
-"""O ROLOX confere se tem versão nova e prova que é o app oficial.
+"""O VISTA confere se tem versão nova e prova que é o app oficial.
 
-Lê o mesmo arquivo que o Atualizador do ROLOX usa:
+Lê o mesmo arquivo que o Atualizador do VISTA usa:
   https://raw.githubusercontent.com/a30208777-ai/Rolox-apk/refs/heads/main/Vision-apk-link.json
   { "version": 0.20 ; "link": "https://..." ; "proctetion": "..." }
-- version: se for maior que a versão deste app, o ROLOX pede para atualizar (pelo Atualizador).
-- proctetion: a chave do app oficial. O ROLOX manda ao servidor; se o dono cadastrou essa chave
+- version: se for maior que a versão deste app, o VISTA pede para atualizar (pelo Atualizador).
+- proctetion: a chave do app oficial. O VISTA manda ao servidor; se o dono cadastrou essa chave
   (Dono -> ✅ App oficial), a conta ganha ✅; senão fica ❌ (app modificado).
 """
 
@@ -64,7 +64,7 @@ def tem_versao_nova(online: Optional[str], minha: str = VERSAO_APP) -> bool:
 
 
 async def buscar_info(cliente: Optional[httpx.AsyncClient] = None) -> Optional[InfoVersao]:
-    """None se não deu para ler (sem internet, arquivo fora do ar): o ROLOX segue normal."""
+    """None se não deu para ler (sem internet, arquivo fora do ar): o VISTA segue normal."""
     dono = cliente is None
     cliente = cliente or httpx.AsyncClient(timeout=10, follow_redirects=True)
     try:

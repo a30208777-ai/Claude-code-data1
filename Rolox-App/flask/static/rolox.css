@@ -267,7 +267,7 @@ body > .tela-rolox { position: fixed; }
 .rodape-links { text-align: center; font-size: .85rem; margin-top: 24px; }
 .rodape-links a { color: var(--suave); }
 
-/* ROLOX Hacks: executor 🤖 */
+/* VISTA Hacks: executor 🤖 */
 .etiqueta.hack { background: #ff6d00; color: #fff; margin-left: 6px; }
 .botao-executor { background: #ff6d00cc; }
 .painel-executor { position: fixed; z-index: 6; top: max(64px, calc(env(safe-area-inset-top) + 56px)); right: 10px;

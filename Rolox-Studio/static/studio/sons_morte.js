@@ -1,4 +1,4 @@
-// ROLOX — 💀 som de quando o seu personagem cai: VOCÊ escolhe (e nunca vamos tirar o seu favorito).
+// VISTA — 💀 som de quando o seu personagem cai: VOCÊ escolhe (e nunca vamos tirar o seu favorito).
 // Todos são gerados na hora (Web Audio), sem arquivo para baixar.
 
 export const SONS_MORTE = { classico: "Clássico (uuf!)", pop: "Pop", sino: "Sino", robo: "Robô", nenhum: "Nenhum" };

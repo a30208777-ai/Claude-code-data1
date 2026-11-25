@@ -1,4 +1,4 @@
-// Rolox Studio — editor (interface). Modo "leve" (celular) e "pesado" (PC).
+// Vista Studio — editor (interface). Modo "leve" (celular) e "pesado" (PC).
 
 import { OrbitControls } from "three/addons/OrbitControls.js";
 import { TransformControls } from "three/addons/TransformControls.js";
@@ -545,11 +545,11 @@ const acoes = {
     estado.nome = nome; estado.sujo = false;
     saida(`Projeto "${nome}" salvo.`, "sistema");
   },
-  /** Site do ROLOX: manda o mapa para o bucket; o dono testa e aprova. */
+  /** Site do VISTA: manda o mapa para o bucket; o dono testa e aprova. */
   async enviarRolox() {
     if (estado.jogo) pararJogo();
     const csrf = document.querySelector('meta[name="csrf"]')?.content;
-    if (!csrf) { modal("Enviar ao ROLOX só funciona no site."); return; }
+    if (!csrf) { modal("Enviar ao VISTA só funciona no site."); return; }
     const nome = await perguntar("Nome do jogo (aparece na lista de Jogos):", estado.nome || "Meu jogo");
     if (!nome) return;
     const descricao = await perguntar("Descrição curta (opcional):", "");
@@ -567,7 +567,7 @@ const acoes = {
       if (!r.ok) throw new Error(d.mensagem || `erro ${r.status}`);
       try { localStorage.setItem(chave, d.id); } catch { /* ok */ }
       saida(`Mapa "${nome}" enviado! O dono vai testar e aprovar.`, "sistema");
-      modal(`🚀 "${nome}" foi enviado para o dono do ROLOX. Quando ele aprovar, aparece em Jogos para todo mundo. ` +
+      modal(`🚀 "${nome}" foi enviado para o dono do VISTA. Quando ele aprovar, aparece em Jogos para todo mundo. ` +
             `Se mandar de novo, a versão nova substitui a que está em análise.`);
     } catch (err) { modal(`Não foi possível enviar: ${err.message}`); }
   },
@@ -639,7 +639,7 @@ const acoes = {
   pasta() { const f = criar("Folder"); f.Parent = ondeColocar("Folder"); mudou(); selecionar(f); },
   ajuda() {
     const dica = (t, d) => el("li", {}, el("b", {}, t), " — ", d);
-    modal([el("p", {}, el("b", {}, "❓ Ajuda do ROLOX Studio")),
+    modal([el("p", {}, el("b", {}, "❓ Ajuda do VISTA Studio")),
       el("p", { class: "vazio" }, "Atalhos (PC)"),
       el("ul", { class: "ajuda" },
         dica("Ctrl+S", "salvar"), dica("Ctrl+Z / Ctrl+Y", "desfazer / refazer"), dica("Ctrl+D", "duplicar"),
@@ -892,7 +892,7 @@ desenharExplorer();
 desenharProps();
 if (!historico.pilha.length) reiniciarHistorico();
 
-// abrir direto pelo endereço (o app Rolox usa isso):
+// abrir direto pelo endereço (o app Vista usa isso):
 //   /studio/leve?projeto=meu-jogo     abre um projeto salvo
 //   /studio/leve?modelo=obby          começa com um modelo (vazio, obby, moedas)
 (() => {
@@ -902,7 +902,7 @@ if (!historico.pilha.length) reiniciarHistorico();
   else if (modelo) { const x = MODELOS.find((m) => m.id === modelo); if (x) usarModelo(x); }
   if (projeto || modelo) history.replaceState(null, "", location.pathname);   // recarregar não repete
 })();
-saida(`Rolox Studio ${PESADO ? "PC (pesado)" : "leve (celular)"} pronto.`, "sistema");
+saida(`Vista Studio ${PESADO ? "PC (pesado)" : "leve (celular)"} pronto.`, "sistema");
 if (PESADO) carregarPython().catch(() => {});      // no PC já deixa o Python carregando
 window.__studio = { estado, acoes, render };      // para testes e depuração
 

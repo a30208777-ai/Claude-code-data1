@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block titulo %}{{ m.nome }} · Rolox{% endblock %}
+{% block titulo %}{{ m.nome }} · Vista{% endblock %}
 {% block conteudo %}
 <p><a class="btn texto" href="{{ url_for('jogos') }}">‹ Jogos</a></p>
 <div class="jogo-capa">
@@ -76,7 +76,7 @@
 {% with tipo='jogo', alvo=m.id, voltar=request.path %}{% include "_denunciar.html" %}{% endwith %}
 <script>
   document.getElementById("compartilhar")?.addEventListener("click", async () => {
-    const dados = { title: {{ m.nome|tojson }}, text: "Bora jogar no ROLOX?", url: location.href };
+    const dados = { title: {{ m.nome|tojson }}, text: "Bora jogar no VISTA?", url: location.href };
     try {
       if (navigator.share) await navigator.share(dados);
       else { await navigator.clipboard.writeText(location.href); aviso("Link copiado!", "ok"); }

@@ -1,4 +1,4 @@
-// Rolox Studio — importar .obj (por exemplo, exportado pelo Roblox Studio com
+// Vista Studio — importar .obj (por exemplo, exportado pelo Roblox Studio com
 // "Export Selection", que gera .obj + .mtl + texturas .png).
 // Selecione os arquivos juntos; vira um MeshPart no Workspace.
 

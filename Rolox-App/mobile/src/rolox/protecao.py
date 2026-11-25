@@ -1,8 +1,8 @@
-"""Proteção contra cópia pirata: o ROLOX só abre se o "Atualizador do ROLOX" estiver no aparelho.
+"""Proteção contra cópia pirata: o VISTA só abre se o "Atualizador do VISTA" estiver no aparelho.
 
-O Atualizador é o app oficial que baixa e atualiza o ROLOX. Os dois se reconhecem por links
-próprios (deep links): o ROLOX responde a  rolox://  e o Atualizador a  roloxatualizador://.
-O ROLOX pergunta ao Android se alguém abre  roloxatualizador://  — se ninguém abre, o
+O Atualizador é o app oficial que baixa e atualiza o VISTA. Os dois se reconhecem por links
+próprios (deep links): o VISTA responde a  rolox://  e o Atualizador a  roloxatualizador://.
+O VISTA pergunta ao Android se alguém abre  roloxatualizador://  — se ninguém abre, o
 Atualizador não está instalado.
 
 Só vale no Android (no PC e no navegador é ambiente de teste/desenvolvimento).

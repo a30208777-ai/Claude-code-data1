@@ -3,7 +3,7 @@
 Cada .md tem na 1ª linha `palavras: a, b, c` (e opcionalmente `sempre: sim`). Quando o usuário pede algo,
 escolhemos os documentos cujas palavras aparecem no pedido (sem acento, por começo de palavra:
 "moedas" acha "moeda") e mandamos o texto deles junto com a instrução. Assim a IA vê receitas
-completas e testadas do ROLOX em vez de inventar.
+completas e testadas do VISTA em vez de inventar.
 """
 
 from __future__ import annotations
@@ -109,5 +109,5 @@ def como_texto(docs: list[Doc]) -> str:
     if not docs:
         return ""
     partes = [f"--- documento: {d.nome} ---\n{d.texto}" for d in docs]
-    return ("DOCUMENTOS DO ROLOX (receitas testadas: siga estes exemplos e esta API; não invente funções "
+    return ("DOCUMENTOS DO VISTA (receitas testadas: siga estes exemplos e esta API; não invente funções "
             "que não estão aqui nem na instrução):\n\n" + "\n\n".join(partes))

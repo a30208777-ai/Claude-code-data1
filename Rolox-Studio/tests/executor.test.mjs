@@ -1,4 +1,4 @@
-// Os scripts prontos do executor 🤖 (ROLOX Hacks) rodam sem erro no motor de verdade.
+// Os scripts prontos do executor 🤖 (VISTA Hacks) rodam sem erro no motor de verdade.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
