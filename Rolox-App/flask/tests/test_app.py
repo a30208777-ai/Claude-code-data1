@@ -2032,3 +2032,46 @@ def test_dono_cria_evento_e_jogador_vai_direto_ao_jogo(cliente, sb, monkeypatch)
     monkeypatch.setattr(RoloxAPI, "verificar_evento", lambda self, i: ev)
     r = cliente.get("/?e=true&evento-id=abc12345")
     assert "/evento/jogar?e=true&evento-id=abc12345" in r.headers["Location"]
+
+
+def test_suporte_jogador_e_conta_banida(cliente, sb, monkeypatch):
+    from rolox_api import RoloxAPI, ErroRolox
+    abertos, bans = [], []
+    monkeypatch.setattr(RoloxAPI, "abrir_suporte", lambda self, t, x: abertos.append((t, x)) or {"id": 1})
+    monkeypatch.setattr(RoloxAPI, "abrir_suporte_ban", lambda self, u, x: bans.append((u, x)) or {"id": 2})
+    monkeypatch.setattr(RoloxAPI, "ban_ja_pediu", lambda self, u: bool(bans))
+    monkeypatch.setattr(RoloxAPI, "meus_suportes", lambda self: [])
+    monkeypatch.setattr(RoloxAPI, "eh_equipe", lambda self: False)
+    # conta banida: o login confere a senha e manda para o suporte com só "relatar ban injusto"
+    def login_banido(self, u, s):
+        raise ErroRolox("conta_banida")
+    monkeypatch.setattr(RoloxAPI, "login", login_banido)
+    tok = csrf(cliente)
+    r = cliente.post("/login", data={"csrf": tok, "usuario": "Bob", "senha": "x"})
+    assert r.headers["Location"].endswith("/suport")
+    t = html(cliente.get("/suport"))
+    assert "Relatar ban injusto" in t and "Bug" not in t and "<select" not in t
+    cliente.post("/suport", data={"csrf": tok, "texto": "fui banido sem motivo"})
+    assert bans == [("bob", "fui banido sem motivo")]
+    assert "já pediu a revisão" in html(cliente.get("/suport"))     # só uma vez
+    # sem login e sem ban: manda entrar
+    with cliente.session_transaction() as s:
+        s.pop("ban_suporte", None)
+    assert "/login" in cliente.get("/suport").headers["Location"]
+
+
+def test_suporte_logado_e_selo_de_cargo(cliente, sb, monkeypatch):
+    from rolox_api import RoloxAPI
+    abertos = []
+    monkeypatch.setattr(RoloxAPI, "abrir_suporte", lambda self, t, x: abertos.append((t, x)) or {"id": 1})
+    monkeypatch.setattr(RoloxAPI, "meus_suportes", lambda self: [{"tipo": "bug", "texto": "caiu", "status": "respondido", "resposta": "arrumado"}])
+    monkeypatch.setattr(RoloxAPI, "eh_equipe", lambda self: True)
+    monkeypatch.setattr(RoloxAPI, "listar_suporte", lambda self, s="aberto": [{"id": 9, "username": "bob", "tipo": "ban_injusto", "texto": "injusto", "criado_em": "2026-11-25T00:00:00Z", "motivo_ban": "spam"}])
+    monkeypatch.setattr(RoloxAPI, "cargo_de", lambda self, u: "dono")
+    entrar(cliente)
+    tok = csrf(cliente)
+    t = html(cliente.get("/suport"))
+    assert "🐞 Bug" in t and "arrumado" in t and "Pedidos dos jogadores" in t and "Motivo do ban: spam" in t
+    cliente.post("/suport", data={"csrf": tok, "tipo": "bug", "texto": "o pulo não funciona"})
+    assert abertos == [("bug", "o pulo não funciona")]
+    assert 'title="Dono do VISTA"' in html(cliente.get("/perfil")) and "👑💎" in html(cliente.get("/perfil"))

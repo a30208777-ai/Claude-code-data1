@@ -534,6 +534,44 @@ class RoloxAPI:
             "p_id": evento_id or "", "p_nome": nome, "p_e": bool(ligado), "p_dia1": dia1, "p_dia2": dia2,
             "p_hora1": hora1 or "00:00", "p_hora2": hora2 or "23:59", "p_jogo": jogo_id or None}) or {}
 
+    # -------------------------------------------------------- 🆘 suporte e cargos
+    def abrir_suporte(self, tipo: str, texto: str) -> dict:
+        return self._req("POST", "/rest/v1/rpc/abrir_suporte", json={"p_tipo": tipo, "p_texto": str(texto or "")[:1500]}) or {}
+
+    def abrir_suporte_ban(self, username: str, texto: str) -> dict:
+        return self._req("POST", "/rest/v1/rpc/abrir_suporte_ban", json={
+            "p_username": username, "p_texto": str(texto or "")[:1500], "p_chave": self.chave_proxy or None}) or {}
+
+    def ban_ja_pediu(self, username: str) -> bool:
+        return bool(self._req("POST", "/rest/v1/rpc/ban_ja_pediu",
+                              json={"p_username": username, "p_chave": self.chave_proxy or None}))
+
+    def meus_suportes(self) -> list[dict]:
+        r = self._req("POST", "/rest/v1/rpc/meus_suportes", json={})
+        return r if isinstance(r, list) else []
+
+    def listar_suporte(self, status: str = "aberto") -> list[dict]:
+        r = self._req("POST", "/rest/v1/rpc/listar_suporte", json={"p_status": status})
+        return r if isinstance(r, list) else []
+
+    def responder_suporte(self, pedido: int, resposta: str, fechar: bool = False) -> dict:
+        return self._req("POST", "/rest/v1/rpc/responder_suporte",
+                         json={"p_id": int(pedido), "p_resposta": resposta, "p_fechar": bool(fechar)}) or {}
+
+    def eh_equipe(self) -> bool:
+        return bool(self._req("POST", "/rest/v1/rpc/eh_equipe", json={}))
+
+    def cargo_de(self, username: str) -> Optional[str]:
+        r = self._req("POST", "/rest/v1/rpc/cargo_de", json={"p_username": username})
+        return r if r in ("dono", "subdono", "adm") else None
+
+    def listar_subdonos(self) -> list[str]:
+        r = self._req("POST", "/rest/v1/rpc/listar_subdonos", json={})
+        return r if isinstance(r, list) else []
+
+    def dono_definir_subdono(self, username: str, sim: bool) -> dict:
+        return self._req("POST", "/rest/v1/rpc/dono_definir_subdono", json={"p_username": username, "p_sim": bool(sim)}) or {}
+
     # -------------------------------------------------------- 👥 seguidores
     def seguir(self, nome: str, seguir: bool = True) -> dict:
         return self._req("POST", "/rest/v1/rpc/seguir", json={"p_nome": nome, "p_seguir": bool(seguir)}) or {}

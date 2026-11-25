@@ -25,6 +25,19 @@
   <button class="btn pequeno">{{ '💾 Salvar mudanças' if ev else '➕ Criar evento' }}</button>
 </form>
 {% endmacro %}
+<h2 id="subdonos">💎 Sub donos ({{ subdonos|length }})</h2>
+<p class="nota">O sub dono ganha o selo 💎 com a logo do VISTA no perfil e ajuda no 🆘 Suporte.</p>
+{% for n in subdonos %}
+<form method="post" action="{{ url_for('dono_subdono') }}" class="linha cartao">
+  <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="nome" value="{{ n }}"><input type="hidden" name="sim" value="0">
+  <span class="cresce">💎 <a href="{{ url_for('jogador', nome=n) }}">{{ n }}</a></span><button class="btn pequeno contorno">Tirar</button>
+</form>
+{% endfor %}
+<form method="post" action="{{ url_for('dono_subdono') }}" class="linha">
+  <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="sim" value="1">
+  <input type="text" name="nome" required placeholder="usuário" class="cresce"><button class="btn pequeno">➕ Tornar sub dono</button>
+</form>
+
 <h2 id="eventos">🎉 Eventos ({{ eventos|length }})</h2>
 <p class="nota">Horário de Brasília. Você e os ADMs veem o evento antes de começar; os jogadores só durante.</p>
 {% for ev in eventos %}

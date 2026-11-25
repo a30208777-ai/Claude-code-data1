@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block titulo %}Suporte · Vista{% endblock %}
+{% block conteudo %}
+<h1>🆘 Suporte</h1>
+{% if banido %}
+  <p class="nota">Conta <b>{{ nome_ban }}</b> está banida. Você pode pedir a revisão <b>uma vez</b> para este banimento.</p>
+  {% if ja_pediu %}
+    <p class="cartao">✅ Você já pediu a revisão deste banimento. Aguarde a resposta da equipe.</p>
+  {% else %}
+  <form method="post" class="pilha">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <label>⚖️ Relatar ban injusto
+      <textarea name="texto" rows="5" maxlength="1500" required placeholder="Conte o que aconteceu e por que acha que o ban foi injusto."></textarea></label>
+    <button class="btn">Enviar pedido de revisão</button>
+  </form>
+  {% endif %}
+{% else %}
+  <p class="nota">Achou um bug ou precisa de ajuda? Conte aqui. A equipe (dono, sub donos e ADMs) responde nesta página.</p>
+  <form method="post" class="pilha">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <label>Assunto <select name="tipo">{% for k, v in tipos.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}</select></label>
+    <label>O que aconteceu? <textarea name="texto" rows="4" maxlength="1500" required placeholder="Ex.: no jogo X, quando eu pulo na lava o personagem some."></textarea></label>
+    <button class="btn">Enviar</button>
+  </form>
+  <h2>Meus pedidos</h2>
+  {% for m in meus %}
+    <div class="cartao"><div class="info">
+      <div class="titulo">{{ tipos.get(m.tipo, '⚖️ Ban injusto') }} · <span class="etiqueta neutra">{{ m.status }}</span></div>
+      <div class="detalhe">{{ m.texto }}</div>
+      {% if m.resposta %}<div class="detalhe">💬 <b>Resposta:</b> {{ m.resposta }}</div>{% endif %}
+    </div></div>
+  {% else %}<p class="muted"><i>Nenhum pedido ainda.</i></p>{% endfor %}
+  {% if equipe %}
+  <h2>🛠️ Pedidos dos jogadores</h2>
+  <p>{% for s in ['aberto', 'respondido', 'fechado', 'todos'] %}<a class="btn texto {{ 'ativo' if status == s }}" href="{{ url_for('suporte', status=s) }}">{{ s }}</a>{% endfor %}</p>
+  {% for m in pedidos %}
+    <div class="cartao"><div class="info cresce">
+      <div class="titulo"><a href="{{ url_for('jogador', nome=m.username) }}">{{ m.username }}</a> · {{ tipos.get(m.tipo, '⚖️ Ban injusto') }} · {{ m.criado_em|data }}</div>
+      <div class="detalhe">{{ m.texto }}</div>
+      {% if m.motivo_ban %}<div class="detalhe">🔨 Motivo do ban: {{ m.motivo_ban }}</div>{% endif %}
+      {% if m.resposta %}<div class="detalhe">💬 {{ m.respondido_por }}: {{ m.resposta }}</div>{% endif %}
+      <form method="post" action="{{ url_for('suporte_responder', pedido=m.id) }}" class="linha">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <input type="text" name="resposta" maxlength="1500" class="cresce" placeholder="Resposta" required>
+        <button class="btn pequeno">Responder</button>
+        <button class="btn pequeno contorno" name="fechar" value="1">Responder e fechar</button>
+      </form>
+    </div></div>
+  {% else %}<p class="muted"><i>Nada aqui.</i></p>{% endfor %}
+  {% endif %}
+{% endif %}
+{% endblock %}

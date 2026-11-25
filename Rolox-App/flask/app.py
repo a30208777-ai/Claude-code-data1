@@ -193,7 +193,16 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
                 "desenhar_avatar": lambda a, largura=120: Markup(avatar_mod.svg(a, largura)),
                 "motivos_denuncia": MOTIVOS_DENUNCIA,
                 "selo": lambda parceiro: Markup('<span class="selo" title="Parceiro do VISTA">🤝</span>') if parceiro else "",
-                "selo_app": selo_app, "categorias": CATEGORIAS}
+                "selo_app": selo_app, "categorias": CATEGORIAS, "selo_cargo": selo_cargo}
+
+    def selo_cargo(cargo):
+        """👑💎 dono · 💎 sub dono · ADM: a logo do VISTA ao lado do nome."""
+        if cargo not in ("dono", "subdono", "adm"):
+            return ""
+        extra = {"dono": "👑💎", "subdono": "💎", "adm": ""}[cargo]
+        titulo = {"dono": "Dono do VISTA", "subdono": "Sub dono do VISTA", "adm": "ADM do VISTA"}[cargo]
+        return Markup(f'<span class="selo-cargo" title="{titulo}"><img src="{url_for("static", filename="favicon.png")}" '
+                      f'alt="VISTA" width="20" height="20">{extra}</span>')
 
     def carregar_perfil() -> dict:
         """Lê o perfil e lembra na sessão se é ADM (só para mostrar a aba;
@@ -318,6 +327,10 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
             except ErroRolox as e:
                 if e.codigo == "sessao_expirada":
                     raise
+                if e.codigo == "conta_banida":                  # a senha estava certa: pode pedir revisão 1 vez
+                    session["ban_suporte"] = {"u": usuario.strip().lower(), "t": time.time()}
+                    flash("🔨 Esta conta foi banida. Se acha que foi injusto, conte o que aconteceu aqui.", "erro")
+                    return redirect(url_for("suporte"))
                 flash(e.mensagem, "erro")
                 return render_template("login.html", usuario=usuario), 401
             try:
@@ -529,7 +542,11 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
                     comprados.setdefault(i["campo"], set()).add(i["valor"])
         except ErroRolox:
             comprados = {}
-        return render_template("perfil.html", perfil=perfil, jogos=nomes_jogos(), idiomas=IDIOMAS, comprados=comprados,
+        try:
+            meu_cargo = g.api.cargo_de(perfil.get("username", ""))
+        except ErroRolox:
+            meu_cargo = None
+        return render_template("perfil.html", perfil=perfil, cargo=meu_cargo, jogos=nomes_jogos(), idiomas=IDIOMAS, comprados=comprados,
                                av=avatar_mod, avatar=avatar_mod.normalizar(perfil.get("avatar")),
                                aba="perfil")
 
@@ -1359,7 +1376,11 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
             seg = g.api.info_seguidores(p["username"])
         except ErroRolox:
             seg = {"seguidores": 0, "seguindo": 0, "eu_sigo": False}
-        return render_template("jogador.html", p=p, redes=redes, eu_nome=carregar_perfil().get("username"), seg=seg,
+        try:
+            cargo = g.api.cargo_de(p["username"])
+        except ErroRolox:
+            cargo = None
+        return render_template("jogador.html", p=p, redes=redes, eu_nome=carregar_perfil().get("username"), seg=seg, cargo=cargo,
                                emblemas=por_jogo, total_emblemas=len(emblemas), criados=criados,
                                visitas_criados=sum(m.get("visitas") or 0 for m in criados), aba="inicio")
 
@@ -1400,6 +1421,72 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
         return redirect(url_for("dono") + "#parcerias")
 
     # --------------------------------------------------------------- dono
+    TIPOS_SUPORTE = {"bug": "🐞 Bug / erro", "conta": "👤 Minha conta", "jogo": "🎮 Um jogo", "outro": "💬 Outro"}
+
+    @app.route("/suport", methods=["GET", "POST"])
+    def suporte():
+        """🆘 Suporte: relatar bugs. Conta banida (senha conferida no login) só pode 'relatar ban injusto', 1 vez."""
+        ban = session.get("ban_suporte") or {}
+        if ban and time.time() - ban.get("t", 0) > 1800:              # vale 30 min depois do login
+            session.pop("ban_suporte", None); ban = {}
+        banido = bool(ban) and not g.api.sessao
+        if not banido and not g.api.sessao:
+            flash("Entre na conta para abrir um suporte.", "erro")
+            return redirect(url_for("login"))
+        if request.method == "POST":
+            texto = request.form.get("texto", "").strip()
+            if len(texto) < 5:
+                flash("Conte um pouco mais (pelo menos 5 letras).", "erro")
+                return redirect(url_for("suporte"))
+            try:
+                if banido:
+                    g.api.abrir_suporte_ban(ban["u"], texto)
+                    flash("✅ Pedido de revisão enviado. A equipe vai analisar seu banimento.", "ok")
+                else:
+                    tipo = request.form.get("tipo", "")
+                    if tipo not in TIPOS_SUPORTE:
+                        abort(400)
+                    g.api.abrir_suporte(tipo, texto)
+                    flash("✅ Suporte enviado! Você vê a resposta aqui.", "ok")
+            except ErroRolox as e:
+                flash(str(e), "erro")
+            return redirect(url_for("suporte"))
+        if banido:
+            try:
+                ja = g.api.ban_ja_pediu(ban["u"])
+            except ErroRolox:
+                ja = False
+            return render_template("suporte.html", banido=True, nome_ban=ban["u"], ja_pediu=ja)
+        carregar_perfil()
+        try:
+            equipe = g.api.eh_equipe()
+            pedidos = g.api.listar_suporte(request.args.get("status", "aberto")) if equipe else []
+        except ErroRolox:
+            equipe, pedidos = False, []
+        return render_template("suporte.html", banido=False, tipos=TIPOS_SUPORTE, meus=g.api.meus_suportes(),
+                               equipe=equipe, pedidos=pedidos, status=request.args.get("status", "aberto"), aba="inicio")
+
+    @app.post("/suport/<int:pedido>/responder")
+    @logado
+    def suporte_responder(pedido: int):
+        try:
+            g.api.responder_suporte(pedido, request.form.get("resposta", ""), request.form.get("fechar") == "1")
+            flash("Resposta enviada.", "ok")
+        except ErroRolox as e:
+            flash(str(e), "erro")
+        return redirect(url_for("suporte"))
+
+    @app.post("/dono/subdono")
+    @logado
+    def dono_subdono():
+        nome = request.form.get("nome", "").strip().lower()
+        try:
+            g.api.dono_definir_subdono(nome, request.form.get("sim") == "1")
+            flash(f"💎 {nome} agora é sub dono." if request.form.get("sim") == "1" else f"{nome} não é mais sub dono.", "ok")
+        except ErroRolox as e:
+            flash(str(e), "erro")
+        return redirect(url_for("dono") + "#subdonos")
+
     @app.get("/evento/jogar")
     @logado
     def evento_jogar():
@@ -1440,7 +1527,13 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
         return render_template("dono.html", analise=g.api.mapas_em_analise(),
                                publicados=g.api.mapas_publicados(), parcerias=g.api.dono_parcerias(),
                                denuncias=denuncias_abertas(), app_oficial=dados_app_oficial(),
-                               eventos=_eventos_seguro(), site_pages=SITE_PAGES, evento_atual=session.get("evento"), aba="dono")
+                               eventos=_eventos_seguro(), subdonos=_subdonos_seguro(), site_pages=SITE_PAGES, evento_atual=session.get("evento"), aba="dono")
+
+    def _subdonos_seguro() -> list[str]:
+        try:
+            return g.api.listar_subdonos()
+        except ErroRolox:
+            return []
 
     def _eventos_seguro() -> list[dict]:
         try:

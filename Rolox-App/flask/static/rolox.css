@@ -417,3 +417,4 @@ body.flash-foto::after { content: ""; position: fixed; inset: 0; z-index: 20; ba
 .btn-jogo { zoom: var(--escala-botoes, 1); }   /* 🔘 ⚙️ tamanho dos botões do jogo */
 body.sem-botoes .btn-jogo, body.sem-botoes .online-jogo { visibility: hidden; }   /* 🙈 */
 .atalhos-inicio{display:flex;flex-wrap:wrap;gap:8px;margin:20px 0 4px}.atalhos-inicio .btn{white-space:nowrap}
+.selo-cargo{display:inline-flex;align-items:center;gap:2px;margin-left:6px;font-size:.75em;vertical-align:middle}.selo-cargo img{border-radius:5px}

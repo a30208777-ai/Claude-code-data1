@@ -50,7 +50,7 @@ Deno.serve(async (req) => {
   const { data: perfil } = await admin
     .from("perfis").select("id, banido, motivo_ban").eq("username", username).maybeSingle();
   if (!perfil) return json({ erro: "credenciais_invalidas" }, 401);
-  if (perfil.banido) return json({ erro: "conta_banida", motivo: perfil.motivo_ban }, 403);
+  // conta banida: só avisa DEPOIS de conferir a senha (assim só o dono da conta abre o suporte de ban)
 
   const { data: usuario, error: erroUsuario } = await admin.auth.admin.getUserById(perfil.id);
   const email = usuario?.user?.email;
@@ -59,6 +59,11 @@ Deno.serve(async (req) => {
   // 3. Tenta logar no Supabase Auth
   const publico = createClient(URL, ANON, { auth: { persistSession: false } });
   const { data: sessao, error } = await publico.auth.signInWithPassword({ email, password: senha });
+
+  if (!error && sessao.session && perfil.banido) {
+    await admin.auth.admin.signOut(sessao.session.access_token).catch(() => {});
+    return json({ erro: "conta_banida", motivo: perfil.motivo_ban, senha_ok: true }, 403);
+  }
 
   if (!error && sessao.session) {
     await admin.from("ips_confiaveis").upsert(
