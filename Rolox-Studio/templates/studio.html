@@ -25,8 +25,8 @@
       <button data-acao="novo" title="Novo projeto">Novo</button>
       <button data-acao="abrir" title="Abrir projeto">Abrir</button>
       <button data-acao="salvar" title="Salvar (Ctrl+S)">Salvar</button>
-      <button data-acao="exportar" title="Baixar arquivo .rolox">Exportar</button>
-      <button data-acao="importarRolox" title="Abrir arquivo .rolox">Importar .rolox</button>
+      <button data-acao="exportar" title="Baixar arquivo .vista">Exportar</button>
+      <button data-acao="importarRolox" title="Abrir arquivo .vista (ou .rolox antigo)">Importar .vista</button>
       {% if site %}<button data-acao="midia" title="Enviar som ou vídeo para o jogo">🎵 Som/Vídeo</button>
       <button data-acao="ia" title="IA do Studio ({{ custo_ia }} tickets por mensagem)">🤖 IA</button>
       <button data-acao="enviarRolox" class="destaque" title="Mandar para o dono aprovar">🚀 Enviar ao VISTA</button>
@@ -125,6 +125,8 @@
     </div>
     <p class="vazio">Peça e a IA faz no mapa: cria peças, scripts e muda o que precisar (↶ desfaz). Cada mensagem custa <b>{{ custo_ia }} tickets</b>
       (se nenhuma IA responder, os tickets voltam).</p>
+    <button type="button" id="iaConverter" class="mini" onclick="document.getElementById('arquivoObjIA').click()"
+      title="Sobe um .obj e a IA transforma em peças do VISTA (com todos os documentos do VISTA)">🤖 Converter .obj → .vista</button>
     <div id="iaMensagens" aria-live="polite"></div>
     <form id="iaForm">
       <textarea id="iaTexto" rows="2" maxlength="2000" placeholder="Ex.: faça uma porta que abre quando eu toco"></textarea>
@@ -141,7 +143,8 @@
   </div>
 
   <input type="file" id="arquivoObj" accept=".obj,.mtl,.png,.jpg,.jpeg,.webp" multiple hidden>
-  <input type="file" id="arquivoRolox" accept=".rolox,.json" hidden>
+  <input type="file" id="arquivoRolox" accept=".vista,.rolox,.json" hidden>
+  <input type="file" id="arquivoObjIA" accept=".obj" hidden>
   <script type="module" src="{{ url_for('static', filename='studio/editor.js') }}"></script>
 </body>
 </html>

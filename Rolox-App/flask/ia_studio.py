@@ -173,11 +173,28 @@ def limpar_historico(mensagens) -> list[dict]:
 MAX_CENA = 6000
 
 
+MAX_OBJ = 8000
+
+CONVERTER = """TAREFA: CONVERTER UM MODELO .obj PARA O VISTA (.vista).
+Você recebe o resumo do .obj: cada parte com centro, tamanho (já na escala do VISTA, chão em y=0) e material.
+Responda com UM bloco ```acoes``` criando as peças ("acao": "criar", "classe": "Part") dentro de um Model
+com o nome do modelo ("pai": "Workspace.<Nome>"; crie o Model antes). Use posicao = centro e tamanho = tamanho.
+Escolha cor e material do VISTA que combinem com o nome/material de cada parte (madeira → Madeira, vidro → Vidro,
+metal → Metal, folhas/grama → Grama...). Partes muito pequenas e repetidas podem ser juntadas.
+Depois do bloco, diga em 1 frase o que foi criado."""
+
+
+def converter_obj(resumo: str, http=requests, agora=time.monotonic) -> tuple[Optional[str], Optional[str]]:
+    """IA recebe o resumo do .obj com TODOS os documentos do VISTA e devolve as peças."""
+    mensagens = [{"role": "user", "content": str(resumo)[:MAX_OBJ]}]
+    return perguntar(mensagens, http=http, agora=agora, todos_docs=True, extra=CONVERTER)
+
+
 def perguntar(mensagens: list[dict], http=requests, agora=time.monotonic,
-              cena: str = "") -> tuple[Optional[str], Optional[str]]:
+              cena: str = "", todos_docs: bool = False, extra: str = "") -> tuple[Optional[str], Optional[str]]:
     """Tenta os modelos em ordem até um responder. Devolve (modelo, texto) ou (None, None)."""
-    sistema = INSTRUCAO
-    escolhidos = docs_ia.escolher(mensagens)
+    sistema = INSTRUCAO + ("\n\n" + extra if extra else "")
+    escolhidos = docs_ia.carregar() if todos_docs else docs_ia.escolher(mensagens)
     if escolhidos:
         sistema += "\n\n" + docs_ia.como_texto(escolhidos)
         log.info("IA: documentos %s", ", ".join(d.nome for d in escolhidos))

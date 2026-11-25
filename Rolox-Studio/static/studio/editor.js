@@ -8,6 +8,7 @@ import {
 import { Render } from "./render.js";
 import { Jogo } from "./jogo.js";
 import { importarNoMundo } from "./importar_obj.js";
+import { resumoObj, nomeSemExtensao } from "./converter_ia.js";
 import { PCtoCelular, ehCelular, LIMITES } from "./pctocelular.js";
 import { carregarPython } from "./scripts.js";
 import { MODELOS } from "./modelos.js";
@@ -529,7 +530,7 @@ const acoes = {
   async abrir() {
     let lista = [];
     try { lista = await (await fetch("/api/projetos")).json(); } catch { /* sem servidor */ }
-    if (!lista.length) { modal("Nenhum projeto salvo ainda. Use Salvar ou Importar .rolox."); return; }
+    if (!lista.length) { modal("Nenhum projeto salvo ainda. Use Salvar ou Importar .vista."); return; }
     const escolha = await modal([el("p", {}, "Abrir projeto:"), el("div", { class: "lista" },
       lista.map((p) => el("button", { onclick: () => { $("#modal").hidden = true; carregarProjeto(p.nome); } },
         `${p.nome}  (${Math.ceil(p.tamanho / 1024)} KB)`)))], [{ texto: "Cancelar", valor: false }]);
@@ -605,7 +606,7 @@ const acoes = {
   exportar() {
     const nome = estado.nome || "meu-jogo";
     const blob = new Blob([JSON.stringify(salvarMundo(estado.mundo, nome))], { type: "application/json" });
-    const a = el("a", { href: URL.createObjectURL(blob), download: `${nome}.rolox` });
+    const a = el("a", { href: URL.createObjectURL(blob), download: `${nome}.vista` });   // .vista e .rolox são o MESMO formato (os dois abrem)
     document.body.append(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 2000);
   },
@@ -715,7 +716,7 @@ $("#arquivoObj").addEventListener("change", async (e) => {
 });
 $("#arquivoRolox").addEventListener("change", async (e) => {
   const f = e.target.files?.[0]; if (!f) return;
-  try { trocarMundo(carregarMundo(JSON.parse(await f.text())), f.name.replace(/\.(rolox|json)$/i, "").replace(/[^\w-]/g, "_").slice(0, 40)); }
+  try { trocarMundo(carregarMundo(JSON.parse(await f.text())), nomeSemExtensao(f.name)); }
   catch (err) { modal(`Arquivo inválido: ${err.message}`); }
   e.target.value = "";
 });
@@ -964,6 +965,33 @@ window.__studio = { estado, acoes, render };      // para testes e depuração
     scriptAberto.Source = t.value; mudou(); atualizarRealce();
     saida("Código da IA colado no script " + scriptAberto.Name, "sistema");
   }
+
+  // 🤖 Converter .obj → .vista: a IA recebe o resumo do .obj + todos os documentos do VISTA
+  $("#arquivoObjIA")?.addEventListener("change", async (e) => {
+    const f = e.target.files?.[0]; e.target.value = ""; if (!f) return;
+    if (f.size > 30 * 1024 * 1024) { mostrar("Esse .obj é grande demais (máx. 30 MB).", "erro"); return; }
+    let resumo;
+    try { resumo = resumoObj(await f.text(), f.name); } catch (err) { mostrar(err.message, "erro"); return; }
+    mostrar(`🤖 Convertendo ${f.name} (${resumo.grupos} partes)...`, "eu");
+    const b = $("#iaConverter"); b.disabled = true;
+    try {
+      const r = await fetch("/api/studio/ia/converter", {
+        method: "POST", headers: { "Content-Type": "application/json", "X-CSRF": csrf },
+        body: JSON.stringify({ obj: resumo.texto }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (d.tickets !== undefined && d.tickets !== null) $("#iaTickets").textContent = "🎟️ " + d.tickets;
+      if (!r.ok) { mostrar(d.mensagem || `Erro ${r.status}`, "erro"); return; }
+      const { acoes, texto: explicacao, erro } = extrairAcoes(d.resposta);
+      mostrar(explicacao || "Convertido!", "ia", d.modelo);
+      if (erro) mostrar(erro, "erro");
+      if (!acoes.length) { mostrar("A IA não mandou peças. Tente de novo.", "erro"); return; }
+      await executarAcoesDaIA(acoes);
+      estado.nome ||= nomeSemExtensao(f.name);
+      mostrar("✅ Pronto! Use Exportar para baixar o arquivo .vista.", "ia");
+    } catch { mostrar("Sem conexão com o site. Tente de novo.", "erro"); }
+    finally { b.disabled = false; }
+  });
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();

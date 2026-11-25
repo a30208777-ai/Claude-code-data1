@@ -1959,3 +1959,22 @@ def test_acordar_so_liga_no_render(tmp_path, monkeypatch):
     assert acordar.iniciar("https://x.onrender.com", trava=str(tmp_path / "t.pid")) is True
     monkeypatch.setattr(acordar, "_iniciado", False)
     assert acordar.iniciar("https://x.onrender.com", trava=str(tmp_path / "t.pid")) is False   # trava: só 1
+
+
+def test_converter_obj_com_ia_manda_todos_os_documentos(cliente, sb, monkeypatch):
+    import ia_studio, docs_ia
+    entrar(cliente)
+    tok = csrf(cliente)
+    t = html(cliente.get("/studio/leve"))
+    assert "Converter .obj → .vista" in t and 'accept=".vista,.rolox,.json"' in t
+    visto = {}
+    def falso(msgs, http=None, agora=None, cena="", todos_docs=False, extra=""):
+        visto.update(msgs=msgs, todos=todos_docs, extra=extra)
+        return "m", '```acoes\n[{"acao":"criar","classe":"Part","nome":"Porta"}]\n```\nPronto.'
+    monkeypatch.setattr(ia_studio, "perguntar", falso)
+    sb.perfil["tickets"] = 25
+    r = cliente.post("/api/studio/ia/converter", json={"obj": "Converta... porta | centro [0,1,0]"}, headers={"X-CSRF": tok})
+    assert r.status_code == 200 and "acoes" in r.get_json()["resposta"] and r.get_json()["tickets"] == 15
+    assert visto["todos"] is True and ".obj" in visto["extra"] and visto["msgs"][0]["role"] == "user"
+    assert cliente.post("/api/studio/ia/converter", json={}, headers={"X-CSRF": tok}).status_code == 400
+    assert len(docs_ia.carregar()) >= 10                       # "todos os documentos" de verdade

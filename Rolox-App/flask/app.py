@@ -604,6 +604,26 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
             return jsonify({"resposta": texto, "modelo": modelo, "tickets": cobranca.get("tickets"),
                             "infinito": bool(cobranca.get("infinito"))})
 
+        @app.post("/api/studio/ia/converter")
+        @logado
+        def studio_ia_converter():
+            """🤖 Converter .obj → .vista: a IA recebe o resumo do .obj + todos os documentos (mesmo preço da IA)."""
+            resumo = str((request.get_json(silent=True) or {}).get("obj") or "").strip()
+            if not resumo:
+                return jsonify({"erro": "vazio", "mensagem": "Escolha um arquivo .obj."}), 400
+            cobranca = g.api.gastar_tickets_studio_ia()
+            modelo, texto = ia_studio.converter_obj(resumo)
+            if texto is None:
+                saldo = cobranca.get("tickets")
+                if cobranca.get("cobranca"):
+                    try:
+                        saldo = g.api.devolver_tickets_studio_ia(cobranca["cobranca"]).get("tickets", saldo)
+                    except ErroRolox:
+                        pass
+                return jsonify({"erro": "sem_ia", "tickets": saldo,
+                                "mensagem": "Nenhuma IA respondeu agora. Seus tickets foram devolvidos. Tente de novo."}), 503
+            return jsonify({"resposta": texto, "modelo": modelo, "tickets": cobranca.get("tickets")})
+
         @app.get("/aprender/python-no-celular")
         def aprender_python():
             return render_template("editor/em_breve.html", titulo="Python no celular (Termux)")
