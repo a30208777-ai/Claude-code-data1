@@ -44,6 +44,7 @@ IDIOMAS = {"pt-BR": "Português", "en": "English", "es": "Español"}
 PASTA_STUDIO = Path(os.environ.get("ROLOX_PASTA_STUDIO", Path(__file__).resolve().parents[2] / "Rolox-Studio"))
 NOME_PROJETO = __import__("re").compile(r"^[A-Za-z0-9_-]{1,40}$")
 TAMANHO_MAX_PROJETO = 5 * 1024 * 1024
+SITE_PAGES = "https://a30208777-ai.github.io/Claude-code-data1/"      # 🎉 links de evento começam aqui
 ARQUIVO_SEGREDO = Path(os.path.expanduser("~/.rolox_flask_segredo"))
 
 
@@ -293,12 +294,15 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
                 except ErroRolox:
                     cargo = None
             if ev.get("ativo") or cargo:
-                session["evento"] = {"id": ev.get("evento-id"), "nome": ev.get("name-e"), "previa": not ev.get("ativo")}
+                session["evento"] = {"id": ev.get("evento-id"), "nome": ev.get("name-e"), "previa": not ev.get("ativo"),
+                                     "jogo": ev.get("jogo-id"), "entrou": False}
                 if cargo:
                     flash(f"👑 Bem-vindo {cargo} {p.get('username', '')}! O evento {ev.get('name-e')} ainda não começou, "
                           "mas você pode vê-lo.", "ok")
                 else:
                     flash(f"🎉 Evento ativo: {ev.get('name-e')}!", "ok")
+                if ev.get("jogo-id") and g.api.sessao:            # 🎮 jogo do evento: vai direto nele
+                    destino = url_for("evento_jogar")
                 destino += "?" + urlencode({"e": "true", "evento-id": ev.get("evento-id")})
             else:
                 session.pop("evento", None)
@@ -365,6 +369,9 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
     @app.get("/inicio")
     @logado
     def inicio():
+        ev = session.get("evento") or {}
+        if ev.get("jogo") and not ev.get("entrou"):          # 🎉 entrou pelo link do evento e acabou de logar
+            return redirect(url_for("evento_jogar"))
         onde = g.api.onde_estou()
         if onde["servidor"]:
             return redirect(destino_do_servidor(onde["servidor"]))
@@ -1393,6 +1400,37 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
         return redirect(url_for("dono") + "#parcerias")
 
     # --------------------------------------------------------------- dono
+    @app.get("/evento/jogar")
+    @logado
+    def evento_jogar():
+        """🎮 Leva direto ao jogo do evento (entra num servidor, como o ▶ Jogar)."""
+        ev = session.get("evento") or {}
+        if not ev.get("jogo"):
+            return redirect(url_for("inicio"))
+        ev["entrou"] = True
+        session["evento"] = ev
+        m = _mapa_ou_404(ev["jogo"])
+        if not m.get("gameid") or not m.get("caminho_aprovado"):
+            flash("O jogo do evento ainda não está pronto.", "erro")
+            return redirect(url_for("inicio"))
+        perfil = g.api.meu_perfil()
+        return _entrar_servidor(m, hack=perfil.get("jogo_mod") == m["gameid"], voltar="inicio")
+
+    @app.post("/dono/eventos")
+    @logado
+    def dono_eventos():
+        """🎉 O dono cria ou muda um evento (o banco confere se é o dono)."""
+        f = request.form
+        try:
+            ev = g.api.salvar_evento(f.get("evento_id", ""), f.get("nome", ""), f.get("e") == "on",
+                                     f.get("dia1", ""), f.get("dia2", ""), f.get("hora1", ""), f.get("hora2", ""),
+                                     f.get("jogo") or None)
+            link = f"{SITE_PAGES}?e=true&evento-id={ev.get('evento-id', '')}"
+            flash(f"🎉 Evento \"{ev.get('name-e')}\" salvo! Link: {link}", "ok")
+        except ErroRolox as e:
+            flash(f"Não deu para salvar o evento: {e}", "erro")
+        return redirect(url_for("dono") + "#eventos")
+
     @app.get("/dono")
     @logado
     def dono():
@@ -1401,7 +1439,14 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
             abort(403)
         return render_template("dono.html", analise=g.api.mapas_em_analise(),
                                publicados=g.api.mapas_publicados(), parcerias=g.api.dono_parcerias(),
-                               denuncias=denuncias_abertas(), app_oficial=dados_app_oficial(), aba="dono")
+                               denuncias=denuncias_abertas(), app_oficial=dados_app_oficial(),
+                               eventos=_eventos_seguro(), site_pages=SITE_PAGES, evento_atual=session.get("evento"), aba="dono")
+
+    def _eventos_seguro() -> list[dict]:
+        try:
+            return g.api.listar_eventos()
+        except ErroRolox:
+            return []
 
     @app.post("/dono/<mapa_id>/<acao>")
     @logado

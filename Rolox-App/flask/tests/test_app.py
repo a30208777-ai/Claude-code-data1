@@ -2010,3 +2010,25 @@ def test_evento_nao_comecou_adm_ve_e_jogador_nao(cliente, sb, monkeypatch):
     assert "evento-id=55520184999372947149471948272ggskw" in r.headers["Location"]
     t = html(cliente.get("/inicio"))
     assert "Bem-vindo ADM alice" in t and "ainda não começou" in t and "pode vê-lo" in t
+
+
+def test_dono_cria_evento_e_jogador_vai_direto_ao_jogo(cliente, sb, monkeypatch):
+    from rolox_api import RoloxAPI
+    salvos = []
+    monkeypatch.setattr(RoloxAPI, "listar_eventos", lambda self: [{"evento-id": "abc12345", "name-e": "Natal", "e": True,
+        "dia-1": "2026-12-25", "dia-2": "2026-12-26", "hora-1": "20:00:00", "hora-2": "03:00:00", "jogo-id": None, "jogo_nome": None}])
+    monkeypatch.setattr(RoloxAPI, "salvar_evento", lambda self, *a: (salvos.append(a), {"evento-id": "abc12345", "name-e": a[1]})[1])
+    entrar(cliente)
+    tok = csrf(cliente)
+    sb.dono = True
+    t = html(cliente.get("/dono"))
+    assert "🎉 Eventos (1)" in t and "?e=true&evento-id=abc12345" in t and "➕ Criar evento" in t
+    r = cliente.post("/dono/eventos", data={"csrf": tok, "nome": "Natal", "dia1": "2026-12-25", "dia2": "2026-12-26",
+                                            "hora1": "20:00", "hora2": "03:00", "e": "on", "jogo": ""})
+    assert r.status_code == 302 and salvos[-1][1] == "Natal" and salvos[-1][2] is True
+    # jogador entra pelo link de evento com jogo: vai para /evento/jogar
+    mid = next(iter(sb.mapas)) if getattr(sb, "mapas", None) else None
+    ev = {"existe": True, "ativo": True, "evento-id": "abc12345", "name-e": "Natal", "jogo-id": mid or "x"}
+    monkeypatch.setattr(RoloxAPI, "verificar_evento", lambda self, i: ev)
+    r = cliente.get("/?e=true&evento-id=abc12345")
+    assert "/evento/jogar?e=true&evento-id=abc12345" in r.headers["Location"]

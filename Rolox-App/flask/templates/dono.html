@@ -5,6 +5,42 @@
 <p class="nota">Tudo passa por você antes de lançar: teste cada mapa aqui no app e aprove ou recuse.
   Aprovado, o mapa vira um jogo em "Jogos" para todo mundo, com servidores e chat.</p>
 
+
+{% macro form_evento(ev=None) %}
+<form method="post" action="{{ url_for('dono_eventos') }}" class="pilha cartao-form">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <input type="hidden" name="evento_id" value="{{ ev['evento-id'] if ev else '' }}">
+  <label>Nome <input type="text" name="nome" maxlength="80" required value="{{ ev['name-e'] if ev else '' }}" placeholder="Ex.: Evento de Natal"></label>
+  <div class="linha" style="flex-wrap:wrap;gap:8px">
+    <label>Começa <input type="date" name="dia1" required value="{{ ev['dia-1'] if ev else '' }}"></label>
+    <label>às <input type="time" name="hora1" value="{{ (ev['hora-1'] or '')[:5] if ev else '00:00' }}"></label>
+    <label>Termina <input type="date" name="dia2" required value="{{ ev['dia-2'] if ev else '' }}"></label>
+    <label>às <input type="time" name="hora2" value="{{ (ev['hora-2'] or '')[:5] if ev else '23:59' }}"></label>
+  </div>
+  <label>🎮 Jogo do evento (quem entra vai direto nele)
+    <select name="jogo"><option value="">Nenhum (só mostra o aviso)</option>
+      {% for m in publicados %}<option value="{{ m.id }}" {{ 'selected' if ev and ev['jogo-id'] == m.id }}>{{ m.nome }}</option>{% endfor %}
+    </select></label>
+  <label class="chave"><input type="checkbox" name="e" {{ 'checked' if not ev or ev['e'] }}> Evento ligado</label>
+  <button class="btn pequeno">{{ '💾 Salvar mudanças' if ev else '➕ Criar evento' }}</button>
+</form>
+{% endmacro %}
+<h2 id="eventos">🎉 Eventos ({{ eventos|length }})</h2>
+<p class="nota">Horário de Brasília. Você e os ADMs veem o evento antes de começar; os jogadores só durante.</p>
+{% for ev in eventos %}
+<details class="cartao" {{ 'open' if evento_atual and evento_atual.id == ev['evento-id'] }}>
+  <summary><b>{{ ev['name-e'] }}</b> · {{ ev['dia-1'] }} {{ (ev['hora-1'] or '')[:5] }} → {{ ev['dia-2'] }} {{ (ev['hora-2'] or '')[:5] }}
+    {% if not ev['e'] %}<span class="etiqueta neutra">desligado</span>{% endif %}
+    {% if ev.jogo_nome %} · 🎮 {{ ev.jogo_nome }}{% endif %}
+    {% if evento_atual and evento_atual.id == ev['evento-id'] %}<span class="etiqueta">você entrou por este</span>{% endif %}</summary>
+  <p class="detalhe">🔗 <code style="word-break:break-all">{{ site_pages }}?e=true&evento-id={{ ev['evento-id'] }}</code></p>
+  {{ form_evento(ev) }}
+</details>
+{% else %}
+<p class="muted"><i>Nenhum evento ainda.</i></p>
+{% endfor %}
+<details class="cartao"><summary><b>➕ Criar evento novo</b></summary>{{ form_evento() }}</details>
+
 <h2>Em análise ({{ analise|length }})</h2>
 {% for m in analise %}
   <div class="cartao coluna">

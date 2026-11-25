@@ -524,6 +524,16 @@ class RoloxAPI:
         r = self._req("POST", "/rest/v1/rpc/verificar_evento", json={"p_id": str(evento_id or "")[:80]})
         return r if isinstance(r, dict) else {"existe": False, "ativo": False}
 
+    def listar_eventos(self) -> list[dict]:
+        r = self._req("POST", "/rest/v1/rpc/listar_eventos", json={})
+        return r if isinstance(r, list) else []
+
+    def salvar_evento(self, evento_id: str, nome: str, ligado: bool, dia1: str, dia2: str,
+                      hora1: str, hora2: str, jogo_id: str | None) -> dict:
+        return self._req("POST", "/rest/v1/rpc/salvar_evento", json={
+            "p_id": evento_id or "", "p_nome": nome, "p_e": bool(ligado), "p_dia1": dia1, "p_dia2": dia2,
+            "p_hora1": hora1 or "00:00", "p_hora2": hora2 or "23:59", "p_jogo": jogo_id or None}) or {}
+
     # -------------------------------------------------------- 👥 seguidores
     def seguir(self, nome: str, seguir: bool = True) -> dict:
         return self._req("POST", "/rest/v1/rpc/seguir", json={"p_nome": nome, "p_seguir": bool(seguir)}) or {}
