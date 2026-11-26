@@ -3,6 +3,8 @@
 {% block conteudo %}
 <h1>🆘 Suporte</h1>
 {% if banido %}
+  <p style="text-align:center"><img src="{{ url_for('static', filename='banido.jpg') }}" alt="Acesso negado: você foi banido do Vista"
+     style="max-width:100%;width:420px;border-radius:12px"></p>
   <p class="nota">Conta <b>{{ nome_ban }}</b> está banida. Você pode pedir a revisão <b>uma vez</b> para este banimento.</p>
   {% if ja_pediu %}
     <p class="cartao">✅ Você já pediu a revisão deste banimento. Aguarde a resposta da equipe.</p>

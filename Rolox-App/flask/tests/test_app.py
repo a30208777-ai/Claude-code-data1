@@ -2050,7 +2050,7 @@ def test_suporte_jogador_e_conta_banida(cliente, sb, monkeypatch):
     r = cliente.post("/login", data={"csrf": tok, "usuario": "Bob", "senha": "x"})
     assert r.headers["Location"].endswith("/suport")
     t = html(cliente.get("/suport"))
-    assert "Relatar ban injusto" in t and "Bug" not in t and "<select" not in t
+    assert "Relatar ban injusto" in t and "Bug" not in t and "<select" not in t and "banido.jpg" in t
     cliente.post("/suport", data={"csrf": tok, "texto": "fui banido sem motivo"})
     assert bans == [("bob", "fui banido sem motivo")]
     assert "já pediu a revisão" in html(cliente.get("/suport"))     # só uma vez
