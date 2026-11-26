@@ -12,7 +12,7 @@ Quem abre sem o Atualizador vê um aviso; a partir da 3ª vez (do mesmo usuário
 from __future__ import annotations
 
 ESQUEMA_ATUALIZADOR = "roloxatualizador://verificar"
-LINK_DISCORD = "https://discord.gg/6NZ5Ftq3p"
+LINK_DISCORD = "https://discord.gg/qWRyzSYzRV"
 LINK_DOWNLOAD = ""            # ainda não existe: quando existir, coloque aqui o link do Atualizador
 VEZES_PARA_AVISO_SERIO = 3
 

@@ -12,7 +12,7 @@ def test_avisos_por_quantidade_de_vezes():
     titulo, texto, serio = protecao.aviso_para(3)
     assert serio and titulo == "EI! VOCÊ PODE SER BANIDO!" and texto.startswith("ABAIXE O APP POR:")
     assert protecao.aviso_para(10)[2] is True
-    assert protecao.LINK_DISCORD == "https://discord.gg/6NZ5Ftq3p"
+    assert protecao.LINK_DISCORD == "https://discord.gg/qWRyzSYzRV"
 
 
 def test_contador_e_por_usuario():

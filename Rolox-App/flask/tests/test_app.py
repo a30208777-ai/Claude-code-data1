@@ -1538,7 +1538,7 @@ def test_termos_e_politica_publicos_e_linkados(cliente):
     assert "banimento" in t and "não valem dinheiro" in t and "/politica" in t
     p = html(cliente.get("/politica"))
     assert "Política de Uso do VISTA" in p and "LGPD" in p and "a senha que a pessoa tentou, cifrada" in p
-    assert "✅" in p and "❌" in p and "discord.gg/6NZ5Ftq3p" in p
+    assert "✅" in p and "❌" in p and "discord.gg/qWRyzSYzRV" in p
     assert "/termos" in html(cliente.get("/cadastro")) and "/politica" in html(cliente.get("/login"))
 
 

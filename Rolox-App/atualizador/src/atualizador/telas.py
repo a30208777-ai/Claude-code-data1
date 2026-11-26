@@ -13,7 +13,7 @@ from .baixar import (ErroAtualizador, InfoVersao, PrecisaNavegador, baixar_arqui
 
 COR = ft.Colors.DEEP_PURPLE
 COR_DESTAQUE = ft.Colors.ORANGE_700
-LINK_DISCORD = "https://discord.gg/6NZ5Ftq3p"
+LINK_DISCORD = "https://discord.gg/qWRyzSYzRV"
 ESQUEMA_ROLOX = "rolox://abrir"
 
 P_VERSAO = "atualizador.versao_baixada"      # versão (do Vision-apk-link.json) da última baixada

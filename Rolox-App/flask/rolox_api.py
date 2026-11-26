@@ -41,7 +41,7 @@ EMAIL_VALIDO = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 MENSAGENS = {
     "credenciais_invalidas": "Usuário ou senha incorretos.",
     "ip_bloqueado": "Este aparelho/rede foi bloqueado após 3 senhas erradas.",
-    "conta_banida": "Esta conta foi banida por um moderador. Acha que foi injusto? Peça revisão no Discord do VISTA: https://discord.gg/6NZ5Ftq3p (diga seu usuário e o que aconteceu).",
+    "conta_banida": "Esta conta foi banida por um moderador. Acha que foi injusto? Peça revisão no Discord do VISTA: https://discord.gg/qWRyzSYzRV (diga seu usuário e o que aconteceu).",
     "email_nao_confirmado": "Confirme seu e-mail (veja a caixa de entrada) antes de entrar.",
     "confirme_por_email": "Muitas tentativas. Enviamos um e-mail para você redefinir a senha.",
     "dados_invalidos": "Preencha usuário e senha.",

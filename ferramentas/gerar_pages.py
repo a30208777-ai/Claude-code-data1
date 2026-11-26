@@ -97,7 +97,7 @@ INICIO = """<!doctype html>
 <a class="btn" href="{SITE}/">▶ Jogar no VISTA</a>
 <a class="btn contorno" href="{SITE}/login">Entrar ou criar conta</a>
 <p class="rodape-links"><a href="novidades/">📰 Novidades</a> · <a href="termos/">Termos de Uso</a> · <a href="politica/">Política de Uso</a>
- · <a href="https://discord.gg/6NZ5Ftq3p" target="_blank" rel="noopener">Discord</a></p>
+ · <a href="https://discord.gg/qWRyzSYzRV" target="_blank" rel="noopener">Discord</a></p>
 </main></body></html>
 """
 
