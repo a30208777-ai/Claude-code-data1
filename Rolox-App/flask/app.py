@@ -10,6 +10,7 @@ use ROLOX_HOST=0.0.0.0 (cuidado: qualquer um na rede poderia abrir sua sessão).
 from __future__ import annotations
 
 import functools
+import logging
 from urllib.parse import urlencode
 import ipaddress
 import time
@@ -27,6 +28,7 @@ from flask import (Flask, abort, flash, g, jsonify, redirect, render_template, r
                    session, url_for)
 
 import avatar as avatar_mod
+import discord_api
 import buscar as busca
 import curiosidades
 import ia_studio
@@ -44,6 +46,7 @@ IDIOMAS = {"pt-BR": "Português", "en": "English", "es": "Español"}
 PASTA_STUDIO = Path(os.environ.get("ROLOX_PASTA_STUDIO", Path(__file__).resolve().parents[2] / "Rolox-Studio"))
 NOME_PROJETO = __import__("re").compile(r"^[A-Za-z0-9_-]{1,40}$")
 TAMANHO_MAX_PROJETO = 5 * 1024 * 1024
+log = logging.getLogger("vista")
 SITE_PAGES = "https://a30208777-ai.github.io/Claude-code-data1/"      # 🎉 links de evento começam aqui
 ARQUIVO_SEGREDO = Path(os.path.expanduser("~/.rolox_flask_segredo"))
 
@@ -546,7 +549,11 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
             meu_cargo = g.api.cargo_de(perfil.get("username", ""))
         except ErroRolox:
             meu_cargo = None
-        return render_template("perfil.html", perfil=perfil, cargo=meu_cargo, jogos=nomes_jogos(), idiomas=IDIOMAS, comprados=comprados,
+        try:
+            discord = g.api.meu_discord()
+        except ErroRolox:
+            discord = {}
+        return render_template("perfil.html", perfil=perfil, cargo=meu_cargo, discord=discord, jogos=nomes_jogos(), idiomas=IDIOMAS, comprados=comprados,
                                av=avatar_mod, avatar=avatar_mod.normalizar(perfil.get("avatar")),
                                aba="perfil")
 
@@ -1068,6 +1075,7 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
                        segundos=7 * 86400)
         discord_log.registrar_sync("ban", r.get("username") or nomes[alvo], motivo or "banido pelo dono no jogo",
                                    f"{quem_sou()} (dono)", "Jogo VISTA")
+        sincronizar_discord(r.get("username") or nomes[alvo], "ban")
         return jsonify({"ok": True, "nome": nomes[alvo]})
 
     @app.post("/api/sala/sair")
@@ -1421,6 +1429,61 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
         return redirect(url_for("dono") + "#parcerias")
 
     # --------------------------------------------------------------- dono
+    # ---------------------------------------------------------- 🔗 Discord
+    @app.get("/discord/ligar")
+    @logado
+    def discord_ligar():
+        estado = discord_api.novo_estado()
+        session["discord_estado"] = estado
+        return redirect(discord_api.link_login(estado))
+
+    @app.get("/discord/callback")
+    @logado
+    def discord_callback():
+        if not request.args.get("code") or request.args.get("state") != session.pop("discord_estado", None):
+            flash("Login com o Discord cancelado ou expirado. Tente de novo.", "erro")
+            return redirect(url_for("perfil"))
+        try:
+            u = discord_api.usuario_do_codigo(request.args["code"])
+            g.api.ligar_discord(u["id"], u.get("global_name") or u.get("username") or "")
+        except (discord_api.ErroDiscord, ErroRolox) as e:
+            flash(str(e), "erro")
+            return redirect(url_for("perfil"))
+        perfil = carregar_perfil()
+        try:
+            no_servidor = discord_api.dar_cargo(u["id"], g.api.cargo_de(perfil.get("username", "")))
+        except (discord_api.ErroDiscord, ErroRolox):
+            no_servidor = None
+        if no_servidor is False:
+            flash("🔗 Discord ligado! Entre no servidor do VISTA para ganhar seu cargo: https://discord.gg/qWRyzSYzRV", "ok")
+        else:
+            flash(f"🔗 Discord ligado: {u.get('global_name') or u.get('username')}!", "ok")
+        return redirect(url_for("perfil"))
+
+    @app.post("/discord/desligar")
+    @logado
+    def discord_desligar():
+        g.api.desligar_discord()
+        flash("Discord desligado da sua conta.", "ok")
+        return redirect(url_for("perfil"))
+
+    def sincronizar_discord(nome: str, acao: str, minutos: Optional[int] = None) -> None:
+        """Castigo/ban do site → Discord (se a pessoa ligou o Discord). Nunca atrapalha a ação no site."""
+        try:
+            did = g.api.discord_de(nome)
+            if not did:
+                return
+            if acao == "ban":
+                discord_api.banir(did, True)
+            elif acao == "desban":
+                discord_api.banir(did, False)
+            elif acao == "castigo":
+                discord_api.castigo(did, minutos)
+            elif acao == "sem_castigo":
+                discord_api.castigo(did, None)
+        except (discord_api.ErroDiscord, ErroRolox) as e:
+            log.info("Discord: não sincronizou %s (%s)", acao, e)
+
     TIPOS_SUPORTE = {"bug": "🐞 Bug / erro", "conta": "👤 Minha conta", "jogo": "🎮 Um jogo", "outro": "💬 Outro"}
 
     @app.route("/suport", methods=["GET", "POST"])
@@ -1503,6 +1566,9 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
         perfil = g.api.meu_perfil()
         return _entrar_servidor(m, hack=perfil.get("jogo_mod") == m["gameid"], voltar="inicio")
 
+    def _iso_brasilia(dia: str, hora: str) -> str:
+        return f"{dia}T{(hora or '00:00')[:5]}:00-03:00"
+
     @app.post("/dono/eventos")
     @logado
     def dono_eventos():
@@ -1513,6 +1579,15 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
                                      f.get("dia1", ""), f.get("dia2", ""), f.get("hora1", ""), f.get("hora2", ""),
                                      f.get("jogo") or None)
             link = f"{SITE_PAGES}?e=true&evento-id={ev.get('evento-id', '')}"
+            if f.get("discord") == "on":
+                try:
+                    discord_api.criar_evento(ev.get("name-e") or f.get("nome", ""),
+                                             _iso_brasilia(f.get("dia1", ""), f.get("hora1", "00:00")),
+                                             _iso_brasilia(f.get("dia2", ""), f.get("hora2", "23:59")),
+                                             f"https://rolox-gj2i.onrender.com/?e=true&evento-id={ev.get('evento-id', '')}")
+                    flash("📅 Evento criado também no Discord!", "ok")
+                except discord_api.ErroDiscord as e:
+                    flash(f"O evento foi salvo, mas não foi para o Discord: {e}", "erro")
             flash(f"🎉 Evento \"{ev.get('name-e')}\" salvo! Link: {link}", "ok")
         except ErroRolox as e:
             flash(f"Não deu para salvar o evento: {e}", "erro")
@@ -1596,10 +1671,12 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
         elif acao == "banir":
             g.api.adm_banir(f["user_id"], f.get("motivo", ""))
             avisar_discord("ban", f.get("nome", "?"), f.get("motivo", ""))
+            sincronizar_discord(f.get("nome", ""), "ban")
             flash("Usuário banido.", "ok")
         elif acao == "desbanir":
             g.api.adm_desbanir(f["user_id"])
             avisar_discord("desban", f.get("nome", "?"), f.get("motivo", ""))
+            sincronizar_discord(f.get("nome", ""), "desban")
             flash("Usuário desbanido.", "ok")
         elif acao == "sem-chat":
             try:
@@ -1608,10 +1685,12 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
                 raise ErroRolox("quantidade_invalida")
             g.api.adm_sem_chat(f["user_id"], minutos, f.get("motivo", ""))
             avisar_discord("sem_chat", f.get("nome", "?"), f.get("motivo", ""), minutos)
+            sincronizar_discord(f.get("nome", ""), "castigo", minutos)
             flash("Usuário sem chat.", "ok")
         elif acao == "com-chat":
             g.api.adm_com_chat(f["user_id"])
             avisar_discord("com_chat", f.get("nome", "?"), "chat liberado pelo ADM")
+            sincronizar_discord(f.get("nome", ""), "sem_castigo")
             flash("Chat liberado.", "ok")
         elif acao == "definir-adm":
             g.api.adm_definir_adm(f["user_id"], f.get("adm") == "1")

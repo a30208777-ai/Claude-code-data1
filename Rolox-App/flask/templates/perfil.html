@@ -61,6 +61,14 @@
   <p><button type="button" class="btn pequeno" id="salvarVisual">💾 Salvar este visual</button>
     <small class="muted">Guarde até 20 visuais e troque num toque (depois clique em Salvar lá embaixo).</small></p>
   <div id="visuais" class="linha" style="flex-wrap:wrap;gap:6px"></div>
+  <h2>🔗 Discord</h2>
+  {% if discord.discord_id %}
+    <p>Ligado a <b>{{ discord.discord_nome }}</b> no Discord. Castigo e ban no VISTA valem também no servidor do Discord.
+      <button class="btn pequeno contorno" formaction="{{ url_for('discord_desligar') }}" formnovalidate>Desligar</button></p>
+  {% else %}
+    <p><a class="btn pequeno" href="{{ url_for('discord_ligar') }}">🔗 Ligar meu Discord</a>
+      <small class="muted">Ganhe seu cargo no servidor do VISTA.</small></p>
+  {% endif %}
   <h2>⚙️ Configurações (config)</h2>
   <label>🌗 Tema do site
     <select id="temaSite">

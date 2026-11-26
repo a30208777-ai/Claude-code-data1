@@ -2075,3 +2075,53 @@ def test_suporte_logado_e_selo_de_cargo(cliente, sb, monkeypatch):
     cliente.post("/suport", data={"csrf": tok, "tipo": "bug", "texto": "o pulo não funciona"})
     assert abertos == [("bug", "o pulo não funciona")]
     assert 'title="Dono do VISTA"' in html(cliente.get("/perfil")) and "👑💎" in html(cliente.get("/perfil"))
+
+
+def test_ligar_discord_e_sincronizar_ban(cliente, sb, monkeypatch):
+    import discord_api
+    from rolox_api import RoloxAPI
+    ligados, acoes = [], []
+    monkeypatch.setattr(discord_api, "usuario_do_codigo", lambda c: {"id": "123456789", "username": "bobd", "global_name": "Bob"})
+    monkeypatch.setattr(discord_api, "dar_cargo", lambda did, cargo: acoes.append(("cargo", did, cargo)) or True)
+    monkeypatch.setattr(discord_api, "banir", lambda did, sim=True: acoes.append(("ban", did, sim)))
+    monkeypatch.setattr(RoloxAPI, "ligar_discord", lambda self, i, n: ligados.append((i, n)) or {"ok": True})
+    monkeypatch.setattr(RoloxAPI, "meu_discord", lambda self: {"discord_id": "123456789", "discord_nome": "Bob"} if ligados else {})
+    monkeypatch.setattr(RoloxAPI, "cargo_de", lambda self, u: "adm")
+    monkeypatch.setattr(RoloxAPI, "discord_de", lambda self, u: "123456789")
+    entrar(cliente)
+    r = cliente.get("/discord/ligar")
+    assert "discord.com/oauth2/authorize" in r.headers["Location"] and "state=" in r.headers["Location"]
+    with cliente.session_transaction() as s:
+        estado = s["discord_estado"]
+    assert "cancelado" in html(cliente.get("/discord/callback?code=x&state=errado", follow_redirects=True))   # estado errado
+    cliente.get("/discord/ligar")
+    with cliente.session_transaction() as s:
+        estado = s["discord_estado"]
+    cliente.get(f"/discord/callback?code=abc&state={estado}")
+    assert ligados == [("123456789", "Bob")] and ("cargo", "123456789", "adm") in acoes
+    assert "Ligado a <b>Bob</b>" in html(cliente.get("/perfil"))
+    sb.perfil["is_adm"] = True
+    tok = csrf(cliente)
+    cliente.post("/adm/banir", data={"csrf": tok, "user_id": "u2", "nome": "bob", "motivo": "x"})
+    assert ("ban", "123456789", True) in acoes
+
+
+def test_discord_api_cargo_e_castigo_sem_rede(monkeypatch):
+    import discord_api
+    monkeypatch.setenv("DISCORD_BOT_TOKEN", "t")
+    feitos = []
+    class R:
+        def __init__(self, st, js=None): self.status_code, self._js, self.content = st, js, b"x" if js is not None else b""
+        def json(self): return self._js
+    class H:
+        def request(self, m, url, **kw):
+            feitos.append((m, url.split("/api/v10")[1], kw.get("json")))
+            if url.endswith("/roles") and m == "GET": return R(200, [{"id": "9", "name": "Membro"}])
+            if url.endswith("/roles") and m == "POST": return R(200, {"id": "10"})
+            return R(200, {})
+    assert discord_api.dar_cargo("55", "dono", http=H()) is True
+    assert any(m == "PUT" and u.endswith("/roles/9") for m, u, _ in feitos) and any(u.endswith("/roles/10") for m, u, _ in feitos)
+    discord_api.castigo("55", 60, http=H())
+    assert feitos[-1][0] == "PATCH" and feitos[-1][2]["communication_disabled_until"]
+    discord_api.castigo("55", None, http=H())
+    assert feitos[-1][2] == {"communication_disabled_until": None}

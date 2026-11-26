@@ -534,6 +534,21 @@ class RoloxAPI:
             "p_id": evento_id or "", "p_nome": nome, "p_e": bool(ligado), "p_dia1": dia1, "p_dia2": dia2,
             "p_hora1": hora1 or "00:00", "p_hora2": hora2 or "23:59", "p_jogo": jogo_id or None}) or {}
 
+    # -------------------------------------------------------- 🔗 Discord
+    def ligar_discord(self, discord_id: str, nome: str) -> dict:
+        return self._req("POST", "/rest/v1/rpc/ligar_discord", json={"p_discord_id": str(discord_id), "p_discord_nome": nome}) or {}
+
+    def desligar_discord(self) -> dict:
+        return self._req("POST", "/rest/v1/rpc/desligar_discord", json={}) or {}
+
+    def meu_discord(self) -> dict:
+        r = self._req("POST", "/rest/v1/rpc/meu_discord", json={})
+        return r if isinstance(r, dict) else {}
+
+    def discord_de(self, username: str) -> Optional[str]:
+        r = self._req("POST", "/rest/v1/rpc/discord_de", json={"p_username": username})
+        return r if isinstance(r, str) and r else None
+
     # -------------------------------------------------------- 🆘 suporte e cargos
     def abrir_suporte(self, tipo: str, texto: str) -> dict:
         return self._req("POST", "/rest/v1/rpc/abrir_suporte", json={"p_tipo": tipo, "p_texto": str(texto or "")[:1500]}) or {}

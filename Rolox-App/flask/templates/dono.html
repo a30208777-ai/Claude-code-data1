@@ -22,6 +22,7 @@
       {% for m in publicados %}<option value="{{ m.id }}" {{ 'selected' if ev and ev['jogo-id'] == m.id }}>{{ m.nome }}</option>{% endfor %}
     </select></label>
   <label class="chave"><input type="checkbox" name="e" {{ 'checked' if not ev or ev['e'] }}> Evento ligado</label>
+  <label class="chave"><input type="checkbox" name="discord" {{ '' if ev else 'checked' }}> 📅 Criar também no servidor do Discord</label>
   <button class="btn pequeno">{{ '💾 Salvar mudanças' if ev else '➕ Criar evento' }}</button>
 </form>
 {% endmacro %}
