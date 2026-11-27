@@ -2125,3 +2125,16 @@ def test_discord_api_cargo_e_castigo_sem_rede(monkeypatch):
     assert feitos[-1][0] == "PATCH" and feitos[-1][2]["communication_disabled_until"]
     discord_api.castigo("55", None, http=H())
     assert feitos[-1][2] == {"communication_disabled_until": None}
+
+
+def test_bloquear_jogador(cliente, sb, monkeypatch):
+    from rolox_api import RoloxAPI
+    bloq = set()
+    monkeypatch.setattr(RoloxAPI, "bloquear", lambda self, n, sim=True: (bloq.add(n) if sim else bloq.discard(n)) or {})
+    monkeypatch.setattr(RoloxAPI, "meus_bloqueados", lambda self: sorted(bloq))
+    entrar(cliente)
+    tok = csrf(cliente)
+    cliente.post("/jogador/bob/bloquear", data={"csrf": tok, "sim": "1"})
+    assert bloq == {"bob"}
+    cliente.post("/jogador/bob/bloquear", data={"csrf": tok, "sim": "0"})
+    assert bloq == set()

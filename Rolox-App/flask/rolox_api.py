@@ -534,6 +534,14 @@ class RoloxAPI:
             "p_id": evento_id or "", "p_nome": nome, "p_e": bool(ligado), "p_dia1": dia1, "p_dia2": dia2,
             "p_hora1": hora1 or "00:00", "p_hora2": hora2 or "23:59", "p_jogo": jogo_id or None}) or {}
 
+    # -------------------------------------------------------- 🚫 bloquear
+    def bloquear(self, nome: str, sim: bool = True) -> dict:
+        return self._req("POST", "/rest/v1/rpc/bloquear", json={"p_nome": nome, "p_sim": bool(sim)}) or {}
+
+    def meus_bloqueados(self) -> list[str]:
+        r = self._req("POST", "/rest/v1/rpc/meus_bloqueados", json={})
+        return r if isinstance(r, list) else []
+
     # -------------------------------------------------------- 🔗 Discord
     def ligar_discord(self, discord_id: str, nome: str) -> dict:
         return self._req("POST", "/rest/v1/rpc/ligar_discord", json={"p_discord_id": str(discord_id), "p_discord_nome": nome}) or {}

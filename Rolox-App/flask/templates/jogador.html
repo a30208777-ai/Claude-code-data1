@@ -15,6 +15,12 @@
       <input type="hidden" name="seguir" value="{{ '0' if seg.eu_sigo else '1' }}">
       <button class="btn pequeno{{ ' contorno' if seg.eu_sigo }}">{{ '✓ Seguindo' if seg.eu_sigo else '➕ Seguir' }}</button>
     </form>
+    <form method="post" action="{{ url_for('jogador_bloquear', nome=p.username) }}"
+          onsubmit="return {{ 'true' if bloqueei else 'confirm(\'Bloquear ' ~ p.username ~ '? Vocês não vão mais trocar mensagens privadas.\')' }}">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <input type="hidden" name="sim" value="{{ '0' if bloqueei else '1' }}">
+      <button class="btn texto pequeno">{{ '🔓 Desbloquear' if bloqueei else '🚫 Bloquear' }}</button>
+    </form>
     {% endif %}
     <p><button class="btn pequeno contorno" type="button" id="compartilharPerfil">🔗 Compartilhar perfil</button></p>
     <script>

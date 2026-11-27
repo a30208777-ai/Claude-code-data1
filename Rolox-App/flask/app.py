@@ -1353,6 +1353,17 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
             flash(str(e), "erro")
         return redirect(url_for("jogador", nome=nome))
 
+    @app.post("/jogador/<nome>/bloquear")
+    @logado
+    def jogador_bloquear(nome: str):
+        sim = request.form.get("sim") == "1"
+        try:
+            g.api.bloquear(nome, sim)
+            flash(f"🚫 {nome} bloqueado: vocês não trocam mais mensagens privadas." if sim else f"{nome} desbloqueado.", "ok")
+        except ErroRolox as e:
+            flash(str(e), "erro")
+        return redirect(url_for("jogador", nome=nome))
+
     @app.get("/jogador/<nome>/<any(seguidores, seguindo):tipo>")
     @logado
     def jogador_seguidores(nome: str, tipo: str):
@@ -1388,7 +1399,12 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
             cargo = g.api.cargo_de(p["username"])
         except ErroRolox:
             cargo = None
+        try:
+            bloqueei = p["username"] in g.api.meus_bloqueados()
+        except ErroRolox:
+            bloqueei = False
         return render_template("jogador.html", p=p, redes=redes, eu_nome=carregar_perfil().get("username"), seg=seg, cargo=cargo,
+                               bloqueei=bloqueei,
                                emblemas=por_jogo, total_emblemas=len(emblemas), criados=criados,
                                visitas_criados=sum(m.get("visitas") or 0 for m in criados), aba="inicio")
 
