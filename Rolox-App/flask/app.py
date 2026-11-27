@@ -10,6 +10,7 @@ use ROLOX_HOST=0.0.0.0 (cuidado: qualquer um na rede poderia abrir sua sessão).
 from __future__ import annotations
 
 import functools
+import re
 import logging
 from urllib.parse import urlencode
 import ipaddress
@@ -196,7 +197,7 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
                 "desenhar_avatar": lambda a, largura=120: Markup(avatar_mod.svg(a, largura)),
                 "motivos_denuncia": MOTIVOS_DENUNCIA,
                 "selo": lambda parceiro: Markup('<span class="selo" title="Parceiro do VISTA">🤝</span>') if parceiro else "",
-                "selo_app": selo_app, "categorias": CATEGORIAS, "selo_cargo": selo_cargo}
+                "selo_app": selo_app, "categorias": CATEGORIAS, "selo_cargo": selo_cargo, "icones_capa": ICONES_CAPA}
 
     def selo_cargo(cargo):
         """👑💎 dono · 💎 sub dono · ADM: a logo do VISTA ao lado do nome."""
@@ -786,6 +787,20 @@ def criar_app(fabrica_api: Callable[[Optional[Sessao]], RoloxAPI] = RoloxAPI,
         seguro = "".join(c for c in nome if c.isalnum() or c in "_-")[:30] or "conversa"
         return ("\n".join(linhas) + "\n", 200, {"Content-Type": "text/plain; charset=utf-8",
                 "Content-Disposition": f'attachment; filename="rolox_conversa_{seguro}.txt"'})
+
+    ICONES_CAPA = ["🕹️", "🏃", "🏎️", "🗡️", "👻", "🧙", "🥊", "🏗️", "🧩", "🌋", "🏰", "🚀", "⚽", "🐉", "💎", "🎯"]
+
+    @app.post("/jogos/<mapa_id>/capa")
+    @logado
+    def jogo_capa(mapa_id: str):
+        """🖼️ Capa do jogo: o criador escolhe ícone e cor (o banco confere se é o criador)."""
+        _mapa_ou_404(mapa_id)
+        icone, cor = request.form.get("icone", ""), request.form.get("cor", "")
+        if icone not in ICONES_CAPA or not re.fullmatch(r"#[0-9a-fA-F]{6}", cor):
+            abort(400)
+        g.api.definir_capa(mapa_id, icone, cor)
+        flash("🖼️ Capa do jogo atualizada!", "ok")
+        return redirect(url_for("jogo_pagina", mapa_id=mapa_id))
 
     @app.post("/jogos/<mapa_id>/categoria")
     @logado

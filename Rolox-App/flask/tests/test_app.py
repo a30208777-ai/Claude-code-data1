@@ -2138,3 +2138,21 @@ def test_bloquear_jogador(cliente, sb, monkeypatch):
     assert bloq == {"bob"}
     cliente.post("/jogador/bob/bloquear", data={"csrf": tok, "sim": "0"})
     assert bloq == set()
+
+
+def test_capa_do_jogo(cliente, sb, monkeypatch):
+    from rolox_api import RoloxAPI
+    capas = []
+    monkeypatch.setattr(RoloxAPI, "definir_capa", lambda self, m, i, c: capas.append((m, i, c)) or {})
+    entrar(cliente)
+    tok = csrf(cliente)
+    mid = enviar_mapa(cliente).get_json()["id"]
+    sb.dono = True
+    cliente.post(f"/dono/{mid}/aprovar", data={"csrf": tok})
+    sb.dono = False
+    assert "🖼️ Mudar capa" in html(cliente.get(f"/jogos/{mid}"))
+    cliente.post(f"/jogos/{mid}/capa", data={"csrf": tok, "icone": "🐉", "cor": "#ff0000"})
+    assert capas == [(mid, "🐉", "#ff0000")]
+    assert cliente.post(f"/jogos/{mid}/capa", data={"csrf": tok, "icone": "<b>", "cor": "#ff0000"}).status_code == 400
+    sb.mapas[mid].update(icone="🐉", cor_capa="#ff0000")
+    assert "🐉" in html(cliente.get("/jogos"))

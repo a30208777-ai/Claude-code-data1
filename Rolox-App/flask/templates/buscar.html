@@ -46,7 +46,7 @@
   <h2>🎮 Jogos</h2>
   {% for m in jogos %}
     <div class="cartao">
-      <span class="icone">🕹️</span>
+      <span class="icone capa-jogo" style="background:{{ m.cor_capa or '#5e35b1' }}">{{ m.icone or '🕹️' }}</span>
       <div class="info">
         <div class="titulo">{{ m.nome }}</div>
         <div class="detalhe">👁 {{ m.visitas or 0 }} · ❤ {{ m.curtidas or 0 }}{% if m.descricao %} · {{ m.descricao }}{% endif %}</div>

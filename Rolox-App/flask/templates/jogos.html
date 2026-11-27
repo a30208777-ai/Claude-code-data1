@@ -67,7 +67,7 @@
 
 {% for m in publicados %}
   <div class="cartao" id="mapa-{{ m.id }}">
-    <span class="icone">🕹️</span>
+    <span class="icone capa-jogo" style="background:{{ m.cor_capa or '#5e35b1' }}">{{ m.icone or '🕹️' }}</span>
     <div class="info">
       <div class="titulo"><a href="{{ url_for('jogo_pagina', mapa_id=m.id) }}">{{ m.nome }}</a></div>
       {% if m.descricao %}<div class="detalhe">{{ m.descricao }}</div>{% endif %}
